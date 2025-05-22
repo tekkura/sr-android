@@ -9,3 +9,6 @@
 **/build
 *.swp
 config.json
+**/.project
+**/.classpath
+**/.settings/
