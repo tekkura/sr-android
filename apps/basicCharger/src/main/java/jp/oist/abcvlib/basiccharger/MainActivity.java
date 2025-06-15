@@ -74,7 +74,7 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
     private final String TAG = getClass().getName();
     private float speedL = 0.0f;
     private float speedR = 0.0f;
-    private float forwardBias = 0.5f; // for moving forward while centering
+    private float forwardBias = 0.3f; // for moving forward while centering
     private float p_controller = 0.2f;
     private float leftWheelCompensation = 1.1f;
     private PublisherManager publisherManager;
@@ -98,8 +98,10 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
     private StateX stateX = StateX.UNCENTERED;
     private StateY stateY = StateY.FAR_FROM_BOTTOM;
     private Action action = Action.APPROACH;
-    private boolean centeredPuck = false;
-    private boolean puckCloseToBottom = false;
+    private int centeredPuck = 0;
+    private int centeredPuckLimit = 5;
+    private int puckCloseToBottom = 0;
+    private int puckCloseToBottomLimit = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -142,7 +144,11 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
         WheelData wheelData = new WheelData.Builder(this, publisherManager).build();
         wheelData.addSubscriber(this);
 
-        new ObjectDetectorData.Builder(this, publisherManager, this).setPreviewView(previewView).build().addSubscriber(this);
+        new ObjectDetectorData.Builder(this, publisherManager, this)
+                .setModel("model.tflite")
+                .setPreviewView(previewView)
+                .build()
+                .addSubscriber(this);
 
         setSerialCommManager(new SerialCommManager(usbSerial, batteryData, wheelData));
         super.onSerialReady(usbSerial);
@@ -203,25 +209,34 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
         height = height_;
         try{
             // Note you can also get the bounding box here. See https://www.tensorflow.org/lite/api_docs/java/org/tensorflow/lite/task/vision/detector/Detection
-            Category category = results.get(0).getCategories().get(0); //todo not sure if there will ever be more than one category (multiple detections). If so are they ordered by higheest score?
-            String label = category.getLabel();
-            RectF boundingBox = results.get(0).getBoundingBox();
-            overlayView.setImageDimensions(width, height);
-            overlayView.setRect(boundingBox);
+            boolean puckDetected = false;
+            Category category = null;
+            RectF boundingBox = null;
+            String label = "";
 
-            boolean visible = false;
-            if (label.equals("puck")) {
-                Log.d("PUCK", "Puck detected");
-                visible = true;
-            }else{
-                Log.d("PUCK", "Puck not detected");
+            for (Detection result : results) {
+                Category currentCategory = result.getCategories().get(0);
+                if (currentCategory.getLabel().equals("puck")) {
+                    puckDetected = true;
+                    category = currentCategory;
+                    label = category.getLabel();
+                    boundingBox = result.getBoundingBox();
+                    Log.d("PUCK", "Puck detected");
+                    break;
+                }
             }
-            puckMountController(visible, boundingBox.centerX(), boundingBox.centerY(), width, height);
 
-
-            @SuppressLint("DefaultLocale") String score = String.format("%.2f", category.getScore());
-            @SuppressLint("DefaultLocale") String time = String.format("%d", inferenceTime);
-            guiUpdater.objectDetectorString = label + " : " + score + " : " + time + "ms";
+            overlayView.setImageDimensions(width, height);
+            if (puckDetected && boundingBox != null) overlayView.setRect(boundingBox);
+            puckMountController(puckDetected, puckDetected ? boundingBox.centerX() : 0, puckDetected ? boundingBox.centerY() : 0, width, height);
+            if (category != null) {
+                @SuppressLint("DefaultLocale") String score = String.format("%.2f", category.getScore());
+                @SuppressLint("DefaultLocale") String time = String.format("%d", inferenceTime);
+                Log.v("PUCK", "ObjectDetector: " + label + " : " + score + " : " + time + "ms");
+                guiUpdater.objectDetectorString = label + " : " + score + " : " + time + "ms";
+            } else {
+                guiUpdater.objectDetectorString = "No puck detected";
+            }
         }catch (IndexOutOfBoundsException e){
             guiUpdater.objectDetectorString = "No results from ObjectDetector";
         }
@@ -241,6 +256,7 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
             float errorX = 2f * ((centerX / width) - 0.5f); // Error normalized from -1 to 1 from horizontal center
             float errorY = 1 - (centerY / height); // Error normalized to 1 from bottom. 1 - as origin apparently at top of image
             Log.v("PUCK", "ErrorX: " + errorX + " ErrorY: " + errorY);
+            Log.v("PUCK", "centeredPuck: " + centeredPuck + " puckCloseToBottom: " + puckCloseToBottom);
 
             // Implement hysteresis on both error signals to prevent jitter
             float centeredLowerThreshold = 0.5f;
@@ -249,17 +265,17 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
             float closeUpperThreshold = 0.2f;
 
             if (abs(errorX) < centeredLowerThreshold){
-                centeredPuck = true;
+                centeredPuck++;
             }else if (abs(errorX) > centeredUpperThreshold){
-                centeredPuck = false;
+                centeredPuck = 0;
             }
             if (abs(errorY) < closeLowerThreshold){
-                puckCloseToBottom = true;
+                puckCloseToBottom++;
             }else if (abs(errorY) > closeUpperThreshold){
-                puckCloseToBottom = false;
+                puckCloseToBottom = 0;
             }
 
-            if (centeredPuck && puckCloseToBottom) {
+            if (centeredPuck >= centeredPuckLimit && puckCloseToBottom >= puckCloseToBottomLimit) {
                 mount();
             }else{
                 approach(errorX, errorY);
@@ -274,8 +290,8 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
     private void searching(){
 //        action = Action.SEARCHING;
         Log.v("PUCK", "Action.SEARCHING");
-        speedL = 0.6f;
-        speedR = -0.6f;
+        speedL = 0.3f;
+        speedR = -0.3f;
     }
 
     private void approach(float errorX, float errorY){

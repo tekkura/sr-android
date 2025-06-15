@@ -169,7 +169,7 @@ public class MicrophoneData extends Publisher<MicrophoneDataSubscriber> implemen
         int framePeriod = framePerBuffer / 2; // Read from buffer two times per full buffer.
         recorder.setPositionNotificationPeriod(framePeriod);
         recorder.setRecordPositionUpdateListener(this, handler);
-        publisherManager.onPublisherPermissionsGranted();
+        publisherManager.onPublisherPermissionsGranted(this);
     }
 
     @Override

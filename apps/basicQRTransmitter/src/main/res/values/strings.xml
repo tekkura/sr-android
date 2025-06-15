@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Basic QR Transmitter</string>
+    <string name="app_name">QR Transmitter</string>
     <string name="set_point_deg">Set Point (Deg)</string>
     <string name="tilt_p">Tilt P</string>
     <string name="tilt_d">Tilt D</string>

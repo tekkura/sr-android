@@ -50,7 +50,7 @@ public abstract class ImageData<S extends Subscriber> extends Publisher<S> imple
 
     private ProcessCameraProvider cameraProvider;
     private final String TAG = getClass().getName();
-    private final CountDownLatch countDownLatch = new CountDownLatch(2); // Waits for both analysis and preview to be running before sending a signal that it is ready
+    private final CountDownLatch countDownLatch; // Waits for both analysis and preview to be running before sending a signal that it is ready
 
     /*
      * @param previewView: e.g. from your Activity findViewById(R.id.camera_x_preview)
@@ -63,6 +63,8 @@ public abstract class ImageData<S extends Subscriber> extends Publisher<S> imple
         this.previewView = previewView;
         this.imageAnalysis = imageAnalysis;
         this.imageExecutor = imageExecutor;
+        // Initialize countDownLatch with count of 1 if no preview view, 2 if preview view exists
+        this.countDownLatch = new CountDownLatch(previewView != null ? 2 : 1);
     }
 
     // We must specify T to define the extending subclass, S to specify the subscriber type used by the extending subclass, and B to reference the extending subclasses' builder class.

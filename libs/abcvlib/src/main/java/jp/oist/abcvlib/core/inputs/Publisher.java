@@ -59,6 +59,7 @@ public abstract class Publisher<T extends Subscriber> implements PermissionManag
         this.publisherManager = publisherManager;
         publisherManager.add(this);
         permissionManager = PermissionManager.getInstance(context);
+        Log.i(TAG, "Requesting permissions: " + getRequiredPermissions());
         permissionManager.checkPermissions(getRequiredPermissions(), this);
     }
 
@@ -97,11 +98,12 @@ public abstract class Publisher<T extends Subscriber> implements PermissionManag
 
     @Override
     public void onPermissionGranted() {
-        publisherManager.onPublisherPermissionsGranted();
+        Log.i(TAG, "Permissions granted for " + this.getClass().getName());
+        publisherManager.onPublisherPermissionsGranted(this);
     }
 
     @Override
     public void onPermissionDenied(DeniedPermissions deniedPermissions) {
-        Log.e("Permissions", "Permission Error: Unable to get the following permissions: " + deniedPermissions.toString());
+        Log.e(TAG, "Permission Error: Unable to get the following permissions: " + deniedPermissions.toString());
     }
 }

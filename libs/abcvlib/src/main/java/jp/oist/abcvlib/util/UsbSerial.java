@@ -250,6 +250,12 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
      * @throws IOException if fifoQueue is full
      */
     protected synchronized boolean verifyPacket(byte[] bytes) throws IOException {
+        if (packetBuffer.remaining() < bytes.length) {
+            Log.e("verifyPacket", "Buffer overflow risk: clearing buffer and resynchronizing.");
+            packetBuffer.clear();
+            onBadPacket();
+            return false;
+        }
         packetBuffer.put(bytes);
 
         // If startIdx not yet found, find it
@@ -280,7 +286,12 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
                         return true;
                     }
                     // get the packetDataSize. It is stored at index 3 and 4 as a short
-                    packetDataSize = packetBuffer.getShort(startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.DATA_SIZE);
+                    packetDataSize = packetBuffer.getShort(startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.DATA_SIZE) & 0xFFFF;
+                    if (packetDataSize > 2048) { // sanity check for max packet size
+                        Log.e("verifyPacket", "Unreasonable packet size: " + packetDataSize + ". Resynchronizing.");
+                        onBadPacket();
+                        return true;
+                    }
                     Log.v("serial", packetType + " packetType of size " + packetDataSize + " found at " + (startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE));
                 }
                 else{
@@ -347,7 +358,11 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
         }
         // reset to default value;
         packetType = AndroidToRP2040Command.NACK;
+        badPacketCount = 0; // Reset on successful packet
     }
+
+    private int badPacketCount = 0;
+    private static final int BAD_PACKET_THRESHOLD = 5;
 
     private void onBadPacket(){
         Log.e("serial", "Bad packet received. Clearing buffer and sending next command.");
@@ -356,8 +371,34 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
         while (packetBuffer.hasRemaining()) {
             packetBuffer.put((byte) 0);
         }
+        resyncToNextStartMarker();
         // reset to default value;
         packetType = AndroidToRP2040Command.NACK;
+        badPacketCount++;
+        if (badPacketCount >= BAD_PACKET_THRESHOLD) {
+            Log.e("serial", "Too many consecutive bad packets. Consider resetting connection or notifying user.");
+            // Optionally: trigger recovery, e.g., re-initialize serial connection or notify user
+            // recoverSerialConnection();
+            // For now, just reset the counter
+            badPacketCount = 0;
+        }
+    }
+
+    private void resyncToNextStartMarker() {
+        packetBuffer.flip();
+        int startIdx = -1;
+        for (int i = 0; i < packetBuffer.limit(); i++) {
+            if (packetBuffer.get(i) == AndroidToRP2040Command.START.getHexValue()) {
+                startIdx = i;
+                break;
+            }
+        }
+        if (startIdx >= 0) {
+            packetBuffer.position(startIdx);
+            packetBuffer.compact();
+        } else {
+            packetBuffer.clear();
+        }
     }
 
     @Override

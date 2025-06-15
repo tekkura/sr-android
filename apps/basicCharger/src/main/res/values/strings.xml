@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Basic Charger</string>
+    <string name="app_name">Charger</string>
     <string name="voltageBatteryHeader">Battery Voltage: </string>
     <string name="voltageChargerHeader">Charger Voltage: </string>
     <string name="tiltAngleHeader">Tilt Angle (deg): </string>
