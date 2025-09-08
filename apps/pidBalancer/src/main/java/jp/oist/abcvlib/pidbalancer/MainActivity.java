@@ -87,7 +87,8 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
         // Attach the controller/subscriber to the publishers
         orientationData.addSubscriber(balancePIDController);
         wheelData.addSubscriber(balancePIDController);
-        setSerialCommManager(new SerialCommManager(usbSerial, batteryData, wheelData));
+        SerialCommManager serialCommManager = new SerialCommManager(usbSerial, batteryData, wheelData);
+        setSerialCommManager(serialCommManager);
         super.onSerialReady(usbSerial);
     }
 
