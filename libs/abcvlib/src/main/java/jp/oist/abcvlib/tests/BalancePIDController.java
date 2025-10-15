@@ -111,7 +111,7 @@ public class BalancePIDController extends AbcvlibController implements WheelData
         // TODO this needs to account for length of time on each interval, or overall time length. Here this just assumes a width of 1 for all intervals.
         int_e_t = int_e_t + e_t;
         e_t = setPoint - thetaDeg;
-        // error betweeen actual and desired wheel speed (default 0)
+        Log.v(TAG, "tilt angle:" + thetaDeg);// error betweeen actual and desired wheel speed (default 0)
         double e_w = 0.0 - speedL;
         Log.v(TAG, "speedL:" + speedL);
 
