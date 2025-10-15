@@ -19,7 +19,7 @@
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:stepSize="0.1"
-        android:value="6.7"
+        android:value="0.0"
         android:valueFrom="-10.0"
         android:valueTo="10.0" />
 
@@ -36,7 +36,7 @@
         android:layout_height="50dp"
         android:stepSize="0.001"
         android:value="0.0"
-        android:valueFrom="-1.0"
+        android:valueFrom="-0.3"
         android:valueTo="0.0" />
 
     <TextView
@@ -52,8 +52,8 @@
         android:layout_height="50dp"
         android:stepSize="0.0001"
         android:value="0.000"
-        android:valueFrom="0.0"
-        android:valueTo="0.1" />
+        android:valueFrom="0.00"
+        android:valueTo="0.02" />
 
     <TextView
         android:id="@+id/textViewWheelSpeedP"
@@ -69,7 +69,7 @@
         android:stepSize="0.00001"
         android:value="0.000"
         android:valueFrom="0.0"
-        android:valueTo="0.01" />
+        android:valueTo="0.001" />
 
     <TextView
         android:id="@+id/textViewExponentialWeight"
