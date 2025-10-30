@@ -9,8 +9,8 @@ import jp.oist.abcvlib.core.AbcvlibActivity;
  * @author Christopher Buckley <a href="https://github.com/topherbuckley">...</a>
  */
 public class MainActivity extends AbcvlibActivity {
-    float speed = 0.35f;
-    float increment = 0.01f;
+    float speed = 0.0f;
+    float increment = 0.4f;
 
     protected void onCreate(Bundle savedInstanceState) {
         // Passes Android App information up to parent classes for various usages. Do not modify
