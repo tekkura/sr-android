@@ -1,13 +1,9 @@
 android {
     buildTypes {
-        debug {
-            buildConfigField "boolean", "optimized", "false"
-        }
         optimized {
             initWith buildTypes.debug
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField "boolean", "optimized", "true"
         }
     }
 }
