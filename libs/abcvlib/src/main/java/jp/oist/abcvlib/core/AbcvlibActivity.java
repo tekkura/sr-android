@@ -12,7 +12,12 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.intentfilter.androidpermissions.PermissionManager;
+import com.intentfilter.androidpermissions.models.DeniedPermissions;
+
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 
 import jp.oist.abcvlib.core.outputs.Outputs;
@@ -53,7 +58,28 @@ public abstract class AbcvlibActivity extends AppCompatActivity implements Seria
         isCreated = true;
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        usbInitialize();
+        // Check for all required permissions before initializing USB.
+        // If permissions are granted, proceed with usbInitialize().
+        // Handles multiple permissions smoothly.
+        // If no permissions are required, initialize USB immediately.
+        // This approach prevents UI blocking and ensures proper permission handling.
+        if(!getRequiredPermissions().isEmpty()) {
+            PermissionManager.getInstance(this).checkPermissions(
+                    getRequiredPermissions(),
+                    new PermissionManager.PermissionRequestListener() {
+                        @Override
+                        public void onPermissionGranted() {
+                            usbInitialize();
+                        }
+
+                        @Override
+                        public void onPermissionDenied(DeniedPermissions deniedPermissions) {
+
+                        }
+                    });
+        } else{
+            usbInitialize();
+        }
         super.onCreate(savedInstanceState);
     }
 
@@ -66,6 +92,10 @@ public abstract class AbcvlibActivity extends AppCompatActivity implements Seria
             e.printStackTrace();
             showCustomDialog();
         }
+    }
+
+    protected List<String> getRequiredPermissions(){
+        return new ArrayList<>();
     }
 
     public void onSerialReady(UsbSerial usbSerial) {
