@@ -54,12 +54,18 @@ public class PublisherManager {
         phaser.arrive();
         Logger.i(TAG, "Starting initializePublishers with " + publishers.size() + " publishers");
         Logger.i(TAG, "Waiting on all publishers to initialize before starting");
-        phaser.awaitAdvance(0); // Waits to initialize if not finished with initPhase
-        Logger.i(TAG, "Phase 0 complete, starting publisher initialization");
-        for (Publisher<?> publisher: publishers){
-            Logger.i(TAG, "Initializing publisher: " + publisher.getClass().getName());
-            initialize(publisher);
-        }
+        // Wait for all publishers to initialize before starting the next phase
+        // This is done in a separate thread to avoid blocking the main thread
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.submit(() -> {
+            phaser.awaitAdvance(0); // Waits to initialize if not finished with initPhase
+            Logger.i(TAG, "Phase 0 complete, starting publisher initialization");
+            for (Publisher<?> publisher : publishers) {
+                Logger.i(TAG, "Initializing publisher: " + publisher.getClass().getName());
+                initialize(publisher);
+            }
+        });
+        executor.shutdown();
     }
 
     //========================================Phase 2===============================================
