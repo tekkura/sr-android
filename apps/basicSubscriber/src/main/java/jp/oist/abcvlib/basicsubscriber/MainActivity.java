@@ -107,11 +107,11 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
         wheelData.addSubscriber(this);
 
         // These publishers do not need references as they are not passed to the SerialCommManager
-        new OrientationData.Builder(this, publisherManager).build().addSubscriber(this);
 //        new ImageDataRaw.Builder(this, publisherManager, this).build().addSubscriber(this);
         new MicrophoneData.Builder(this, publisherManager).build().addSubscriber(this);
         new ObjectDetectorData.Builder(this, publisherManager, this).setPreviewView(findViewById(R.id.camera_x_preview)).build().addSubscriber(this);
         new QRCodeData.Builder(this, publisherManager, this).build().addSubscriber(this);
+        new OrientationData.Builder(this, publisherManager).build().addSubscriber(this);
 
         setSerialCommManager(new SerialCommManager(usbSerial, batteryData, wheelData));
         super.onSerialReady(usbSerial);

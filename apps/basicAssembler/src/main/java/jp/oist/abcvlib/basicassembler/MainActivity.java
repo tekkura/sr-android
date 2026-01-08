@@ -114,15 +114,15 @@ public class MainActivity extends AbcvlibActivity implements SerialReadyListener
         BatteryData batteryData = new BatteryData.Builder(this, publisherManager).build();
         batteryData.addSubscriber(timeStepDataBuffer);
 
-        OrientationData orientationData = new OrientationData.Builder(this, publisherManager).build();
-        orientationData.addSubscriber(timeStepDataBuffer);
-
         MicrophoneData microphoneData = new MicrophoneData.Builder(this, publisherManager).build();
         microphoneData.addSubscriber(timeStepDataBuffer);
 
         ImageDataRaw imageDataRaw = new ImageDataRaw.Builder(this, publisherManager, this)
                 .setPreviewView(findViewById(R.id.camera_x_preview)).build();
         imageDataRaw.addSubscriber(timeStepDataBuffer);
+
+        OrientationData orientationData = new OrientationData.Builder(this, publisherManager).build();
+        orientationData.addSubscriber(timeStepDataBuffer);
 
         stateSpace = new StateSpace(publisherManager);
         setSerialCommManager(new SerialCommManager(usbSerial, batteryData, wheelData));
