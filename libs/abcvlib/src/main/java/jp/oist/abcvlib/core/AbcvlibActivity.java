@@ -11,6 +11,9 @@ import android.view.WindowManager;
 import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -55,6 +58,23 @@ public abstract class AbcvlibActivity extends AppCompatActivity implements Seria
 
         usbInitialize();
         super.onCreate(savedInstanceState);
+
+        ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (v, insets) -> {
+            // Get the insets for system bars (status bar, navigation bar)
+            View contentView = findViewById(android.R.id.content);
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            // Apply the top inset as padding to your view
+            contentView.setPadding(
+                    contentView.getPaddingLeft(),
+                    systemBars.top,
+                    contentView.getPaddingRight(),
+                    systemBars.bottom
+            );
+
+            // Return the insets to allow the system to continue processing them
+            return insets;
+        });
     }
 
     private void usbInitialize(){
