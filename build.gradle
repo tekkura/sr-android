@@ -6,7 +6,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.1'
+        classpath 'com.android.tools.build:gradle:8.13.2'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.21' // needed for YuvToRgbConverter
         classpath 'de.undercouch:gradle-download-task:5.3.1'
     }
@@ -72,7 +72,7 @@ subprojects {
         implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
         implementation "androidx.lifecycle:lifecycle-livedata:2.3.1"
         implementation "androidx.lifecycle:lifecycle-viewmodel:2.3.1"
-        implementation 'androidx.appcompat:appcompat:1.3.1'
+        implementation 'androidx.appcompat:appcompat:1.6.1'
         implementation 'androidx.activity:activity:1.3.1'
         implementation "androidx.fragment:fragment:1.3.6"
         implementation "androidx.core:core-ktx:1.6.0"
@@ -109,10 +109,10 @@ subprojects {
             targetCompatibility(JavaVersion.VERSION_1_8)
         }
         defaultConfig {
-            compileSdkVersion = 33
-            buildToolsVersion = '33.0.2'
+            compileSdkVersion = 36
+            buildToolsVersion = '35.0.0'
             minSdkVersion 30
-            targetSdkVersion 30
+            targetSdkVersion 36
 
             buildConfigField("String", "IP", "\"${ip.toString()}\"")
             buildConfigField("int", "PORT", "${port.toString()}")

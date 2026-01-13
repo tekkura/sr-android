@@ -10,6 +10,10 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
+
+import androidx.core.content.ContextCompat;
+
 import jp.oist.abcvlib.util.Logger;
 
 import com.hoho.android.usbserial.driver.CdcAcmSerialDriver;
@@ -103,7 +107,7 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
 
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         BroadcastReceiver usbReceiver = new MyBroadcastReceiver();
-        context.registerReceiver(usbReceiver, filter);
+        ContextCompat.registerReceiver(context, usbReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     private void connect(UsbDevice device) throws IOException {
@@ -113,8 +117,15 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
             openPort(connection);
         }else{
             Logger.i(Thread.currentThread().getName(), "Requesting permission to connect to device");
-            PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
-            usbManager.requestPermission(device, permissionIntent);
+            Intent permissionIntent = new Intent(ACTION_USB_PERMISSION);
+            permissionIntent.setPackage(context.getPackageName());
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    0,
+                    permissionIntent,
+                    PendingIntent.FLAG_MUTABLE
+            );
+            usbManager.requestPermission(device, pendingIntent);
         }
     }
 
@@ -409,20 +420,30 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
 
     private class MyBroadcastReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) {
-            UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            if (!ACTION_USB_PERMISSION.equals(intent.getAction())) {
+                return;
+            }
+
+            UsbDevice device;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice.class);
+            } else {
+                device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            }
+
+            if (device == null) {
+                Logger.w("serial", "USB device is null");
+                return;
+            }
+
             if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                String action = intent.getAction();
-                if (ACTION_USB_PERMISSION.equals(action)) {
-                    synchronized (this) {
-                        try {
-                            connect(device);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                try {
+                    connect(device);
+                } catch (IOException e) {
+                    Logger.e("serial", "Failed to connect", e);
                 }
-            }else {
-                Logger.d("serial", "permission denied for device " + device);
+            } else {
+                Logger.d("serial", "Permission denied for device " + device);
             }
         }
     }
