@@ -1,5 +1,6 @@
 package jp.oist.abcvlib.util;
 
+import static android.content.Context.RECEIVER_NOT_EXPORTED;
 import static java.lang.Thread.sleep;
 
 import android.app.PendingIntent;
@@ -10,6 +11,8 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
+
 import jp.oist.abcvlib.util.Logger;
 
 import com.hoho.android.usbserial.driver.CdcAcmSerialDriver;
@@ -103,7 +106,13 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
 
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         BroadcastReceiver usbReceiver = new MyBroadcastReceiver();
-        context.registerReceiver(usbReceiver, filter);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(usbReceiver, filter, RECEIVER_NOT_EXPORTED);
+        } else {
+            // suppressing lint as this runs when device version is less than 33 where registerReceiver flag is not required
+            // noinspection UnspecifiedRegisterReceiverFlag
+            context.registerReceiver(usbReceiver, filter);
+        }
     }
 
     private void connect(UsbDevice device) throws IOException {
@@ -113,7 +122,13 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
             openPort(connection);
         }else{
             Logger.i(Thread.currentThread().getName(), "Requesting permission to connect to device");
-            PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
+
+            int flags = PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
+            Intent usbPermissionIntent = new Intent(ACTION_USB_PERMISSION);
+            usbPermissionIntent.setPackage(context.getPackageName());
+            PendingIntent permissionIntent = PendingIntent
+                    .getBroadcast(context, 0, usbPermissionIntent, flags);
+
             usbManager.requestPermission(device, permissionIntent);
         }
     }
