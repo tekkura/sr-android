@@ -103,7 +103,11 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
 
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         BroadcastReceiver usbReceiver = new MyBroadcastReceiver();
-        context.registerReceiver(usbReceiver, filter);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(usbReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            context.registerReceiver(usbReceiver, filter);
+        }
     }
 
     private void connect(UsbDevice device) throws IOException {
@@ -113,7 +117,15 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
             openPort(connection);
         }else{
             Logger.i(Thread.currentThread().getName(), "Requesting permission to connect to device");
-            PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
+            // Make the permission intent mutable for Android 12 and above
+            int flags = 0;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                flags = PendingIntent.FLAG_MUTABLE | PendingIntent.FLAG_UPDATE_CURRENT;
+            }
+            Intent usbPermissionIntent = new Intent(ACTION_USB_PERMISSION);
+            usbPermissionIntent.setPackage(context.getPackageName());
+            PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0,usbPermissionIntent , flags);
+
             usbManager.requestPermission(device, permissionIntent);
         }
     }
