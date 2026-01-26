@@ -55,7 +55,7 @@ afterEvaluate {
         publications {
             create<MavenPublication>("debug") {
                 from(components["debug"])
-                groupId = "com.github.ma7moud3ly"
+                groupId = project.group.toString()
                 artifactId = "abcvlib"
                 version = project.version.toString()
                 pom {
