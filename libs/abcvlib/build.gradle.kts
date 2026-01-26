@@ -45,7 +45,7 @@ afterEvaluate {
         repositories {
             maven {
                 name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/oist/smartphone-robot-android")
+                url = uri("https://maven.pkg.github.com/Ma7moud3ly/smartphone-robot-android")
                 credentials {
                     username = System.getenv("GITHUB_ACTOR")
                     password = System.getenv("GITHUB_TOKEN")
