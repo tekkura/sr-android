@@ -43,20 +43,6 @@ subprojects {
     extra["versionNamespace"] = "abcvlib"
     extra["versionString"] = "${extra["versionNamespace"]}$version"
 
-    repositories {
-        mavenCentral()
-        mavenLocal()
-        maven { url = uri("https://jitpack.io") }
-        google()
-        jcenter()
-        maven {
-            url = uri("https://maven.pkg.github.com/topherbuckley/smartphone-robot-flatbuffers")
-            credentials {
-                username = System.getenv("GITHUB_USER")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
 
     apply(plugin = "maven-publish")
     apply(plugin = "signing")
