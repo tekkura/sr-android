@@ -26,9 +26,9 @@ zxingCore = "3.4.1"
 zxingAndroid = "3.3.0"
 
 # Other
-flatbuffers = "1.12.0"
-androidPermissions = "2.0.54"
-commonsCollections = "4.4"
+flatbuffers = "25.2.10"
+androidPermissions = "2.1.8"
+commonsCollections = "4.5.0"
 usbSerial = "3.10.0"
 abcvlibFbclasses = "0.0.1"
 
