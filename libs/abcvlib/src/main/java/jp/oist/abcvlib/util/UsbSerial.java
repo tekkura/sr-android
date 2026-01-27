@@ -10,6 +10,9 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+
+import androidx.core.content.ContextCompat;
+
 import jp.oist.abcvlib.util.Logger;
 
 import com.hoho.android.usbserial.driver.CdcAcmSerialDriver;
@@ -103,11 +106,12 @@ public class UsbSerial implements SerialInputOutputManager.Listener{
 
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         BroadcastReceiver usbReceiver = new MyBroadcastReceiver();
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(usbReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            context.registerReceiver(usbReceiver, filter);
-        }
+        ContextCompat.registerReceiver(
+                context,
+                usbReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+        );
     }
 
     private void connect(UsbDevice device) throws IOException {

@@ -3,11 +3,11 @@ import groovy.json.JsonSlurper
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.1")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.21") // needed for YuvToRgbConverter
+        classpath("com.android.tools.build:gradle:8.13.2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24") // needed for YuvToRgbConverter
         classpath("de.undercouch:gradle-download-task:5.3.1")
     }
 }
@@ -79,7 +79,7 @@ subprojects {
         "implementation"("androidx.appcompat:appcompat:1.3.1")
         "implementation"("androidx.activity:activity:1.3.1")
         "implementation"("androidx.fragment:fragment:1.3.6")
-        "implementation"("androidx.core:core-ktx:1.6.0")
+        "implementation"("androidx.core:core-ktx:1.17.0")
         "implementation"("androidx.navigation:navigation-fragment:2.3.5")
         "implementation"("androidx.navigation:navigation-ui:2.3.5")
         "implementation"("org.tensorflow:tensorflow-lite-task-vision:0.4.0")
@@ -113,6 +113,11 @@ subprojects {
     pluginManager.withPlugin("com.android.application") {
         configureAndroidExtension()
     }
+    pluginManager.withPlugin("org.jetbrains.kotlin.android") {
+        configure<org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension> {
+            jvmToolchain(17)
+        }
+    }
 }
 
 // In Kotlin DSL, android {} isn't directly available in subprojects {}
@@ -123,8 +128,8 @@ fun Project.configureAndroidExtension() {
     extensions.configure<com.android.build.gradle.BaseExtension>("android") {
         namespace = "jp.oist.abcvlib"
         compileOptions {
-            sourceCompatibility = JavaVersion.VERSION_1_8
-            targetCompatibility = JavaVersion.VERSION_1_8
+            sourceCompatibility = JavaVersion.VERSION_17
+            targetCompatibility = JavaVersion.VERSION_17
         }
         defaultConfig {
             compileSdkVersion(36)

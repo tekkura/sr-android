@@ -3,7 +3,8 @@ android {
         optimized {
             initWith buildTypes.debug
             minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    rootProject.file('proguard-rules.pro')
         }
     }
 }
