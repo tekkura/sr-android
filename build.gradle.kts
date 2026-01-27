@@ -81,7 +81,6 @@ subprojects {
         "implementation"(libs.findLibrary("zxing-core").get())
         "implementation"(libs.findLibrary("zxing-android-integration").get())
         // Other
-        "implementation"(libs.findLibrary("kotlin-stdlib-jdk7").get())
         "implementation"(libs.findLibrary("flatbuffers").get())
         "implementation"(libs.findLibrary("android-permissions").get())
         "implementation"(libs.findLibrary("usb-serial").get())
