@@ -52,39 +52,40 @@ subprojects {
         }
     }
 
+    val libs = rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs")
+
     dependencies {
-        "implementation"("androidx.annotation:annotation:1.2.0")
-        "implementation"("androidx.constraintlayout:constraintlayout:2.1.0")
-        "implementation"("androidx.lifecycle:lifecycle-livedata:2.3.1")
-        "implementation"("androidx.lifecycle:lifecycle-viewmodel:2.3.1")
-        "implementation"("androidx.appcompat:appcompat:1.3.1")
-        "implementation"("androidx.activity:activity:1.3.1")
-        "implementation"("androidx.fragment:fragment:1.3.6")
-        "implementation"("androidx.core:core-ktx:1.17.0")
-        "implementation"("androidx.navigation:navigation-fragment:2.3.5")
-        "implementation"("androidx.navigation:navigation-ui:2.3.5")
-        "implementation"("org.tensorflow:tensorflow-lite-task-vision:0.4.0")
-        "implementation"("org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.0")
-        "implementation"("org.tensorflow:tensorflow-lite-gpu:2.9.0")
-
-        // CameraX core library using the camera2 implementation
-        "implementation"("androidx.camera:camera-camera2:1.1.0-alpha07")
-        // If you want to additionally use the CameraX Lifecycle library
-        "implementation"("androidx.camera:camera-lifecycle:1.1.0-alpha07")
-        // If you want to additionally use the CameraX View class
-        "implementation"("androidx.camera:camera-view:1.0.0-alpha27")
-        // If you want to additionally use the CameraX Extensions library
-        "implementation"("androidx.camera:camera-extensions:1.0.0-alpha27")
-
-        "implementation"("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.5.21")
-        "implementation"("com.google.flatbuffers:flatbuffers-java:1.12.0")
-        "implementation"("com.google.android.material:material:1.4.0")
-        "implementation"("com.google.zxing:core:3.4.1")
-        "implementation"("com.google.zxing:android-integration:3.3.0")
-        "implementation"("io.github.nishkarsh:android-permissions:2.0.54")
-
-        "implementation"("com.github.mik3y:usb-serial-for-android:3.6.0")
-        "implementation"("jp.oist.abcvlib.core.learning:fbclasses:0.0.1")
+        // Android Core
+        "implementation"(libs.findLibrary("androidx-annotation").get())
+        "implementation"(libs.findLibrary("androidx-constraintlayout").get())
+        "implementation"(libs.findLibrary("androidx-appcompat").get())
+        "implementation"(libs.findLibrary("androidx-activity").get())
+        "implementation"(libs.findLibrary("androidx-fragment").get())
+        "implementation"(libs.findLibrary("androidx-core-ktx").get())
+        "implementation"(libs.findLibrary("material").get())
+        "implementation"(libs.findLibrary("androidx-lifecycle-livedata").get())
+        "implementation"(libs.findLibrary("androidx-lifecycle-viewmodel").get())
+        // Navigation
+        "implementation"(libs.findLibrary("androidx-navigation-fragment").get())
+        "implementation"(libs.findLibrary("androidx-navigation-ui").get())
+        // CameraX
+        "implementation"(libs.findLibrary("androidx-camera-camera2").get())
+        "implementation"(libs.findLibrary("androidx-camera-lifecycle").get())
+        "implementation"(libs.findLibrary("androidx-camera-view").get())
+        "implementation"(libs.findLibrary("androidx-camera-extensions").get())
+        // TensorFlow Lite
+        "implementation"(libs.findLibrary("tensorflow-lite-task-vision").get())
+        "implementation"(libs.findLibrary("tensorflow-lite-gpu-delegate-plugin").get())
+        "implementation"(libs.findLibrary("tensorflow-lite-gpu").get())
+        // ZXing (QR/Barcode)
+        "implementation"(libs.findLibrary("zxing-core").get())
+        "implementation"(libs.findLibrary("zxing-android-integration").get())
+        // Other
+        "implementation"(libs.findLibrary("kotlin-stdlib-jdk7").get())
+        "implementation"(libs.findLibrary("flatbuffers").get())
+        "implementation"(libs.findLibrary("android-permissions").get())
+        "implementation"(libs.findLibrary("usb-serial").get())
+        "implementation"(libs.findLibrary("abcvlib-fbclasses").get())
     }
 
     // Configure Android block immediately after plugin application (not in afterEvaluate)
