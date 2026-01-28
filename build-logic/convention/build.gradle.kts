@@ -9,13 +9,14 @@ plugins {
 group = "jp.oist.abcvlib"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    val jvm = JavaVersion.toVersion(libs.versions.jvmTarget.get())
+    sourceCompatibility = jvm
+    targetCompatibility = jvm
 }
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_17
+        jvmTarget = JvmTarget.fromTarget(libs.versions.jvmTarget.get())
     }
 }
 
