@@ -1,5 +1,5 @@
-apply(from = rootProject.file("common-buildconfig.gradle"))
 plugins {
+    alias(libs.plugins.oist.library)
     alias(libs.plugins.undercouch.download)
 }
 
