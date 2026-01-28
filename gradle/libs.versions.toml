@@ -71,16 +71,6 @@ android-permissions = { module = "io.github.nishkarsh:android-permissions", vers
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commonsCollections" }
 abcvlib-fbclasses = { module = "jp.oist.abcvlib.core.learning:fbclasses", version.ref = "abcvlibFbclasses" }
 
-[bundles]
-# Optional: group related dependencies
-lifecycle = ["androidx-lifecycle-livedata", "androidx-lifecycle-viewmodel"]
-navigation = ["androidx-navigation-fragment", "androidx-navigation-ui"]
-camerax = ["androidx-camera-camera2", "androidx-camera-lifecycle", "androidx-camera-view", "androidx-camera-extensions"]
-tensorflow = ["tensorflow-lite-task-vision", "tensorflow-lite-gpu-delegate-plugin", "tensorflow-lite-gpu"]
-ioio = ["ioio-android", "ioio-accessory", "ioio-bluetooth", "ioio-device"]
-zxing = ["zxing-core", "zxing-android-integration"]
-
-
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
