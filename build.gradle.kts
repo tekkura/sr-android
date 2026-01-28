@@ -55,16 +55,6 @@ subprojects {
     val libs = rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs")
 
     dependencies {
-        // Android Core
-        "implementation"(libs.findLibrary("androidx-annotation").get())
-        "implementation"(libs.findLibrary("androidx-constraintlayout").get())
-        "implementation"(libs.findLibrary("androidx-appcompat").get())
-        "implementation"(libs.findLibrary("androidx-activity").get())
-        "implementation"(libs.findLibrary("androidx-fragment").get())
-        "implementation"(libs.findLibrary("androidx-core-ktx").get())
-        "implementation"(libs.findLibrary("material").get())
-        "implementation"(libs.findLibrary("androidx-lifecycle-livedata").get())
-        "implementation"(libs.findLibrary("androidx-lifecycle-viewmodel").get())
         // Navigation
         "implementation"(libs.findLibrary("androidx-navigation-fragment").get())
         "implementation"(libs.findLibrary("androidx-navigation-ui").get())
