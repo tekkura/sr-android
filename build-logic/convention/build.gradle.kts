@@ -24,6 +24,7 @@ kotlin {
 dependencies {
     compileOnly(libs.android.gradlePlugin)
     compileOnly(libs.kotlin.gradlePlugin)
+    implementation(libs.download.gradlePlugin)
 }
 
 tasks {

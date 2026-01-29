@@ -81,6 +81,7 @@ abcvlib-fbclasses = { module = "jp.oist.abcvlib.core.learning:fbclasses", versio
 # Dependencies that included at build-logic
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+download-gradlePlugin = { group = "de.undercouch", name = "gradle-download-task", version.ref = "undercouchDownload" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
