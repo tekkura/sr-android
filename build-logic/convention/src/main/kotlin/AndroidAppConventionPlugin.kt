@@ -38,6 +38,8 @@ class AndroidAppConventionPlugin : Plugin<Project> {
             }
 
             dependencies {
+                "implementation"(project(":abcvlib"))
+
                 "implementation"(versionCatalog.findLibrary("androidx-annotation").get())
                 "implementation"(versionCatalog.findLibrary("androidx-constraintlayout").get())
                 "implementation"(versionCatalog.findLibrary("androidx-appcompat").get())

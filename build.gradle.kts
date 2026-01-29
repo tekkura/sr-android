@@ -15,17 +15,6 @@ allprojects {
 }
 
 subprojects {
-    if ((gradle.extra["androidLibs"] as List<*>).any { it == project.name }) {
-        apply(plugin = "com.android.library")
-        apply(plugin = "kotlin-android") // needed for YuvToRgbConverter
-    } else if ((gradle.extra["apps"] as List<*>).any { it == project.name }) {
-        apply(plugin = "com.android.application")
-        dependencies {
-            "implementation"(project(":abcvlib"))
-        }
-    }
-
-
     // Configure Android block immediately after plugin application (not in afterEvaluate)
     pluginManager.withPlugin("com.android.library") {
         configureAndroidExtension()
