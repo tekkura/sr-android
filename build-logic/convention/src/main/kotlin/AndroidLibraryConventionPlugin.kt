@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.LibraryExtension
+import jp.oist.abcvlib.AppVersioning
 import jp.oist.abcvlib.buildTools
 import jp.oist.abcvlib.compileSdk
 import jp.oist.abcvlib.configureBuildTypes
@@ -17,6 +18,10 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply(versionCatalog.plugin("android-library"))
             pluginManager.apply(versionCatalog.plugin("kotlin-android"))
+
+            // Maven publishing version
+            group = "jp.oist"
+            version = AppVersioning.gitVersion()
 
             extensions.configure<LibraryExtension> {
                 compileSdk = versionCatalog.compileSdk

@@ -31,14 +31,6 @@ allprojects {
 }
 
 subprojects {
-    group = "jp.oist"
-    version = getGitVersion()
-    println("version = ${getGitVersion()}")
-    extra["gitVersion"] = scmTag()
-    extra["versionNamespace"] = "abcvlib"
-    extra["versionString"] = "${extra["versionNamespace"]}$version"
-
-
     apply(plugin = "maven-publish")
     apply(plugin = "signing")
 
@@ -89,31 +81,6 @@ fun Project.configureAndroidExtension() {
             buildConfigField("String", "IP", "\"$ip\"")
             buildConfigField("int", "PORT", "$port")
 
-            // Fetch the version according to git latest tag and "how far are we from last tag"
-            try {
-                val longVersionName = "git -C $rootDir describe --tags --long --dirty".execute().trim()
-                val (fullVersionTag, commitCount, gitSha, dirty) = longVersionName.split("-", limit = 4)
-                val (versionMajor, versionMinor, versionPatch) = fullVersionTag.removePrefix("v").split(".")
-
-                // Set the version name
-                versionName = "$versionMajor.$versionMinor.$versionPatch-$commitCount-$dirty"
-
-                // Turn the version name into a version code
-                versionCode = versionMajor.toInt() * 100000 +
-                        versionMinor.toInt() * 10000 +
-                        versionPatch.toInt() * 1000 +
-                        commitCount.toInt()
-
-                println("versionName = $versionName")
-                println("versionCode = $versionCode")
-
-            } catch (e: Exception) {
-                // Handle cases where there are no tags or the git command fails
-                println("Warning: No tags present or failed to fetch version from git. Setting default version. Error: ${e.message}")
-                // Set a default version name and version code
-                versionName = "0.0.0-0-unknown"
-                versionCode = 1
-            }
         }
 
         ndkVersion = "21.0.6113669"

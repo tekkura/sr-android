@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
+import jp.oist.abcvlib.AppVersioning
 import jp.oist.abcvlib.buildTools
 import jp.oist.abcvlib.compileSdk
 import jp.oist.abcvlib.configureBuildTypes
@@ -25,6 +26,11 @@ class AndroidAppConventionPlugin : Plugin<Project> {
                 defaultConfig{
                     targetSdk = versionCatalog.targetSdk
                     minSdk = versionCatalog.minSdk
+
+                    // Git-based versioning
+                    val versionInfo = AppVersioning.getVersionInfo()
+                    versionName = versionInfo.versionName
+                    versionCode = versionInfo.versionCode
                 }
 
                 configureKotlinAndroid(this)
