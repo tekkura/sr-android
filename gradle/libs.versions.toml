@@ -1,8 +1,15 @@
 [versions]
+# Build configuration
+compileSdk = "36"
+targetSdk = "36"
+minSdk = "30"
+buildTools = "35.0.0"
+jvmTarget = "17"
+
+# Plugins
 agp = "8.13.2"
 kotlin = "1.9.24"
 undercouchDownload = "5.6.0"
-
 # Android Core
 annotation = "1.9.1"
 appcompat = "1.7.1"
@@ -71,8 +78,17 @@ android-permissions = { module = "io.github.nishkarsh:android-permissions", vers
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commonsCollections" }
 abcvlib-fbclasses = { module = "jp.oist.abcvlib.core.learning:fbclasses", version.ref = "abcvlibFbclasses" }
 
+# Dependencies that included at build-logic
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
+kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+download-gradlePlugin = { group = "de.undercouch", name = "gradle-download-task", version.ref = "undercouchDownload" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 undercouch-download = { id = "de.undercouch.download", version.ref = "undercouchDownload" }
+
+# Plugins defined at build-logic
+oist-application = { id = "oist.application" }
+oist-library = { id = "oist.library" }

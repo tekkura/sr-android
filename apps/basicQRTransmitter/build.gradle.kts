@@ -1,4 +1,6 @@
-apply(from = rootProject.file("common-buildconfig.gradle"))
+plugins{
+    alias(libs.plugins.oist.application)
+}
 
 android {
     namespace = "jp.oist.abcvlib.basicqrtransmitter"

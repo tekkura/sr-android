@@ -1,15 +1,52 @@
-apply(from = rootProject.file("common-buildconfig.gradle"))
+import jp.oist.abcvlib.AppVersioning.gitHash
+import jp.oist.abcvlib.AppVersioning.isDirty
+import jp.oist.abcvlib.AppVersioning.isTagged
+import jp.oist.abcvlib.AppVersioning.scmTag
+import jp.oist.abcvlib.ModelDownload
+import jp.oist.abcvlib.loadNetworkConfig
+
 plugins {
-    alias(libs.plugins.undercouch.download)
+    alias(libs.plugins.oist.library)
+    `maven-publish`
+    signing
 }
 
 dependencies {
+    // Ui
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.fragment)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.material)
+    // Architecture
+    implementation(libs.androidx.lifecycle.livedata)
+    implementation(libs.androidx.lifecycle.viewmodel)
+    // Navigation
+    implementation(libs.androidx.navigation.fragment)
+    implementation(libs.androidx.navigation.ui)
+    // IOIOLibAndroid
     api(libs.ioio.android)
     implementation(libs.ioio.accessory)
     implementation(libs.ioio.bluetooth)
     implementation(libs.ioio.device)
-    implementation(libs.android.permissions)
+    // CameraX
+    api(libs.androidx.camera.camera2)
+    api(libs.androidx.camera.lifecycle)
+    api(libs.androidx.camera.view)
+    implementation(libs.androidx.camera.extensions)
+    // TensorFlow Lite
+    api(libs.tensorflow.lite.task.vision)
+    implementation(libs.tensorflow.lite.gpu.delegate.plugin)
+    implementation(libs.tensorflow.lite.gpu)
+    // ZXing (QR/Barcode)
+    implementation(libs.zxing.core)
+    implementation(libs.zxing.android.integration)
+    // Other
+    implementation(libs.usb.serial)
     implementation(libs.commons.collections4)
+    api(libs.flatbuffers)
+    api(libs.android.permissions)
+    api(libs.abcvlib.fbclasses)
 }
 
 android {
@@ -17,24 +54,16 @@ android {
     buildFeatures {
         buildConfig = true
     }
-    buildTypes {
-        getByName("optimized") {
-            // shrinkResources not allowed for libs → disable it
-            isShrinkResources = false
-            isMinifyEnabled = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                rootProject.file("proguard-rules.pro")
-            )
-        }
+    defaultConfig {
+        val networkConfig = loadNetworkConfig(rootDir)
+        buildConfigField("String", "IP", "\"${networkConfig.ip}\"")
+        buildConfigField("int", "PORT", "${networkConfig.port}")
     }
 }
 
-project.extra["ASSET_DIR"] = "${projectDir}/src/main/assets"
-
 // Download default models; if you wish to use your own models then
 // place them in the "assets" directory and comment out this line.
-apply(from = "download_models.gradle")
+ModelDownload.configure(project)
 
 tasks.withType<GenerateMavenPom>().configureEach {
     doFirst {
@@ -82,107 +111,4 @@ afterEvaluate {
             }
         }
     }
-}
-
-/**
- * These functions are duplicated here temporarily because
- * Kotlin DSL scripts cannot directly access functions defined
- * in the root project's build.gradle.kts.
- *
- * TODO: Move to build-logic module once implemented
- */
-fun getGitVersion(): String {
-    return try {
-        val longVersionName = "git describe --tags --long".runCommand().trim()
-        val parts = longVersionName.split('-')
-
-        if (parts.size >= 3) {
-            val fullVersionTag = parts[0]
-            val commitCount = parts[1].toIntOrNull() ?: 0
-
-            // Release
-            if (commitCount == 0) {
-                fullVersionTag
-            }
-            // Quickfixes
-            else {
-                longVersionName
-            }
-        } else {
-            longVersionName
-        }
-    } catch (e: Exception) {
-        println("Warning: Failed to fetch git version. Error: ${e.message}")
-        "0.0.0-0-unknown"
-    }
-}
-
-fun scmTag(): String {
-    return try {
-        var gitVersion = System.getenv("VERSION") ?: "null"
-
-        if (gitVersion == "null") {
-            val processTag = "git describe --tags --dirty".runCommand().trim()
-            val processHash = "git rev-parse HEAD".runCommand().trim()
-            gitVersion = "${processTag}_${processHash}"
-        } else {
-            val gitVersionToken = gitVersion.split("/")
-            gitVersion = if (gitVersionToken.size > 2) {
-                gitVersionToken[2]
-            } else {
-                gitVersionToken[0]
-            }
-        }
-        gitVersion
-    } catch (e: Exception) {
-        println("Warning: Failed to fetch SCM tag. Error: ${e.message}")
-        "0-unknown"
-    }
-}
-
-fun gitHash(): String {
-    return try {
-        "git rev-parse HEAD".runCommand().trim()
-    } catch (e: Exception) {
-        println("Warning: Failed to fetch git hash. Error: ${e.message}")
-        "unknown"
-    }
-}
-
-fun isDirty(): Boolean {
-    return try {
-        val dirtyString = "git describe --tags --dirty".runCommand()
-            .trim()
-            .split("-")
-            .lastOrNull() ?: ""
-        dirtyString == "dirty"
-    } catch (e: Exception) {
-        println("Warning: Failed to determine if repository is dirty. Error: ${e.message}")
-        false
-    }
-}
-
-fun isTagged(): Boolean {
-    return try {
-        val longVersionName = "git describe --tags --long".runCommand().trim()
-        val parts = longVersionName.split('-')
-
-        if (parts.size >= 3) {
-            val commitCount = parts[1].toIntOrNull() ?: -1
-            commitCount == 0
-        } else {
-            false
-        }
-    } catch (e: Exception) {
-        println("Warning: Failed to determine if repository is tagged. Error: ${e.message}")
-        false
-    }
-}
-
-// Helper extension function to run shell commands
-fun String.runCommand(): String {
-    val process = Runtime.getRuntime().exec(this)
-    val output = process.inputStream.bufferedReader().readText()
-    process.waitFor()
-    return output
 }

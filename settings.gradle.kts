@@ -2,6 +2,7 @@ import groovy.json.JsonSlurper
 import org.gradle.kotlin.dsl.maven
 
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
