@@ -4,4 +4,8 @@ plugins{
 
 android {
     namespace = "jp.oist.abcvlib.basicassembler"
+
+    buildFeatures {
+        viewBinding = true
+    }
 }
