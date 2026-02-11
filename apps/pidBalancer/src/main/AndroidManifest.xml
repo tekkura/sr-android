@@ -5,7 +5,9 @@
     <application android:theme="@style/Theme.MaterialComponents"
         android:icon="@mipmap/balance"
         android:label="@string/app_name">
-        <activity android:name="jp.oist.abcvlib.pidbalancer.MainActivity">
+        <activity
+            android:name="jp.oist.abcvlib.pidbalancer.MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

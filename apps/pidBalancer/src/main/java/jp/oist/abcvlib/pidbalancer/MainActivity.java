@@ -10,21 +10,21 @@ import androidx.fragment.app.FragmentTransaction;
 import java.util.concurrent.TimeUnit;
 
 import jp.oist.abcvlib.core.AbcvlibActivity;
-import jp.oist.abcvlib.core.AbcvlibLooper;
-import jp.oist.abcvlib.core.IOReadyListener;
 import jp.oist.abcvlib.core.inputs.PublisherManager;
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData;
 import jp.oist.abcvlib.core.inputs.phone.OrientationData;
 import jp.oist.abcvlib.tests.BalancePIDController;
 import jp.oist.abcvlib.fragments.PidGuiFragament;
+import jp.oist.abcvlib.util.UsbSerial;
 
 /**
  * Android application showing connection to IOIOBoard, Hubee Wheels, and Android Sensors
  * Initializes socket connection with external python server
  * Runs PID controller locally on Android, but takes PID parameters from python GUI
+ *
  * @author Christopher Buckley https://github.com/topherbuckley
  */
-public class MainActivity extends AbcvlibActivity implements IOReadyListener{
+public class MainActivity extends AbcvlibActivity {
 
     private final String TAG = getClass().getName();
     private BalancePIDController balancePIDController;
@@ -37,41 +37,37 @@ public class MainActivity extends AbcvlibActivity implements IOReadyListener{
         // ID within the R class
         setContentView(R.layout.activity_main);
 
-        setIoReadyListener(this);
-
         // Passes Android App information up to parent classes for various usages. Do not modify
         super.onCreate(savedInstanceState);
     }
 
-    public void displayPID_GUI(){
+    public void displayPID_GUI() {
         pidGuiFragament = PidGuiFragament.newInstance(balancePIDController);
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.replace(R.id.main_fragment, pidGuiFragament).commit();
     }
 
-    public void buttonClick(View view) {
+    private void buttonClick(View view) {
         Button button = (Button) view;
-        if (button.getText().equals("Start")){
+        if (button.getText().equals("Start")) {
             // Sets initial values rather than wait for slider change
             pidGuiFragament.updatePID();
             button.setText("Stop");
             balancePIDController.startController();
 
-        }else{
+        } else {
             button.setText("Start");
             balancePIDController.stopController();
         }
     }
 
     @Override
-    public void onIOReady(AbcvlibLooper abcvlibLooper) {
+    public void onSerialReady(UsbSerial usbSerial) {
         // Create your data publisher objects
         PublisherManager publisherManager = new PublisherManager();
-        OrientationData orientationData = new OrientationData
-                .Builder(this, publisherManager).build();
-        WheelData wheelData = new WheelData
-                .Builder(this, publisherManager, abcvlibLooper).build();
+        OrientationData orientationData = new OrientationData.Builder(this, publisherManager).build();
+        WheelData wheelData = new WheelData.Builder(this, publisherManager).build();
         // Initialize all publishers (i.e. start their threads and data streams)
         publisherManager.initializePublishers();
 
@@ -88,11 +84,22 @@ public class MainActivity extends AbcvlibActivity implements IOReadyListener{
         // Start your publishers
         publisherManager.startPublishers();
 
+        super.onSerialReady(usbSerial);
+    }
+
+    @Override
+    protected void onOutputsReady() {
         // Adds your custom controller to the compounding master controller.
         getOutputs().getMasterController().addController(balancePIDController);
         // Start the master controller after adding and starting any customer controllers.
         getOutputs().startMasterController();
 
         runOnUiThread(this::displayPID_GUI);
+        super.onOutputsReady();
+    }
+
+    @Override
+    protected void abcvlibMainLoop() {
+        super.abcvlibMainLoop();
     }
 }
