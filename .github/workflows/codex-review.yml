@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  resolve-pr-context:
+  gate-report:
     if: |
       (github.event_name != 'issue_comment' || (
         github.event.issue.pull_request &&
@@ -25,6 +25,20 @@ jobs:
         github.event.pull_request.author_association ||
         github.event.comment.author_association || '')
     runs-on: ubuntu-latest
+    steps:
+      - name: Print pre-gate decision
+        shell: bash
+        run: |
+          echo "Pre-gate report"
+          echo "  event_name: ${{ github.event_name }}"
+          echo "  issue_comment_on_pr: ${{ github.event.issue.pull_request && 'true' || 'false' }}"
+          echo "  comment_body: ${{ github.event.comment.body || '' }}"
+          echo "  event_author_association: ${{ github.event.pull_request.author_association || github.event.comment.author_association || '' }}"
+
+  resolve-pr-context:
+    needs: gate-report
+    if: needs.gate-report.result == 'success'
+    runs-on: ubuntu-latest
     outputs:
       pull_number: ${{ steps.resolve.outputs.pull_number }}
       head_sha: ${{ steps.resolve.outputs.head_sha }}
@@ -32,6 +46,8 @@ jobs:
       author_association: ${{ steps.resolve.outputs.author_association }}
       milestone_number: ${{ steps.resolve.outputs.milestone_number }}
       milestone_title: ${{ steps.resolve.outputs.milestone_title }}
+      should_run_downstream: ${{ steps.resolve.outputs.should_run_downstream }}
+      gate_reason: ${{ steps.resolve.outputs.gate_reason }}
     steps:
       - name: Resolve PR context
         id: resolve
@@ -39,6 +55,14 @@ jobs:
         with:
           script: |
             const eventName = context.eventName;
+            const expectedCommand = '#codex-review';
+            const expectedAssociations = ['MEMBER', 'OWNER'];
+            const isIssueComment = eventName === 'issue_comment';
+            const isPullRequestComment = Boolean(context.payload.issue?.pull_request);
+            const receivedCommentBody = context.payload.comment?.body ?? '';
+            const receivedCommentAuthorAssociation = context.payload.comment?.author_association ?? '';
+            const commentCommandMatches = receivedCommentBody === expectedCommand;
+            const commentAssociationAllowed = expectedAssociations.includes(receivedCommentAuthorAssociation);
             let pr = context.payload.pull_request;
 
             if (!pr && eventName === 'issue_comment') {
@@ -60,21 +84,41 @@ jobs:
               return;
             }
 
+            const prAuthorAssociation = pr.author_association || '';
+            const commandGatePassed = !isIssueComment || (isPullRequestComment && commentCommandMatches);
+            const commentAssociationGatePassed = !isIssueComment || commentAssociationAllowed;
+            const prAssociationAllowed = expectedAssociations.includes(prAuthorAssociation);
+            const shouldRunDownstream = commandGatePassed && commentAssociationGatePassed && prAssociationAllowed;
+            let gateReason = 'ok';
+
+            if (isIssueComment && !isPullRequestComment) {
+              gateReason = 'not_pr_comment';
+            } else if (isIssueComment && !commentCommandMatches) {
+              gateReason = 'bad_command';
+            } else if (isIssueComment && !commentAssociationAllowed) {
+              gateReason = 'comment_author_not_allowed';
+            } else if (!prAssociationAllowed) {
+              gateReason = 'pr_author_not_allowed';
+            }
+
+            core.info(`Gate check: expected event trigger command for issue_comment "${expectedCommand}", received "${receivedCommentBody}"`);
+            core.info(`Gate check: expected issue_comment on PR=true, received ${String(isPullRequestComment)}`);
+            core.info(`Gate check: expected comment author association in [${expectedAssociations.join(', ')}], received "${receivedCommentAuthorAssociation}"`);
+            core.info(`Gate check: expected PR author association in [${expectedAssociations.join(', ')}], received "${prAuthorAssociation}"`);
+            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, commentAssociationGatePassed=${String(commentAssociationGatePassed)}, prAssociationAllowed=${String(prAssociationAllowed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
+
             core.setOutput('pull_number', String(pr.number));
             core.setOutput('head_sha', pr.head?.sha || '');
             core.setOutput('base_sha', pr.base?.sha || '');
-            core.setOutput('author_association', pr.author_association || '');
+            core.setOutput('author_association', prAuthorAssociation);
             core.setOutput('milestone_number', pr.milestone?.number ? String(pr.milestone.number) : '');
             core.setOutput('milestone_title', pr.milestone?.title || '');
+            core.setOutput('should_run_downstream', String(shouldRunDownstream));
+            core.setOutput('gate_reason', gateReason);
 
   rebase-check:
     needs: resolve-pr-context
-    if: |
-      contains(fromJSON('["MEMBER","OWNER"]'), needs.resolve-pr-context.outputs.author_association) &&
-      (github.event_name != 'issue_comment' || (
-        github.event.issue.pull_request &&
-        github.event.comment.body == '#codex-review'
-      ))
+    if: needs.resolve-pr-context.outputs.should_run_downstream == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR head
@@ -98,12 +142,7 @@ jobs:
 
   codex-review:
     needs: [resolve-pr-context, rebase-check]
-    if: |
-      contains(fromJSON('["MEMBER","OWNER"]'), needs.resolve-pr-context.outputs.author_association) &&
-      (github.event_name != 'issue_comment' || (
-        github.event.issue.pull_request &&
-        github.event.comment.body == '#codex-review'
-      ))
+    if: needs.resolve-pr-context.outputs.should_run_downstream == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR merge ref
