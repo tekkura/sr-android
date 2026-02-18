@@ -87,8 +87,7 @@ jobs:
             const prAuthorAssociation = pr.author_association || '';
             const commandGatePassed = !isIssueComment || (isPullRequestComment && commentCommandMatches);
             const commentAssociationGatePassed = !isIssueComment || commentAssociationAllowed;
-            const prAssociationAllowed = expectedAssociations.includes(prAuthorAssociation);
-            const shouldRunDownstream = commandGatePassed && commentAssociationGatePassed && prAssociationAllowed;
+            const shouldRunDownstream = commandGatePassed && commentAssociationGatePassed;
             let gateReason = 'ok';
 
             if (isIssueComment && !isPullRequestComment) {
@@ -97,15 +96,13 @@ jobs:
               gateReason = 'bad_command';
             } else if (isIssueComment && !commentAssociationAllowed) {
               gateReason = 'comment_author_not_allowed';
-            } else if (!prAssociationAllowed) {
-              gateReason = 'pr_author_not_allowed';
             }
 
             core.info(`Gate check: expected event trigger command for issue_comment "${expectedCommand}", received "${receivedCommentBody}"`);
             core.info(`Gate check: expected issue_comment on PR=true, received ${String(isPullRequestComment)}`);
             core.info(`Gate check: expected comment author association in [${expectedAssociations.join(', ')}], received "${receivedCommentAuthorAssociation}"`);
             core.info(`Gate check: expected PR author association in [${expectedAssociations.join(', ')}], received "${prAuthorAssociation}"`);
-            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, commentAssociationGatePassed=${String(commentAssociationGatePassed)}, prAssociationAllowed=${String(prAssociationAllowed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
+            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, commentAssociationGatePassed=${String(commentAssociationGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
 
             core.setOutput('pull_number', String(pr.number));
             core.setOutput('head_sha', pr.head?.sha || '');
