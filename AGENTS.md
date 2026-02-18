@@ -6,7 +6,7 @@ Scope
 - Small, safe fixes (e.g. obvious typos) are fine as long as they are intentional and do not introduce changes to other parts of the project that are not included in this PR.
 
 Migration guides
-- If a PR has a milestone label, map it to `docs/migrations/NN-<Title>.md` and use that file as the review checklist.
+- If a PR has a milestone label, map it to `docs/migrations/<Title>.md` and use that file as the review checklist.
 - If needed, use `gh` CLI to fetch the PR’s milestone/labels to select the correct guide.
 - If compliance is unclear, request the PR description to cite the guide section(s).
 
