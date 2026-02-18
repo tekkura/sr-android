@@ -20,10 +20,7 @@ jobs:
       (github.event_name != 'issue_comment' || (
         github.event.issue.pull_request &&
         github.event.comment.body == '#codex-review'
-      )) &&
-      contains(fromJSON('["MEMBER","OWNER"]'),
-        github.event.pull_request.author_association ||
-        github.event.comment.author_association || '')
+      ))
     runs-on: ubuntu-latest
     steps:
       - name: Print pre-gate decision
@@ -62,7 +59,6 @@ jobs:
             const receivedCommentBody = context.payload.comment?.body ?? '';
             const receivedCommentAuthorAssociation = context.payload.comment?.author_association ?? '';
             const commentCommandMatches = receivedCommentBody === expectedCommand;
-            const commentAssociationAllowed = expectedAssociations.includes(receivedCommentAuthorAssociation);
             let pr = context.payload.pull_request;
 
             if (!pr && eventName === 'issue_comment') {
@@ -86,23 +82,20 @@ jobs:
 
             const prAuthorAssociation = pr.author_association || '';
             const commandGatePassed = !isIssueComment || (isPullRequestComment && commentCommandMatches);
-            const commentAssociationGatePassed = !isIssueComment || commentAssociationAllowed;
-            const shouldRunDownstream = commandGatePassed && commentAssociationGatePassed;
+            const shouldRunDownstream = commandGatePassed;
             let gateReason = 'ok';
 
             if (isIssueComment && !isPullRequestComment) {
               gateReason = 'not_pr_comment';
             } else if (isIssueComment && !commentCommandMatches) {
               gateReason = 'bad_command';
-            } else if (isIssueComment && !commentAssociationAllowed) {
-              gateReason = 'comment_author_not_allowed';
             }
 
             core.info(`Gate check: expected event trigger command for issue_comment "${expectedCommand}", received "${receivedCommentBody}"`);
             core.info(`Gate check: expected issue_comment on PR=true, received ${String(isPullRequestComment)}`);
             core.info(`Gate check: expected comment author association in [${expectedAssociations.join(', ')}], received "${receivedCommentAuthorAssociation}"`);
             core.info(`Gate check: expected PR author association in [${expectedAssociations.join(', ')}], received "${prAuthorAssociation}"`);
-            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, commentAssociationGatePassed=${String(commentAssociationGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
+            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
 
             core.setOutput('pull_number', String(pr.number));
             core.setOutput('head_sha', pr.head?.sha || '');
