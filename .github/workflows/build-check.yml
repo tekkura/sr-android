@@ -2,7 +2,13 @@ name: Build Check
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - milestone/**
+
+concurrency:
+  group: build-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

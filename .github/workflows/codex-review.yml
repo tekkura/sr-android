@@ -1,0 +1,232 @@
+name: Codex PR Review
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: codex-review-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resolve-pr-context:
+    if: |
+      (github.event_name != 'issue_comment' || (
+        github.event.issue.pull_request &&
+        github.event.comment.body == '#codex-review'
+      )) &&
+      contains(fromJSON('["MEMBER","OWNER"]'),
+        github.event.pull_request.author_association ||
+        github.event.comment.author_association || '')
+    runs-on: ubuntu-latest
+    outputs:
+      pull_number: ${{ steps.resolve.outputs.pull_number }}
+      head_sha: ${{ steps.resolve.outputs.head_sha }}
+      base_sha: ${{ steps.resolve.outputs.base_sha }}
+      author_association: ${{ steps.resolve.outputs.author_association }}
+      milestone_number: ${{ steps.resolve.outputs.milestone_number }}
+      milestone_title: ${{ steps.resolve.outputs.milestone_title }}
+    steps:
+      - name: Resolve PR context
+        id: resolve
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const eventName = context.eventName;
+            let pr = context.payload.pull_request;
+
+            if (!pr && eventName === 'issue_comment') {
+              if (!context.payload.issue?.pull_request) {
+                core.setFailed('issue_comment is not on a pull request');
+                return;
+              }
+              const pull_number = context.issue.number;
+              const response = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number,
+              });
+              pr = response.data;
+            }
+
+            if (!pr) {
+              core.setFailed('Unable to resolve pull request context from event payload');
+              return;
+            }
+
+            core.setOutput('pull_number', String(pr.number));
+            core.setOutput('head_sha', pr.head?.sha || '');
+            core.setOutput('base_sha', pr.base?.sha || '');
+            core.setOutput('author_association', pr.author_association || '');
+            core.setOutput('milestone_number', pr.milestone?.number ? String(pr.milestone.number) : '');
+            core.setOutput('milestone_title', pr.milestone?.title || '');
+
+  rebase-check:
+    needs: resolve-pr-context
+    if: |
+      contains(fromJSON('["MEMBER","OWNER"]'), needs.resolve-pr-context.outputs.author_association) &&
+      (github.event_name != 'issue_comment' || (
+        github.event.issue.pull_request &&
+        github.event.comment.body == '#codex-review'
+      ))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-pr-context.outputs.head_sha }}
+          fetch-depth: 0
+
+      - name: Ensure PR is rebased onto base
+        shell: bash
+        run: |
+          git fetch --no-tags origin ${{ needs.resolve-pr-context.outputs.base_sha }}
+          if ! git merge-base --is-ancestor \
+            ${{ needs.resolve-pr-context.outputs.base_sha }} \
+            ${{ needs.resolve-pr-context.outputs.head_sha }}; then
+            echo "PR head is not rebased onto base."
+            echo "Base SHA: ${{ needs.resolve-pr-context.outputs.base_sha }}"
+            echo "Head SHA: ${{ needs.resolve-pr-context.outputs.head_sha }}"
+            exit 1
+          fi
+
+  codex-review:
+    needs: [resolve-pr-context, rebase-check]
+    if: |
+      contains(fromJSON('["MEMBER","OWNER"]'), needs.resolve-pr-context.outputs.author_association) &&
+      (github.event_name != 'issue_comment' || (
+        github.event.issue.pull_request &&
+        github.event.comment.body == '#codex-review'
+      ))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR merge ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-pr-context.outputs.head_sha }}
+          fetch-depth: 0
+
+      - name: Debug workflow refs
+        shell: bash
+        run: |
+          echo "GITHUB_WORKFLOW_REF=$GITHUB_WORKFLOW_REF"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "--- workflow file (first 120 lines) ---"
+          sed -n '1,120p' .github/workflows/codex-review.yml
+
+      - name: Fetch PR base and head
+        shell: bash
+        run: |
+          git fetch --no-tags origin ${{ needs.resolve-pr-context.outputs.base_sha }}
+          git fetch --no-tags origin ${{ needs.resolve-pr-context.outputs.head_sha }}
+
+      - name: Resolve migration guide
+        id: guide
+        shell: bash
+        run: |
+          num="${{ needs.resolve-pr-context.outputs.milestone_number }}"
+          if [ -z "$num" ]; then
+            echo "PR has no milestone set."
+            exit 1
+          fi
+
+          title="${{ needs.resolve-pr-context.outputs.milestone_title }}"
+          if [ -z "$title" ]; then
+            echo "PR has no milestone title set."
+            exit 1
+          fi
+
+          # Sanitize title for filename matching
+          safe=$(echo "$title" | sed -E 's/[^A-Za-z0-9._-]+/_/g' | sed -E 's/^_+|_+$//g')
+          glob="docs/migrations/${safe}.md"
+          matches=$(ls $glob 2>/dev/null || true)
+          count=$(echo "$matches" | sed '/^$/d' | wc -l | tr -d ' ')
+          if [ "$count" -ne 1 ]; then
+            echo "Expected exactly one migration guide for milestone title: $title"
+            echo "Sanitized title: $safe"
+            echo "Attempted match: $glob"
+            echo "Match count: $count"
+            if [ -n "$matches" ]; then
+              echo "Matches:"
+              echo "$matches"
+            fi
+            exit 1
+          fi
+
+          echo "GUIDE_PATH=$matches" >> "$GITHUB_ENV"
+
+      - name: Build Codex prompt
+        shell: bash
+        run: |
+          cat .github/codex/prompts/review.md > /tmp/codex_prompt.md
+          echo "" >> /tmp/codex_prompt.md
+          echo "AGENTS instructions (from HEAD):" >> /tmp/codex_prompt.md
+          cat AGENTS.md >> /tmp/codex_prompt.md
+          echo "" >> /tmp/codex_prompt.md
+          echo "Migration guide (from HEAD): $GUIDE_PATH" >> /tmp/codex_prompt.md
+          cat "$GUIDE_PATH" >> /tmp/codex_prompt.md
+          echo "" >> /tmp/codex_prompt.md
+          echo "Review only the PR changes using:" >> /tmp/codex_prompt.md
+          echo "git diff ${{ needs.resolve-pr-context.outputs.base_sha }}...${{ needs.resolve-pr-context.outputs.head_sha }}" >> /tmp/codex_prompt.md
+          echo "" >> /tmp/codex_prompt.md
+          echo "For any inline comment, first find the exact line number with: nl -ba <file>." >> /tmp/codex_prompt.md
+
+      - name: Run Codex review
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: /tmp/codex_prompt.md
+          sandbox: read-only
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        env:
+          REVIEW_BODY: ${{ steps.codex.outputs.final-message }}
+        with:
+          script: |
+            const raw = process.env.REVIEW_BODY || '';
+            let summary = raw || 'Codex review produced no output.';
+            let comments = [];
+            let event = 'REQUEST_CHANGES';
+
+            try {
+              const parsed = JSON.parse(raw);
+              summary = parsed.summary || summary;
+              comments = Array.isArray(parsed.comments) ? parsed.comments : [];
+
+            } catch (err) {
+              core.setFailed(`Codex output is not valid JSON: ${err.message}`);
+              return;
+            }
+
+            const reviewComments = comments
+              .filter((c) => c && c.path && Number.isInteger(c.line))
+              .map((c) => ({
+                path: c.path,
+                line: c.line,
+                side: 'RIGHT',
+                body: c.body || c.summary || c.message || 'Codex review comment.'
+              }));
+
+            if (reviewComments.length === 0) {
+              event = 'APPROVE';
+            } else {
+              summary = 'Codex review with inline comments.';
+            }
+
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number('${{ needs.resolve-pr-context.outputs.pull_number }}'),
+              event,
+              body: summary,
+              comments: reviewComments
+            });
