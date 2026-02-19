@@ -23,42 +23,41 @@ Each app/library migration should be done in a separate PR for clarity and revie
 - `apps/serverLearning`
 
 ### 2) Migrate `abcvlib` Library
-- `abcvlib/core`
-- `abcvlib/fragments`
-- `abcvlib/tests`
-- `abcvlib/util`
+- `abcvlib/core..`
+- `abcvlib/fragments..`
+- `abcvlib/tests..`
+- `abcvlib/util..`
 
 ## Required outcomes
 - Target module(s) are 100% Kotlin (no remaining Java files).
 
 ## Migration rules (review checks)
-- Apply Android Studio hints and suggestions that improve code quality.
-- If a layout is complex, View Binding is allowed:
+-   Accept Android Studio hints and suggestions that improve code quality.
+-   Keep using the existing logic as much as possible.
+-   Do not suggest improvements or bug fixes at this milestone.
+-   Allow minor typo corrections and identifier renaming, provided they do not affect files outside the current PR.
+-   If a layout is complex, using `viewBinding` is allowed instead of `findViewById`.
+-   Do not introduce lifecycle- or resource-safety logic at this milestone.
 
-```gradle
-buildFeatures {
-    viewBinding = true
-}
-```
+## Null Safety (see tekkura/sr-android#56)
 
-- Do not introduce lifecycle- or resource-safety logic at this milestone.
+-   Avoid safe calls for required objects. Do not use `?.` for objects that are essential to the app.
+-   If something is essential for the app to function, it must not be nullable and must crash loudly if missing.
+-   Use `lateinit` as much as possible for non-null objects.
+-   If an object will never be null” → then make Kotlin enforce it, for example `public void onSerialReady(UsbSerial usbSerial)` might be converted automatically as nullable `onSerialReady(usbSerial: UsbSerial?)` however this should be strictly non-null, and by the same for all function parameters if they are non-null in java code.
 
-## Null safety (see tekkura/sr-android#56)
-- Avoid safe calls for required objects. Do not use `?.` for objects that are essential to the app’s
-- If something is essential for the app to function, it must NOT be nullable, and it must crash loudly if missing.
-- If an object will never be null” → then make Kotlin enforce it, for example `public void onSerialReady(UsbSerial usbSerial)` might be converted automatically as nullable `onSerialReady(usbSerial: UsbSerial?)` however this should be strictly non-null, and by the same for all function parameters if they are non-null in java code.
+## Periodic / Scheduled Updates
 
-## Periodic / scheduled updates
-- UI updates may use coroutines:
+-   UI updates may use coroutines instead of `scheduleAtFixedRate` or `scheduleWithFixedDelay` (optional):
 
-```kotlin
+``` kotlin
 lifecycleScope.launch {
     while (isActive) {
-        // call suspend method that update ui
+        // call suspend method that updates UI
         delay(100)
     }
 }
 ```
 
-- State updates must continue to use `scheduleAtFixedRate`.
-- Fixed delay is only acceptable for UI updates; non-UI state/actions must use fixed rate.
+-   UI updates may use View Binding directly instead of volatile variables and infinite loops or scheduled tasks.
+-   State updates must continue using the existing method either `scheduleAtFixedRate` or `scheduleWithFixedDelay`. Do not accept replacing them with coroutines.
