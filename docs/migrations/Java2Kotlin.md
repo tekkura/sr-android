@@ -29,7 +29,7 @@ Each app/library migration should be done in a separate PR for clarity and revie
 - `abcvlib/util..`
 
 ## Required outcomes
-- Files in the PR should be strictly Kotlin. Deletion of Java files is allowed. Updates or changes to Java files are not allowed.
+- Updates or changes to Java files are not allowed. All code must be migrated to Kotlin. Changes to build files or otherwise config files are allowed.
 
 ## Migration rules (review checks)
 -   Accept Android Studio hints and suggestions that improve code quality.
