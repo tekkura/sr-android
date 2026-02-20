@@ -80,9 +80,9 @@ class MainActivity : AbcvlibActivity() {
 
     override fun onOutputsReady() {
         // Adds your custom controller to the compounding master controller.
-        getOutputs().masterController.addController(balancePIDController)
+        outputs.masterController.addController(balancePIDController)
         // Start the master controller after adding and starting any customer controllers.
-        getOutputs().startMasterController()
+        outputs.startMasterController()
 
         runOnUiThread { displayPidUi() }
     }
