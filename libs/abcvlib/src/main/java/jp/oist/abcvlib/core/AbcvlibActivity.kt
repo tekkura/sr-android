@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit
  * @author Christopher Buckley https://github.com/topherbuckley
  */
 abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
-    private var _switches = Switches()
+    var switches = Switches()
     protected lateinit var usbSerial: UsbSerial
     protected lateinit var outputs: Outputs
     private var serialCommManager: SerialCommManager? = null
@@ -98,15 +98,7 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     }
 
     private fun initializeOutputs() {
-        outputs = Outputs(_switches, serialCommManager!!)
-    }
-
-    fun getSwitches(): Switches {
-        return _switches
-    }
-
-    fun setSwitches(switches: Switches) {
-        this._switches = switches
+        outputs = Outputs(switches, serialCommManager!!)
     }
 
     protected fun setSerialCommManager(serialCommManager: SerialCommManager) {
