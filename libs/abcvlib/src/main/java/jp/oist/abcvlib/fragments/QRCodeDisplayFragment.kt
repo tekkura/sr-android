@@ -50,11 +50,7 @@ class QRCodeDisplayFragment(
     }
 
     @Throws(WriterException::class)
-    private fun encodeAsBitmap(contents: String?, imgWidth: Int, imgHeight: Int): Bitmap? {
-        if (contents == null) {
-            return null
-        }
-
+    private fun encodeAsBitmap(contents: String, imgWidth: Int, imgHeight: Int): Bitmap? {
         val hints = EnumMap<EncodeHintType, Any>(EncodeHintType::class.java)
         hints[EncodeHintType.CHARACTER_SET] = "UTF-8"
         hints[EncodeHintType.MARGIN] = 0
