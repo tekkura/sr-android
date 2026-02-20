@@ -97,20 +97,6 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         )
     }
 
-
-    @JvmName("getOutputs1")
-    protected fun getOutputs(): Outputs {
-        if (::outputs.isInitialized.not()) {
-            throw RuntimeException(
-                "Outputs is null. You are trying to access outputs before " +
-                        "it has been initialized. Make sure to call super.onCreate() in your onCreate " +
-                        "method."
-            )
-        }
-        return outputs
-    }
-
-
     private fun initializeOutputs() {
         outputs = Outputs(_switches, serialCommManager!!)
     }
