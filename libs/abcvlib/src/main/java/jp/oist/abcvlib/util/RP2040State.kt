@@ -78,7 +78,7 @@ internal class RP2040State(
     }
 
     fun updatePublishers() {
-        if (batteryData.getState() != PublisherState.STARTED || wheelData.getState() != PublisherState.STARTED) {
+        if (batteryData.state != PublisherState.STARTED || wheelData.state != PublisherState.STARTED) {
             return
         }
         val ts = System.nanoTime()
