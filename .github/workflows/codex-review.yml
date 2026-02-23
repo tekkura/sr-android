@@ -40,6 +40,7 @@ jobs:
       pull_number: ${{ steps.resolve.outputs.pull_number }}
       head_sha: ${{ steps.resolve.outputs.head_sha }}
       base_sha: ${{ steps.resolve.outputs.base_sha }}
+      pr_body: ${{ steps.resolve.outputs.pr_body }}
       author_association: ${{ steps.resolve.outputs.author_association }}
       milestone_number: ${{ steps.resolve.outputs.milestone_number }}
       milestone_title: ${{ steps.resolve.outputs.milestone_title }}
@@ -100,6 +101,7 @@ jobs:
             core.setOutput('pull_number', String(pr.number));
             core.setOutput('head_sha', pr.head?.sha || '');
             core.setOutput('base_sha', pr.base?.sha || '');
+            core.setOutput('pr_body', pr.body || '');
             core.setOutput('author_association', prAuthorAssociation);
             core.setOutput('milestone_number', pr.milestone?.number ? String(pr.milestone.number) : '');
             core.setOutput('milestone_title', pr.milestone?.title || '');
@@ -204,6 +206,11 @@ jobs:
           echo "" >> /tmp/codex_prompt.md
           echo "Migration guide (from HEAD): $GUIDE_PATH" >> /tmp/codex_prompt.md
           cat "$GUIDE_PATH" >> /tmp/codex_prompt.md
+          echo "" >> /tmp/codex_prompt.md
+          echo "PR description (from GitHub):" >> /tmp/codex_prompt.md
+          cat <<'EOF' >> /tmp/codex_prompt.md
+          ${{ needs.resolve-pr-context.outputs.pr_body }}
+          EOF
           echo "" >> /tmp/codex_prompt.md
           echo "Review only the PR changes using:" >> /tmp/codex_prompt.md
           echo "git diff ${{ needs.resolve-pr-context.outputs.base_sha }}...${{ needs.resolve-pr-context.outputs.head_sha }}" >> /tmp/codex_prompt.md
