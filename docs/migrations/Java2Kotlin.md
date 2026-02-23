@@ -28,8 +28,15 @@ Each app/library migration should be done in a separate PR for clarity and revie
 - `abcvlib/tests..`
 - `abcvlib/util..`
 
+### 3) `abcvlib` split policy (allowed)
+- `abcvlib` may be split across multiple PRs by stable subpackage/slice for reviewability (for example `abcvlib/core/inputs`, `abcvlib/core/learning`, `abcvlib/util`).
+- This does not violate the milestone, as long as the PR description clearly declares the exact slice in scope and links sibling PRs/issues for remaining slices.
+- Reviewers should evaluate the declared slice only against migration rules and avoid failing solely because unrelated `abcvlib` Java files remain outside that slice.
+
 ## Required outcomes
-- Updates or changes to Java files are not allowed. All code must be migrated to Kotlin. Changes to build files or otherwise config files are allowed.
+- Within the declared PR scope, updates or changes to Java files are not allowed: code in scope must be migrated to Kotlin.
+- For milestone tracking, full Java-to-Kotlin completion is required across all planned PR slices.
+- Changes to build files or otherwise config files are allowed.
 
 ## Migration rules (review checks)
 -   Accept Android Studio hints and suggestions that improve code quality.
