@@ -95,9 +95,10 @@ jobs:
           
           Task:
           - Evaluate whether the developer response is technically correct based on repository code and the PR diff.
+          - Actively verify claims by checking relevant code paths/usages in the repository instead of only restating uncertainty.
           - Return one verdict: AGREE, DISAGREE, or NEEDS_INFO.
           - Provide concise reasoning and concrete file evidence.
-          - If evidence is ambiguous, return NEEDS_INFO and request the minimum missing proof.
+          - Only return NEEDS_INFO after attempting repository-based verification and finding that evidence is still insufficient.
           
           Required output format (strict JSON only, no markdown):
           {
@@ -117,6 +118,8 @@ jobs:
           - Base conclusions on repository files and this PR diff only.
           - Do not invent files or lines.
           - Keep reasoning concise and technical.
+          - For dependency/safety questions (for example, exception-type dependencies), check in-repo call sites/catch sites before concluding.
+          - Do not ask the developer for proof if repository evidence already supports a verdict.
           """
           
           with open("/tmp/codex_reply_prompt.md", "w", encoding="utf-8") as f:
