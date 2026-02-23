@@ -38,6 +38,10 @@ Each app/library migration should be done in a separate PR for clarity and revie
 -   Allow minor typo corrections and identifier renaming, provided they do not affect files outside the current PR.
 -   If a layout is complex, using `viewBinding` is allowed instead of `findViewById`.
 -   Do not introduce lifecycle- or resource-safety logic at this milestone.
+-   Do not bypass JVM accessor clashes by renaming canonical properties to underscore-backed names (for example `state` -> `_state`) when the rename is only used to avoid getter/setter conflicts.
+-   Do not bypass accessor clashes with `@JvmField` if it changes accessor/Java API behavior.
+-   Resolve accessor clashes by preserving the canonical property name and using accessor design that keeps prior API intent:
+    keep one canonical property, remove redundant explicit accessors when possible, and set accessor visibility explicitly (for example `var state ... protected set`) so required public getter behavior (for example `getState()`) is preserved.
 
 ## Null Safety (see tekkura/sr-android#56)
 
