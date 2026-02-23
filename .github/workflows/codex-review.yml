@@ -455,18 +455,39 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: pullNumber,
-                event: 'COMMENT',
+                event: 'REQUEST_CHANGES',
                 body: summary,
                 comments: newReviewComments,
               });
               return;
             }
 
-            if (findings.length === 0) {
-              await github.rest.issues.createComment({
+            if (findings.length > 0) {
+              const matchedOnlySummary = [
+                summary,
+                '',
+                'No new inline findings were identified in this run.',
+                'Existing unresolved issues remain, and follow-up comments were posted on related existing review threads.',
+              ].join('\n');
+
+              await github.rest.pulls.createReview({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: pullNumber,
+                pull_number: pullNumber,
+                event: 'COMMENT',
+                body: matchedOnlySummary,
+                comments: [],
+              });
+              return;
+            }
+
+            if (findings.length === 0) {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullNumber,
+                event: 'APPROVE',
                 body: summary,
+                comments: [],
               });
             }
