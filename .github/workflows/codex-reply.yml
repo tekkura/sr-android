@@ -81,9 +81,17 @@ jobs:
 
       - name: Build Codex follow-up prompt
         shell: bash
+        env:
+          BASE_SHA: ${{ steps.context.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.context.outputs.head_sha }}
+          ORIGINAL_COMMENT: ${{ steps.context.outputs.original_comment }}
+          DEVELOPER_RESPONSE: ${{ steps.context.outputs.developer_response }}
+          THREAD_SUMMARY: ${{ steps.context.outputs.thread_summary }}
         run: |
-          cat > /tmp/codex_reply_prompt.md <<'EOF'
-          You are reviewing a developer's response to a prior Codex review comment in a PR thread.
+          python3 - <<'PY'
+          import os
+          
+          prompt = """You are reviewing a developer's response to a prior Codex review comment in a PR thread.
           
           Task:
           - Evaluate whether the developer response is technically correct based on repository code and the PR diff.
@@ -109,22 +117,20 @@ jobs:
           - Base conclusions on repository files and this PR diff only.
           - Do not invent files or lines.
           - Keep reasoning concise and technical.
-          EOF
-
-          {
-            echo ""
-            echo "PR diff boundary:"
-            echo "git diff ${{ steps.context.outputs.base_sha }}...${{ steps.context.outputs.head_sha }}"
-            echo ""
-            echo "Original codex review comment:"
-            echo "${{ steps.context.outputs.original_comment }}"
-            echo ""
-            echo "Developer response (trigger comment body without command):"
-            echo "${{ steps.context.outputs.developer_response }}"
-            echo ""
-            echo "Thread comments (JSON):"
-            echo '${{ steps.context.outputs.thread_summary }}'
-          } >> /tmp/codex_reply_prompt.md
+          """
+          
+          with open("/tmp/codex_reply_prompt.md", "w", encoding="utf-8") as f:
+              f.write(prompt)
+              f.write("\n\nPR diff boundary:\n")
+              f.write(f"git diff {os.getenv('BASE_SHA','')}...{os.getenv('HEAD_SHA','')}\n\n")
+              f.write("Original codex review comment:\n")
+              f.write(os.getenv("ORIGINAL_COMMENT", ""))
+              f.write("\n\nDeveloper response (trigger comment body without command):\n")
+              f.write(os.getenv("DEVELOPER_RESPONSE", ""))
+              f.write("\n\nThread comments (JSON):\n")
+              f.write(os.getenv("THREAD_SUMMARY", "[]"))
+              f.write("\n")
+          PY
 
       - name: Run Codex follow-up
         id: codex
