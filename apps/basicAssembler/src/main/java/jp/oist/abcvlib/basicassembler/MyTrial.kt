@@ -30,8 +30,8 @@ class MyTrial(
         // Use data as input to your policy and select action here
         // Just using default actions of each set as an example but this
         // should be replaced by your policy's decision process
-        val motionAction: MotionAction = motionActionSet.motionActions[1]
-        val commAction: CommAction = commActionSet.commActions[0]
+        val motionAction: MotionAction = motionActionSet.motionActions[1]!!
+        val commAction: CommAction = commActionSet.commActions[0]!!
 
         // Add your selected actions to the TimeStepDataBuffer for record
         data.actions.add(motionAction, commAction)
@@ -45,7 +45,7 @@ class MyTrial(
         )
 
         // Note this will never be called when the myStepHandler.getTimeStep() >= myStepHandler.getMaxTimeStep() as the forward method will no longer be called
-        mainHandler.post { guiUpdater.updateGUIValues(data, getTimeStep(), getEpisodeCount()) }
+        mainHandler.post { guiUpdater.updateGUIValues(data, timeStep, episodeCount) }
     }
 
     // If you want to do things at the start/end of the episode/trail you can override these methods from Trail
