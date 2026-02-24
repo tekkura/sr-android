@@ -303,8 +303,8 @@ class FlatbufferAssembler(
     }
 
     private fun addActionData(timeStepData: TimeStepData): Int {
-        val ca = timeStepData.actions.commAction
-        val ma = timeStepData.actions.motionAction
+        val ca = timeStepData.actions.commAction!!
+        val ma = timeStepData.actions.motionAction!!
         Logger.v(TAG, "CommAction : " + ca.actionByte)
         Logger.v(TAG, "MotionAction : " + ma.actionName)
         val caOffset = CommAction.createCommAction(
