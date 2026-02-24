@@ -191,69 +191,69 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         }
 
         class WheelData {
-            private var _left: IndividualWheelData = IndividualWheelData()
-            private var _right: IndividualWheelData = IndividualWheelData()
+            private var left: IndividualWheelData = IndividualWheelData()
+            private var right: IndividualWheelData = IndividualWheelData()
 
-            fun getLeft(): IndividualWheelData = _left
-            fun getRight(): IndividualWheelData = _right
+            fun getLeft(): IndividualWheelData = left
+            fun getRight(): IndividualWheelData = right
 
             class IndividualWheelData {
-                private val _timestamps = arrayListOf<Long>()
-                private val _counts = arrayListOf<Int>()
-                private val _distances = arrayListOf<Double>()
-                private val _speedsInstantaneous = arrayListOf<Double>()
-                private val _speedsBuffered = arrayListOf<Double>()
-                private val _speedsExpAvg = arrayListOf<Double>()
+                private val timestamps = arrayListOf<Long>()
+                private val counts = arrayListOf<Int>()
+                private val distances = arrayListOf<Double>()
+                private val speedsInstantaneous = arrayListOf<Double>()
+                private val speedsBuffered = arrayListOf<Double>()
+                private val speedsExpAvg = arrayListOf<Double>()
 
                 fun put(
                     timestamp: Long, count: Int, distance: Double, speedInstantaneous: Double,
                     speedBuffered: Double, speedExpAvg: Double
                 ) {
-                    _timestamps.add(timestamp)
-                    _counts.add(count)
-                    _distances.add(distance)
-                    _speedsInstantaneous.add(speedInstantaneous)
-                    _speedsBuffered.add(speedBuffered)
-                    _speedsExpAvg.add(speedExpAvg)
+                    timestamps.add(timestamp)
+                    counts.add(count)
+                    distances.add(distance)
+                    speedsInstantaneous.add(speedInstantaneous)
+                    speedsBuffered.add(speedBuffered)
+                    speedsExpAvg.add(speedExpAvg)
                 }
 
-                fun getTimeStamps() = _timestamps.toLongArray()
-                fun getCounts() = _counts.toIntArray()
-                fun getDistances() = _distances.toDoubleArray()
-                fun getSpeedsInstantaneous() = _speedsInstantaneous.toDoubleArray()
-                fun getSpeedsBuffered() = _speedsBuffered.toDoubleArray()
-                fun getSpeedsExpAvg() = _speedsExpAvg.toDoubleArray()
+                fun getTimeStamps() = timestamps.toLongArray()
+                fun getCounts() = counts.toIntArray()
+                fun getDistances() = distances.toDoubleArray()
+                fun getSpeedsInstantaneous() = speedsInstantaneous.toDoubleArray()
+                fun getSpeedsBuffered() = speedsBuffered.toDoubleArray()
+                fun getSpeedsExpAvg() = speedsExpAvg.toDoubleArray()
             }
 
         }
 
         class ChargerData {
-            private val _timestamps = arrayListOf<Long>()
-            private val _chargerVoltage = arrayListOf<Double>()
-            private val _coilVoltage = arrayListOf<Double>()
+            private val timestamps = arrayListOf<Long>()
+            private val chargerVoltage = arrayListOf<Double>()
+            private val coilVoltage = arrayListOf<Double>()
 
             fun put(timestamp: Long, chargerVoltage: Double, coilVoltage: Double) {
-                _timestamps.add(timestamp)
-                _chargerVoltage.add(chargerVoltage)
-                _coilVoltage.add(coilVoltage)
+                timestamps.add(timestamp)
+                this.chargerVoltage.add(chargerVoltage)
+                this.coilVoltage.add(coilVoltage)
             }
 
-            fun getTimeStamps() = _timestamps.toLongArray()
-            fun getChargerVoltage() = _chargerVoltage.toDoubleArray()
-            fun getCoilVoltage() = _coilVoltage.toDoubleArray()
+            fun getTimeStamps() = timestamps.toLongArray()
+            fun getChargerVoltage() = chargerVoltage.toDoubleArray()
+            fun getCoilVoltage() = coilVoltage.toDoubleArray()
         }
 
         class BatteryData {
-            private val _timestamps = arrayListOf<Long>()
-            private val _voltage = arrayListOf<Double>()
+            private val timestamps = arrayListOf<Long>()
+            private val voltage = arrayListOf<Double>()
 
             fun put(voltage: Double, timestamp: Long) {
-                _timestamps.add(timestamp)
-                _voltage.add(voltage)
+                timestamps.add(timestamp)
+                this.voltage.add(voltage)
             }
 
-            fun getTimeStamps() = _timestamps.toLongArray()
-            fun getVoltage() = _voltage.toDoubleArray()
+            fun getTimeStamps() = timestamps.toLongArray()
+            fun getVoltage() = voltage.toDoubleArray()
         }
 
         class SoundData {
@@ -271,12 +271,12 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             var totalSamplesCalculatedViaTime: Long = 0
                 private set
 
-            private val _levels = arrayListOf<Float>()
-            fun getLevels() = _levels.toFloatArray()
+            private val levels = arrayListOf<Float>()
+            fun getLevels() = levels.toFloatArray()
 
             fun add(levels: FloatArray, numSamples: Int) {
                 for (level in levels) {
-                    _levels.add(level)
+                    this.levels.add(level)
                 }
                 totalSamples += numSamples.toLong()
             }
@@ -334,9 +334,9 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         }
 
         class OrientationData {
-            private val _timestamps = arrayListOf<Long>()
-            private val _tiltAngle = arrayListOf<Double>()
-            private val _angularVelocity = arrayListOf<Double>()
+            private val timestamps = arrayListOf<Long>()
+            private val tiltAngle = arrayListOf<Double>()
+            private val angularVelocity = arrayListOf<Double>()
 
             /**
              * @param timestamp long nano-time
@@ -344,14 +344,14 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
              * @param _angularVelocity in radians per second
              */
             fun put(timestamp: Long, tiltAngle: Double, angularVelocity: Double) {
-                _timestamps.add(timestamp)
-                _tiltAngle.add(tiltAngle)
-                _angularVelocity.add(angularVelocity)
+                timestamps.add(timestamp)
+                this.tiltAngle.add(tiltAngle)
+                this.angularVelocity.add(angularVelocity)
             }
 
-            fun getTimeStamps() = _timestamps.toLongArray()
-            fun getTiltAngle() = _tiltAngle.toDoubleArray()
-            fun getAngularVelocity() = _angularVelocity.toDoubleArray()
+            fun getTimeStamps() = timestamps.toLongArray()
+            fun getTiltAngle() = tiltAngle.toDoubleArray()
+            fun getAngularVelocity() = angularVelocity.toDoubleArray()
         }
     }
 }
