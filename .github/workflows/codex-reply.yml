@@ -135,6 +135,21 @@ jobs:
               f.write("\n")
           PY
 
+      - name: Verify Codex secret availability
+        shell: bash
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          IS_CROSS_REPO: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          if [ -z "${OPENAI_API_KEY}" ]; then
+            echo "OPENAI_API_KEY is unavailable in this workflow run context."
+            if [ "${IS_CROSS_REPO}" = "true" ]; then
+              echo "This appears to be a fork PR review-comment event; GitHub does not expose repository secrets here."
+              echo "Use a branch in ${GITHUB_REPOSITORY} for inline #codex-reply support."
+            fi
+            exit 1
+          fi
+
       - name: Run Codex follow-up
         id: codex
         uses: openai/codex-action@v1
