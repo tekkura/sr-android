@@ -6,6 +6,10 @@ This repo itself is an Android project, so opening the root of the repo in Andro
 
 Although abcvlib can be used as an external dependency (see [Using abcvlib as an external dependency](#using-abcvlib-as-an-external-dependency)), it is likely easier to get to know the API by looking at the example applications. The example applications are located in the apps directory and are designed to be simple examples of how to use core features of the library.
 
+## PR Workflow
+
+See `docs/PR_WORKFLOW.md` for the required milestone branch naming, review process, and merge flow.
+
 ## Building abcvlib and the Example Applications
 
 ### Prerequisites

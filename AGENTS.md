@@ -1,5 +1,8 @@
 ## Review guidelines
 
+Workflow
+- Follow `docs/PR_WORKFLOW.md` for branch naming, milestone guide usage, Codex trigger usage, and merge flow.
+
 Scope
 - One high-level task per PR. If multiple unrelated goals appear, request a split.
 - Large formatting changes or unrelated refactors should be proposed separately.

@@ -1,6 +1,7 @@
 ## Summary
 - What is in scope for this PR?
 - What is intentionally out of scope?
+- [ ] I have read and agree to follow `docs/PR_WORKFLOW.md` for this PR.
 
 ## Branching
 - Milestone base branch: `milestone/[milestone-name]`
