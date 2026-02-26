@@ -114,11 +114,11 @@ open class Trial(
         timeStepDataBuffer.nextTimeStep()
 
         // Choose action wte based on current timestep data
-        forward(timeStepDataBuffer.readData)
+        forward(timeStepDataBuffer.getReadData())
 
         // Add timestep and return int representing offset in flatbuffer
         try {
-            flatBufferAssembler.addTimeStep(timeStepDataBuffer.readIndex)
+            flatBufferAssembler.addTimeStep(timeStepDataBuffer.getReadIndex())
         } catch (e: ExecutionException) {
             e.printStackTrace()
         } catch (e: InterruptedException) {
