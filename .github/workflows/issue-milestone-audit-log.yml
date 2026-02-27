@@ -268,29 +268,57 @@ jobs:
           git add audit/events.ndjson audit/LAST_100.md audit/events
           git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
 
-          for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            echo "Push attempt $attempt"
+          original_commit=$(git rev-parse HEAD)
+          start_epoch=$(date +%s)
+          max_seconds=900
+          attempt=0
+
+          while true; do
+            now_epoch=$(date +%s)
+            elapsed=$((now_epoch - start_epoch))
+            if [ "$elapsed" -ge "$max_seconds" ]; then
+              echo "Retry budget exhausted after ${elapsed}s"
+              break
+            fi
+
+            attempt=$((attempt + 1))
+            echo "Push attempt $attempt (elapsed ${elapsed}s/${max_seconds}s)"
+
             git fetch origin audit-log
-            if ! git rebase origin/audit-log; then
-              echo "Rebase conflict on attempt $attempt; aborting rebase and retrying"
-              git rebase --abort || true
-              sleep $((attempt * 2 + RANDOM % 4))
+            git reset --hard origin/audit-log
+
+            if ! git cherry-pick --no-commit "$original_commit"; then
+              echo "Cherry-pick conflict on attempt $attempt; aborting and retrying"
+              git cherry-pick --abort || true
+              base_delay=$((attempt * 5))
+              if [ "$base_delay" -gt 60 ]; then base_delay=60; fi
+              jitter=$((RANDOM % 10))
+              sleep_seconds=$((base_delay + jitter))
+              echo "Sleeping ${sleep_seconds}s before retry"
+              sleep "$sleep_seconds"
               continue
             fi
 
+            git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
+
             if git push origin HEAD:audit-log; then
-              echo "Push to audit-log succeeded"
+              echo "Push to audit-log succeeded on attempt $attempt"
               exit 0
             fi
 
-            echo "Push failed; retrying after short delay"
-            sleep $((attempt * 2 + RANDOM % 4))
+            echo "Push failed on attempt $attempt; retrying"
+            base_delay=$((attempt * 5))
+            if [ "$base_delay" -gt 60 ]; then base_delay=60; fi
+            jitter=$((RANDOM % 10))
+            sleep_seconds=$((base_delay + jitter))
+            echo "Sleeping ${sleep_seconds}s before retry"
+            sleep "$sleep_seconds"
           done
 
           staging_branch="audit-staging/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo "Direct push failed after retries; preserving event on $staging_branch"
 
-          git checkout -B "$staging_branch"
+          git checkout -B "$staging_branch" "$original_commit"
           git push origin "HEAD:$staging_branch"
 
           echo "Event preserved on staging branch for later reconciliation"
