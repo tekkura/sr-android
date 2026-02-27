@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-02-27T15:35:15Z",
+  "event_ts": "2026-02-27T15:34:59Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "demilestoned",
+  "actor": "topherbuckley",
+  "run_id": "22492610739",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 41,
+    "title": "Create and load QR code in non UI blocking thread (Non UI coroutine dispatcher when using kotlin)",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/41",
+    "milestone": {
+      "number": 3,
+      "title": "NonPriority"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 12,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "due_on": "2026-03-02T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/12",
+    "description": "Milestone spec moved to: [docs/milestones/PermissionHandlingUpdates.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/PermissionHandlingUpdates.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/41",
+  "event_id": "324025b89a772af091b9891b992dee3e8c9c62d3aef10814db65521f8ce992ce"
+}
