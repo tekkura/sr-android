@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-02-27T22:41:01Z",
+  "event_ts": "2026-02-27T22:40:43Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "22506630390",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 160,
+    "title": "Created migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/160",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 5,
+    "title": "AppSigning",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/5",
+    "description": "Milestone spec moved to: [docs/milestones/AppSigning.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/AppSigning.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/160",
+  "event_id": "f7863f6d7b981a9fbe34bf5ff127b3d76cd08fb9eac061b0a05283ff46ce17d3"
+}
