@@ -46,39 +46,36 @@ jobs:
               | sort
           )
 
-          if [ "${#staging_branches[@]}" -eq 0 ]; then
-            echo "No audit-staging branches found"
-            exit 0
-          fi
-
           : > /tmp/staging_records.ndjson
           : > /tmp/staging_branch_list.txt
 
-          for branch in "${staging_branches[@]}"; do
-            echo "Processing $branch"
-            echo "$branch" >> /tmp/staging_branch_list.txt
+          if [ "${#staging_branches[@]}" -eq 0 ]; then
+            echo "No audit-staging branches found; proceeding with canonical daily re-sort/rebuild"
+          else
+            for branch in "${staging_branches[@]}"; do
+              echo "Processing $branch"
+              echo "$branch" >> /tmp/staging_branch_list.txt
 
-            git fetch origin "$branch:$branch"
+              git fetch origin "$branch:$branch"
 
-            if git show "$branch:audit/events.ndjson" >/tmp/branch_events.ndjson 2>/dev/null; then
-              cat /tmp/branch_events.ndjson >> /tmp/staging_records.ndjson
-            fi
+              if git show "$branch:audit/events.ndjson" >/tmp/branch_events.ndjson 2>/dev/null; then
+                cat /tmp/branch_events.ndjson >> /tmp/staging_records.ndjson
+              fi
 
-            tmp_extract=$(mktemp -d)
-            if git archive "$branch" audit/events 2>/dev/null | tar -x -C "$tmp_extract" 2>/dev/null; then
-              mkdir -p audit/events
-              rsync -a --ignore-existing "$tmp_extract/audit/events/" "audit/events/" || true
-            fi
-            rm -rf "$tmp_extract"
-          done
-
-          if [ -s /tmp/staging_records.ndjson ]; then
-            cat audit/events.ndjson /tmp/staging_records.ndjson | jq -cs '
-              unique_by(.event_id // (.|tostring))
-              | sort_by((.event_ts // .timestamp // ""), (.run_id // ""), (.run_attempt // ""), (.event_id // ""))[]
-            ' > /tmp/events_merged.ndjson
-            mv /tmp/events_merged.ndjson audit/events.ndjson
+              tmp_extract=$(mktemp -d)
+              if git archive "$branch" audit/events 2>/dev/null | tar -x -C "$tmp_extract" 2>/dev/null; then
+                mkdir -p audit/events
+                rsync -a --ignore-existing "$tmp_extract/audit/events/" "audit/events/" || true
+              fi
+              rm -rf "$tmp_extract"
+            done
           fi
+
+          cat audit/events.ndjson /tmp/staging_records.ndjson | jq -cs '
+            unique_by(.event_id // (.|tostring))
+            | sort_by((.event_ts // .timestamp // ""), (.run_id // ""), (.run_attempt // ""), (.event_id // ""))[]
+          ' > /tmp/events_merged.ndjson
+          mv /tmp/events_merged.ndjson audit/events.ndjson
 
           {
             echo "# Last 100 Audit Events"
