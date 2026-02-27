@@ -121,16 +121,41 @@ jobs:
             printf '%s\n' "$record" | jq .
             echo '```'
 
-            if printf '%s' "$record" | jq -e '.event_name=="issue_comment" and .action=="edited" and .changes.body.from != null and .comment.body != null' >/dev/null; then
-              before=$(printf '%s' "$record" | jq -r '.changes.body.from')
-              after=$(printf '%s' "$record" | jq -r '.comment.body')
+            if printf '%s' "$record" | jq -e '.action=="edited" and .changes != null' >/dev/null; then
               echo
-              echo "## Comment Body Diff"
-              echo
-              echo '```diff'
-              printf '%s\n' "$before" | sed 's/^/- /'
-              printf '%s\n' "$after" | sed 's/^/+ /'
-              echo '```'
+              echo "## Field Diffs"
+
+              while IFS=$'\t' read -r field before after; do
+                echo
+                echo "### $field"
+                echo
+                echo '```diff'
+                printf '%s\n' "$before" | sed 's/^/- /'
+                printf '%s\n' "$after" | sed 's/^/+ /'
+                echo '```'
+              done < <(
+                printf '%s' "$record" | jq -r '
+                  def new_value($f):
+                    if .event_name == "issue_comment" and $f == "body" then .comment.body
+                    elif .event_name == "issues" and .issue != null and (.issue[$f] != null) then .issue[$f]
+                    elif .event_name == "milestone" and .milestone != null and (.milestone[$f] != null) then .milestone[$f]
+                    elif .issue != null and (.issue[$f] != null) then .issue[$f]
+                    elif .milestone != null and (.milestone[$f] != null) then .milestone[$f]
+                    else null end;
+
+                  .changes
+                  | to_entries[]
+                  | .key as $k
+                  | (.value.from // "") as $from
+                  | (new_value($k) // "") as $to
+                  | [
+                      $k,
+                      ($from | tostring),
+                      ($to | tostring)
+                    ]
+                  | @tsv
+                '
+              )
             fi
           } > "$event_dir/$event_id.md"
 
