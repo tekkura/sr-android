@@ -132,8 +132,8 @@ jobs:
               echo "## Comment Body Diff"
               echo
               echo '```diff'
-              printf -- '- %s\n' "$before"
-              printf -- '+ %s\n' "$after"
+              printf '%s\n' "$before" | sed 's/^/- /'
+              printf '%s\n' "$after" | sed 's/^/+ /'
               echo '```'
             fi
           } > "$event_dir/$event_id.md"
