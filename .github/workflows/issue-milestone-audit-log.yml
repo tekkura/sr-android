@@ -1,0 +1,100 @@
+name: Issue/Milestone Audit Log
+
+on:
+  milestone:
+    types: [created, edited, opened, closed, deleted]
+  issues:
+    types:
+      [
+        opened,
+        edited,
+        deleted,
+        closed,
+        reopened,
+        assigned,
+        unassigned,
+        labeled,
+        unlabeled,
+        milestoned,
+        demilestoned,
+        locked,
+        unlocked,
+        transferred,
+        pinned,
+        unpinned,
+      ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: issue-milestone-audit-log
+  cancel-in-progress: false
+
+jobs:
+  append-audit-record:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout audit-log branch
+        uses: actions/checkout@v4
+        with:
+          ref: audit-log
+          fetch-depth: 0
+
+      - name: Append event record
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit
+
+          record=$(jq -c '{
+            timestamp: (now | todateiso8601),
+            repo: .repository.full_name,
+            event_name: env.GITHUB_EVENT_NAME,
+            action: .action,
+            actor: .sender.login,
+            run_id: env.GITHUB_RUN_ID,
+            run_attempt: env.GITHUB_RUN_ATTEMPT,
+            sender: {
+              login: .sender.login,
+              html_url: .sender.html_url
+            },
+            issue: (if .issue then {
+              number: .issue.number,
+              title: .issue.title,
+              state: .issue.state,
+              html_url: .issue.html_url,
+              milestone: (if .issue.milestone then {
+                number: .issue.milestone.number,
+                title: .issue.milestone.title
+              } else null end)
+            } else null end),
+            milestone: (if .milestone then {
+              number: .milestone.number,
+              title: .milestone.title,
+              state: .milestone.state,
+              due_on: .milestone.due_on,
+              html_url: .milestone.html_url,
+              description: .milestone.description
+            } else null end),
+            changes: (.changes // null),
+            target_url: (.issue.html_url // .milestone.html_url // null)
+          }' "$GITHUB_EVENT_PATH")
+
+          echo "$record" >> audit/events.ndjson
+
+      - name: Commit and push audit update
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- audit/events.ndjson; then
+            echo "No audit changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add audit/events.ndjson
+          git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
+          git push origin HEAD:audit-log
