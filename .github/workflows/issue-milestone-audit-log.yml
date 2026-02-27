@@ -265,10 +265,151 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add audit/events.ndjson audit/LAST_100.md audit/events
-          git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
+          record="$(tail -n 1 audit/events.ndjson || true)"
+          if [ -z "$record" ]; then
+            echo "Unable to extract event record from audit/events.ndjson"
+            exit 1
+          fi
+          event_id="$(printf '%s' "$record" | jq -r '.event_id // empty')"
+          if [ -z "$event_id" ]; then
+            echo "Event record missing event_id"
+            exit 1
+          fi
 
-          original_commit=$(git rev-parse HEAD)
+          apply_record_to_worktree() {
+            echo "$record" >> audit/events.ndjson
+
+            event_date="$(printf '%s' "$record" | jq -r '.timestamp[0:10]')"
+            event_dir="audit/events/${event_date}"
+            mkdir -p "$event_dir"
+            printf '%s\n' "$record" | jq . > "$event_dir/$event_id.json"
+
+            {
+              echo "# Audit Event $event_id"
+              echo
+              echo "- Timestamp: $(printf '%s' "$record" | jq -r '.timestamp')"
+              echo "- Actor: $(printf '%s' "$record" | jq -r '.actor')"
+              echo "- Event: $(printf '%s' "$record" | jq -r '.event_name + "." + .action')"
+              echo "- Target URL: $(printf '%s' "$record" | jq -r '.target_url // "-"')"
+              echo
+              echo "## Raw Event"
+              echo
+              echo '```json'
+              printf '%s\n' "$record" | jq .
+              echo '```'
+
+              if printf '%s' "$record" | jq -e '.action=="edited" and .changes != null' >/dev/null; then
+                echo
+                echo "## Field Diffs"
+
+                while IFS=$'\t' read -r field before after; do
+                  before_raw=$(printf '%s' "$before" | base64 -d)
+                  after_raw=$(printf '%s' "$after" | base64 -d)
+                  before_decoded=$(printf '%b' "$before_raw")
+                  after_decoded=$(printf '%b' "$after_raw")
+
+                  echo
+                  echo "### $field"
+                  echo
+
+                  diff_tmp_dir=$(mktemp -d)
+                  before_file="$diff_tmp_dir/before"
+                  after_file="$diff_tmp_dir/after"
+                  printf '%s\n' "$before_decoded" > "$before_file"
+                  printf '%s\n' "$after_decoded" > "$after_file"
+
+                  echo '```diff'
+                  git diff --no-index --unified=3 -- "$before_file" "$after_file" || true
+                  echo '```'
+
+                  rm -rf "$diff_tmp_dir"
+                done < <(
+                  printf '%s' "$record" | jq -r '
+                    . as $root
+                    | def new_value($f):
+                        if $root.event_name == "issue_comment" and $f == "body" then $root.comment.body
+                        elif $root.event_name == "issues" and $root.issue != null and ($root.issue[$f] != null) then $root.issue[$f]
+                        elif $root.event_name == "milestone" and $root.milestone != null and ($root.milestone[$f] != null) then $root.milestone[$f]
+                        elif $root.issue != null and ($root.issue[$f] != null) then $root.issue[$f]
+                        elif $root.milestone != null and ($root.milestone[$f] != null) then $root.milestone[$f]
+                        else null end;
+
+                    $root.changes
+                    | to_entries[]
+                    | .key as $k
+                    | (.value.from // "") as $from
+                    | (new_value($k) // "") as $to
+                    | [
+                        $k,
+                        ($from | tostring | @base64),
+                        ($to | tostring | @base64)
+                      ]
+                    | @tsv
+                  '
+                )
+              fi
+            } > "$event_dir/$event_id.md"
+
+            {
+              echo "# Last 100 Audit Events"
+              echo
+              echo "This file is generated from \`audit/events.ndjson\`."
+              echo
+              echo "| Timestamp (UTC) | Event ID | Actor | Event | Issue | Milestone | Link |"
+              echo "|---|---|---|---|---|---|---|"
+              tail -n 100 audit/events.ndjson | jq -r '
+                def event_file:
+                  if (.event_id != null and .timestamp != null) then
+                    "events/" + (.timestamp[0:10]) + "/" + .event_id + ".md"
+                  else "-"
+                  end;
+
+                def event_id_cell:
+                  if .event_id == null then "-"
+                  else "[" + .event_id[0:12] + "...]" + "(" + event_file + ")"
+                  end;
+
+                def issue_text:
+                  if .issue == null then "-"
+                  else "[#\(.issue.number)](\(.issue.html_url // "#"))"
+                  end;
+
+                def milestone_text:
+                  if .milestone != null then
+                    "[#\(.milestone.number)](\(.milestone.html_url // "#"))"
+                  elif (.issue != null and .issue.milestone != null) then
+                    "[#\(.issue.milestone.number)](https://github.com/\(.repo)/milestone/\(.issue.milestone.number))"
+                  else "-"
+                  end;
+
+                [
+                  (.timestamp // "-"),
+                  event_id_cell,
+                  (.actor // "-"),
+                  (((.event_name // "-") + "." + (.action // "-"))),
+                  issue_text,
+                  milestone_text,
+                  (.target_url // "-")
+                ]
+                | @tsv
+              ' | while IFS=$'\t' read -r ts event_id_col actor ev issue ms url; do
+                safe_issue=$(printf '%s' "$issue" | tr '\n\r' ' ')
+                safe_ms=$(printf '%s' "$ms" | tr '\n\r' ' ')
+                safe_ev=$(printf '%s' "$ev" | tr '\n\r' ' ')
+                safe_event_id=$(printf '%s' "$event_id_col" | tr '\n\r' ' ')
+                safe_actor=$(printf '%s' "$actor" | tr '\n\r' ' ')
+
+                if [ "$url" = "-" ]; then
+                  link_cell='-'
+                else
+                  link_cell="[link]($url)"
+                fi
+
+                printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_event_id" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
+              done
+            } > audit/LAST_100.md
+          }
+
           start_epoch=$(date +%s)
           max_seconds=900
           attempt=0
@@ -286,16 +427,19 @@ jobs:
 
             git fetch origin audit-log
             git reset --hard origin/audit-log
+            touch audit/events.ndjson
 
-            if ! git cherry-pick --no-commit "$original_commit"; then
-              echo "Cherry-pick conflict on attempt $attempt; aborting and retrying"
-              git cherry-pick --abort || true
-              sleep_seconds=$((10 + RANDOM % 110))
-              echo "Sleeping ${sleep_seconds}s before retry"
-              sleep "$sleep_seconds"
-              continue
+            if grep -Fq "\"event_id\":\"$event_id\"" audit/events.ndjson; then
+              echo "Event $event_id already present in audit-log; nothing to push"
+              exit 0
             fi
 
+            apply_record_to_worktree
+            git add audit/events.ndjson audit/LAST_100.md audit/events
+            if git diff --cached --quiet; then
+              echo "No net changes after applying record; treating as success"
+              exit 0
+            fi
             git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
 
             if git push origin HEAD:audit-log; then
@@ -312,7 +456,19 @@ jobs:
           staging_branch="audit-staging/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo "Direct push failed after retries; preserving event on $staging_branch"
 
-          git checkout -B "$staging_branch" "$original_commit"
+          git fetch origin audit-log
+          git reset --hard origin/audit-log
+          touch audit/events.ndjson
+          if grep -Fq "\"event_id\":\"$event_id\"" audit/events.ndjson; then
+            echo "Event $event_id already present in audit-log; no staging fallback needed"
+            exit 0
+          fi
+
+          apply_record_to_worktree
+          git add audit/events.ndjson audit/LAST_100.md audit/events
+          git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
+
+          git checkout -B "$staging_branch"
           git push origin "HEAD:$staging_branch"
 
           echo "Event preserved on staging branch for later reconciliation"
