@@ -135,15 +135,16 @@ jobs:
                 echo '```'
               done < <(
                 printf '%s' "$record" | jq -r '
-                  def new_value($f):
-                    if .event_name == "issue_comment" and $f == "body" then .comment.body
-                    elif .event_name == "issues" and .issue != null and (.issue[$f] != null) then .issue[$f]
-                    elif .event_name == "milestone" and .milestone != null and (.milestone[$f] != null) then .milestone[$f]
-                    elif .issue != null and (.issue[$f] != null) then .issue[$f]
-                    elif .milestone != null and (.milestone[$f] != null) then .milestone[$f]
-                    else null end;
+                  . as $root
+                  | def new_value($f):
+                      if $root.event_name == "issue_comment" and $f == "body" then $root.comment.body
+                      elif $root.event_name == "issues" and $root.issue != null and ($root.issue[$f] != null) then $root.issue[$f]
+                      elif $root.event_name == "milestone" and $root.milestone != null and ($root.milestone[$f] != null) then $root.milestone[$f]
+                      elif $root.issue != null and ($root.issue[$f] != null) then $root.issue[$f]
+                      elif $root.milestone != null and ($root.milestone[$f] != null) then $root.milestone[$f]
+                      else null end;
 
-                  .changes
+                  $root.changes
                   | to_entries[]
                   | .key as $k
                   | (.value.from // "") as $from
