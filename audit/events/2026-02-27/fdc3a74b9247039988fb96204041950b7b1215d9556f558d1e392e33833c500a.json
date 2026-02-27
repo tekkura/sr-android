@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-02-27T11:13:24Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "demilestoned",
+  "actor": "topherbuckley",
+  "run_id": "22483939762",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 158,
+    "title": "Testing https://github.com/tekkura/sr-android/pull/157",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/158",
+    "milestone": null
+  },
+  "comment": null,
+  "milestone": {
+    "number": 14,
+    "title": "koy",
+    "state": "closed",
+    "due_on": null,
+    "html_url": "https://github.com/tekkura/sr-android/milestone/14",
+    "description": null
+  },
+  "changes": null,
+  "target_url": "https://github.com/tekkura/sr-android/issues/158",
+  "event_id": "fdc3a74b9247039988fb96204041950b7b1215d9556f558d1e392e33833c500a"
+}
