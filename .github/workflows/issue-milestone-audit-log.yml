@@ -137,16 +137,17 @@ jobs:
                 echo "### $field"
                 echo
 
-                before_file=$(mktemp)
-                after_file=$(mktemp)
+                diff_tmp_dir=$(mktemp -d)
+                before_file="$diff_tmp_dir/before"
+                after_file="$diff_tmp_dir/after"
                 printf '%s\n' "$before_decoded" > "$before_file"
                 printf '%s\n' "$after_decoded" > "$after_file"
 
                 echo '```diff'
-                git diff --no-index --unified=3 -- "$before_file" "$after_file" | sed '1,2d' || true
+                git diff --no-index --unified=3 -- "$before_file" "$after_file" || true
                 echo '```'
 
-                rm -f "$before_file" "$after_file"
+                rm -rf "$diff_tmp_dir"
               done < <(
                 printf '%s' "$record" | jq -r '
                   . as $root
