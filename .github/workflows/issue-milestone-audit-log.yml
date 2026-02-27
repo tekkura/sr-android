@@ -26,15 +26,12 @@ on:
   issue_comment:
     types: [created, edited, deleted]
 
-concurrency:
-  group: issue-milestone-audit-log
-  cancel-in-progress: false
-
 permissions:
   contents: write
 
 jobs:
   append-audit-record:
+    if: ${{ github.run_attempt == '1' }}
     runs-on: ubuntu-latest
     steps:
       - name: Verify audit push token is configured
@@ -61,6 +58,15 @@ jobs:
 
           raw_record=$(jq -c '{
             timestamp: (now | todateiso8601),
+            event_ts: (
+              .comment.updated_at
+              // .comment.created_at
+              // .issue.updated_at
+              // .issue.created_at
+              // .milestone.updated_at
+              // .milestone.created_at
+              // (now | todateiso8601)
+            ),
             repo: .repository.full_name,
             event_name: env.GITHUB_EVENT_NAME,
             action: .action,
@@ -103,6 +109,11 @@ jobs:
           event_id=$(printf '%s' "$raw_record" | jq -cS . | sha256sum | awk '{print $1}')
           record=$(printf '%s' "$raw_record" | jq -c --arg event_id "$event_id" '. + {event_id: $event_id}')
 
+          if [ -f audit/events.ndjson ] && grep -Fq "\"event_id\":\"$event_id\"" audit/events.ndjson; then
+            echo "Event $event_id already exists; skipping append"
+            exit 0
+          fi
+
           echo "$record" >> audit/events.ndjson
 
           event_date=$(printf '%s' "$record" | jq -r '.timestamp[0:10]')
@@ -130,10 +141,8 @@ jobs:
               echo "## Field Diffs"
 
               while IFS=$'\t' read -r field before after; do
-                # Values are base64-encoded in jq to preserve multiline content safely.
                 before_raw=$(printf '%s' "$before" | base64 -d)
                 after_raw=$(printf '%s' "$after" | base64 -d)
-                # Normalize escaped control sequences (e.g., \n) into real newlines.
                 before_decoded=$(printf '%b' "$before_raw")
                 after_decoded=$(printf '%b' "$after_raw")
 
@@ -243,10 +252,11 @@ jobs:
             done
           } > audit/LAST_100.md
 
-      - name: Commit and push audit update
+      - name: Commit and push audit update (fallback to staging branch)
         shell: bash
         run: |
           set -euo pipefail
+
           if [ -z "$(git status --porcelain -- audit/events.ndjson audit/LAST_100.md audit/events)" ]; then
             echo "No audit changes to commit"
             exit 0
@@ -264,18 +274,24 @@ jobs:
             if ! git rebase origin/audit-log; then
               echo "Rebase conflict on attempt $attempt; aborting rebase and retrying"
               git rebase --abort || true
-              sleep $((attempt * 2))
+              sleep $((attempt * 2 + RANDOM % 4))
               continue
             fi
 
             if git push origin HEAD:audit-log; then
-              echo "Push succeeded"
+              echo "Push to audit-log succeeded"
               exit 0
             fi
 
             echo "Push failed; retrying after short delay"
-            sleep $((attempt * 2))
+            sleep $((attempt * 2 + RANDOM % 4))
           done
 
-          echo "Failed to push audit update after 10 attempts"
-          exit 1
+          staging_branch="audit-staging/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "Direct push failed after retries; preserving event on $staging_branch"
+
+          git checkout -B "$staging_branch"
+          git push origin "HEAD:$staging_branch"
+
+          echo "Event preserved on staging branch for later reconciliation"
+          exit 0
