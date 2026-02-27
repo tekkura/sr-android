@@ -15,6 +15,7 @@ Workflow: `.github/workflows/issue-milestone-audit-log.yml`
 
 - `milestone`: `created`, `edited`, `opened`, `closed`, `deleted`
 - `issues`: `opened`, `edited`, `deleted`, `closed`, `reopened`, `assigned`, `unassigned`, `labeled`, `unlabeled`, `milestoned`, `demilestoned`, `locked`, `unlocked`, `transferred`, `pinned`, `unpinned`
+- `issue_comment`: `created`, `edited`, `deleted`
 
 ## Required repository settings
 
