@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-02-27T12:36:11Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "milestone",
+  "action": "edited",
+  "actor": "topherbuckley",
+  "run_id": "22485200831",
+  "run_attempt": "2",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "comment": null,
+  "milestone": {
+    "number": 13,
+    "title": "InstrumentationTests",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/13",
+    "description": "Milestone spec moved to: [docs/milestones/InstrumentationTests.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/InstrumentationTests.md)"
+  },
+  "changes": {
+    "description": {
+      "from": "In the absence of the custom robot hardware, it would be useful to have an instrumentation test that mimics the communication between the two. In this way both remote and automated tests could be performed at runtime.\n\nhttps://github.com/tekkura/smartphone-robot-android/blob/3f31a3b4769493a56f6d145aeb8aaa41c6ca0cdb/libs/abcvlib/src/main/java/jp/oist/abcvlib/util/SerialCommManager.java#L110\n\nThat is the function that would have to be called by the test, with command = SET_MOTOR_LEVELS as thats really the only one being used right now. You'd have to create a test definition for an instance of https://github.com/tekkura/smartphone-robot-android/blob/main/libs/abcvlib/src/main/java/jp/oist/abcvlib/util/RP2040State.java.\n\n## USB-Serial scope\nIssues under this milestone are also related to the USB-serial communication protocol.\n\nThe main focus is:\n1. Refactor low-level handling of start/end flags and other enveloping in favor of robust high-level read/write abstractions with intuitive defaults for common USB-serial errors/exceptions.\n2. Reduce communication loop time between phone and firmware. Current round-trip latency is approximately 20 ms; identify contributors via targeted profiling and optimize accordingly.\n\n### Background\nAnother scope is currently focused on refactoring the firmware of the external USB connected robot to use USB-CDC via TinyUSB instead of the current stdio-based USB-serial implementation. Many issues encountered during this project appear to stem from instability in the low-level USB-serial layer. By migrating to TinyUSB on RP2040, firmware aims to improve stability, separation of concerns, and long-term maintainability.\n\nThis work is dependent on progress in the firmware repo, so implementation that depends on firmware protocol changes should wait until firmware-side readiness is established.\n\nTODO:\nAdd details about the expected communication to mimic.\n"
+    }
+  },
+  "target_url": "https://github.com/tekkura/sr-android/milestone/13",
+  "event_id": "da32954ffc875f707cacd9c212d82ab314e17c8e3593e187dcd46a40a4ed1820"
+}
