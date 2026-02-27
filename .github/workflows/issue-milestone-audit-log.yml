@@ -126,12 +126,19 @@ jobs:
               echo "## Field Diffs"
 
               while IFS=$'\t' read -r field before after; do
+                # Values are base64-encoded in jq to preserve multiline content safely.
+                before_raw=$(printf '%s' "$before" | base64 -d)
+                after_raw=$(printf '%s' "$after" | base64 -d)
+                # Normalize escaped control sequences (e.g., \n) into real newlines.
+                before_decoded=$(printf '%b' "$before_raw")
+                after_decoded=$(printf '%b' "$after_raw")
+
                 echo
                 echo "### $field"
                 echo
                 echo '```diff'
-                printf '%s\n' "$before" | sed 's/^/- /'
-                printf '%s\n' "$after" | sed 's/^/+ /'
+                printf '%s\n' "$before_decoded" | sed 's/^/- /'
+                printf '%s\n' "$after_decoded" | sed 's/^/+ /'
                 echo '```'
               done < <(
                 printf '%s' "$record" | jq -r '
@@ -151,8 +158,8 @@ jobs:
                   | (new_value($k) // "") as $to
                   | [
                       $k,
-                      ($from | tostring),
-                      ($to | tostring)
+                      ($from | tostring | @base64),
+                      ($to | tostring | @base64)
                     ]
                   | @tsv
                 '
