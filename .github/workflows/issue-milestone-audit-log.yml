@@ -136,10 +136,17 @@ jobs:
                 echo
                 echo "### $field"
                 echo
+
+                before_file=$(mktemp)
+                after_file=$(mktemp)
+                printf '%s\n' "$before_decoded" > "$before_file"
+                printf '%s\n' "$after_decoded" > "$after_file"
+
                 echo '```diff'
-                printf '%s\n' "$before_decoded" | sed 's/^/- /'
-                printf '%s\n' "$after_decoded" | sed 's/^/+ /'
+                git diff --no-index --unified=3 -- "$before_file" "$after_file" | sed '1,2d' || true
                 echo '```'
+
+                rm -f "$before_file" "$after_file"
               done < <(
                 printf '%s' "$record" | jq -r '
                   . as $root
