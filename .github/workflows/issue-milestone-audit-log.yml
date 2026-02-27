@@ -23,6 +23,8 @@ on:
         pinned,
         unpinned,
       ]
+  issue_comment:
+    types: [created, edited, deleted]
 
 permissions:
   contents: write
@@ -78,6 +80,13 @@ jobs:
                 number: .issue.milestone.number,
                 title: .issue.milestone.title
               } else null end)
+            } else null end),
+            comment: (if .comment then {
+              id: .comment.id,
+              html_url: (.comment.html_url // null),
+              created_at: (.comment.created_at // null),
+              updated_at: (.comment.updated_at // null),
+              body: (.comment.body // null)
             } else null end),
             milestone: (if .milestone then {
               number: .milestone.number,
