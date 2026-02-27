@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-02-27T22:41:37Z",
+  "event_ts": "2026-02-27T22:41:21Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "22506647870",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 160,
+    "title": "Created migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/160",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": {
+    "id": 3975571011,
+    "html_url": "https://github.com/tekkura/sr-android/pull/160#issuecomment-3975571011",
+    "created_at": "2026-02-27T22:41:21Z",
+    "updated_at": "2026-02-27T22:41:21Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/160#issuecomment-3975571011",
+  "event_id": "653a7e75bde9acb08877446e72213b8f03279fa8073a4ee61f6cf841afc1faa0"
+}
