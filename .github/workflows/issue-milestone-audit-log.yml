@@ -98,14 +98,14 @@ jobs:
             tail -n 100 audit/events.ndjson | jq -r '
               def issue_text:
                 if .issue == null then "-"
-                else "#\(.issue.number) \(.issue.title // \"\")"
+                else "#\(.issue.number) \(.issue.title // "")"
                 end;
 
               def milestone_text:
                 if .milestone != null then
-                  "#\(.milestone.number) \(.milestone.title // \"\")"
+                  "#\(.milestone.number) \(.milestone.title // "")"
                 elif (.issue != null and .issue.milestone != null) then
-                  "#\(.issue.milestone.number) \(.issue.milestone.title // \"\")"
+                  "#\(.issue.milestone.number) \(.issue.milestone.title // "")"
                 else "-"
                 end;
 
