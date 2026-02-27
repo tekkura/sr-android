@@ -5,6 +5,7 @@ This directory stores append-only audit records for issue and milestone mutation
 ## Log file
 
 - `audit/events.ndjson`
+- `audit/LAST_100.md` (generated rolling human-readable view)
 
 Each line is one JSON event record.
 
@@ -25,3 +26,4 @@ Workflow: `.github/workflows/issue-milestone-audit-log.yml`
 
 - This log is intended as an in-repo audit trail visible to all collaborators.
 - Keep branch protection strict to preserve audit integrity.
+- `audit/events.ndjson` is the canonical source; `audit/LAST_100.md` is a generated convenience view.

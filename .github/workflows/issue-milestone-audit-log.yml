@@ -83,11 +83,62 @@ jobs:
 
           echo "$record" >> audit/events.ndjson
 
+      - name: Build human-readable last 100 events
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          {
+            echo "# Last 100 Audit Events"
+            echo
+            echo "This file is generated from \`audit/events.ndjson\`."
+            echo
+            echo "| Timestamp (UTC) | Actor | Event | Issue | Milestone | Link |"
+            echo "|---|---|---|---|---|---|"
+            tail -n 100 audit/events.ndjson | jq -r '
+              def issue_text:
+                if .issue == null then "-"
+                else "#\(.issue.number) \(.issue.title // \"\")"
+                end;
+
+              def milestone_text:
+                if .milestone != null then
+                  "#\(.milestone.number) \(.milestone.title // \"\")"
+                elif (.issue != null and .issue.milestone != null) then
+                  "#\(.issue.milestone.number) \(.issue.milestone.title // \"\")"
+                else "-"
+                end;
+
+              [
+                (.timestamp // "-"),
+                (.actor // "-"),
+                (((.event_name // "-") + "." + (.action // "-"))),
+                issue_text,
+                milestone_text,
+                (.target_url // "-")
+              ]
+              | @tsv
+            ' | while IFS=$'\t' read -r ts actor ev issue ms url; do
+              safe_issue=$(printf '%s' "$issue" | tr '\n\r' ' ')
+              safe_ms=$(printf '%s' "$ms" | tr '\n\r' ' ')
+              safe_ev=$(printf '%s' "$ev" | tr '\n\r' ' ')
+              safe_actor=$(printf '%s' "$actor" | tr '\n\r' ' ')
+
+              if [ "$url" = "-" ]; then
+                link_cell='-'
+              else
+                link_cell="[link]($url)"
+              fi
+
+              printf '| %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
+            done
+          } > audit/LAST_100.md
+
       - name: Commit and push audit update
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- audit/events.ndjson; then
+          if git diff --quiet -- audit/events.ndjson audit/LAST_100.md; then
             echo "No audit changes to commit"
             exit 0
           fi
@@ -95,6 +146,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add audit/events.ndjson
+          git add audit/events.ndjson audit/LAST_100.md
           git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
           git push origin HEAD:audit-log
