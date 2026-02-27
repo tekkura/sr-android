@@ -82,8 +82,8 @@ jobs:
             echo
             echo "This file is generated from \`audit/events.ndjson\`."
             echo
-            echo "| Timestamp (UTC) | Event ID | Actor | Event | Issue | Milestone | Link |"
-            echo "|---|---|---|---|---|---|---|"
+            echo "| Timestamp (UTC) | Severity | Event ID | Actor | Event | Issue | Milestone | Link |"
+            echo "|---|---|---|---|---|---|---|---|"
             tail -n 100 audit/events.ndjson | jq -r '
               def event_file:
                 if (.event_id != null and .timestamp != null) then
@@ -111,6 +111,7 @@ jobs:
 
               [
                 (.timestamp // "-"),
+                (.severity // "INFO"),
                 event_id_cell,
                 (.actor // "-"),
                 (((.event_name // "-") + "." + (.action // "-"))),
@@ -119,10 +120,11 @@ jobs:
                 (.target_url // "-")
               ]
               | @tsv
-            ' | while IFS=$'\t' read -r ts event_id actor ev issue ms url; do
+            ' | while IFS=$'\t' read -r ts severity event_id actor ev issue ms url; do
               safe_issue=$(printf '%s' "$issue" | tr '\n\r' ' ')
               safe_ms=$(printf '%s' "$ms" | tr '\n\r' ' ')
               safe_ev=$(printf '%s' "$ev" | tr '\n\r' ' ')
+              safe_sev=$(printf '%s' "$severity" | tr '\n\r' ' ')
               safe_event_id=$(printf '%s' "$event_id" | tr '\n\r' ' ')
               safe_actor=$(printf '%s' "$actor" | tr '\n\r' ' ')
 
@@ -132,7 +134,7 @@ jobs:
                 link_cell="[link]($url)"
               fi
 
-              printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_event_id" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
+              printf '| %s | %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_sev" "$safe_event_id" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
             done
           } > audit/LAST_100.md
 

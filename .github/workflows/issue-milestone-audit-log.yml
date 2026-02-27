@@ -28,6 +28,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   append-audit-record:
@@ -103,6 +104,18 @@ jobs:
               description: .milestone.description
             } else null end),
             changes: (.changes // null),
+            severity: (
+              if env.GITHUB_EVENT_NAME == "milestone"
+                 and .action == "edited"
+                 and ((.changes.title? // null) != null or (.changes.description? // null) != null)
+              then "HIGH"
+              elif env.GITHUB_EVENT_NAME == "issues"
+                 and .action == "edited"
+                 and ((.changes.title? // null) != null or (.changes.body? // null) != null)
+              then "HIGH"
+              else "INFO"
+              end
+            ),
             target_url: (.comment.html_url // .issue.html_url // .milestone.html_url // null)
           }' "$GITHUB_EVENT_PATH")
 
@@ -198,8 +211,8 @@ jobs:
             echo
             echo "This file is generated from \`audit/events.ndjson\`."
             echo
-            echo "| Timestamp (UTC) | Event ID | Actor | Event | Issue | Milestone | Link |"
-            echo "|---|---|---|---|---|---|---|"
+            echo "| Timestamp (UTC) | Severity | Event ID | Actor | Event | Issue | Milestone | Link |"
+            echo "|---|---|---|---|---|---|---|---|"
             tail -n 100 audit/events.ndjson | jq -r '
               def event_file:
                 if (.event_id != null and .timestamp != null) then
@@ -227,6 +240,7 @@ jobs:
 
               [
                 (.timestamp // "-"),
+                (.severity // "INFO"),
                 event_id_cell,
                 (.actor // "-"),
                 (((.event_name // "-") + "." + (.action // "-"))),
@@ -235,10 +249,11 @@ jobs:
                 (.target_url // "-")
               ]
               | @tsv
-            ' | while IFS=$'\t' read -r ts event_id actor ev issue ms url; do
+            ' | while IFS=$'\t' read -r ts severity event_id actor ev issue ms url; do
               safe_issue=$(printf '%s' "$issue" | tr '\n\r' ' ')
               safe_ms=$(printf '%s' "$ms" | tr '\n\r' ' ')
               safe_ev=$(printf '%s' "$ev" | tr '\n\r' ' ')
+              safe_sev=$(printf '%s' "$severity" | tr '\n\r' ' ')
               safe_event_id=$(printf '%s' "$event_id" | tr '\n\r' ' ')
               safe_actor=$(printf '%s' "$actor" | tr '\n\r' ' ')
 
@@ -248,11 +263,12 @@ jobs:
                 link_cell="[link]($url)"
               fi
 
-              printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_event_id" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
+              printf '| %s | %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_sev" "$safe_event_id" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
             done
           } > audit/LAST_100.md
 
       - name: Commit and push audit update (fallback to staging branch)
+        id: push_audit
         shell: bash
         run: |
           set -euo pipefail
@@ -275,11 +291,26 @@ jobs:
             echo "Event record missing event_id"
             exit 1
           fi
+          event_date="$(printf '%s' "$record" | jq -r '.timestamp[0:10]')"
+          severity="$(printf '%s' "$record" | jq -r '.severity // "INFO"')"
+          actor="$(printf '%s' "$record" | jq -r '.actor // "-"')"
+          event_name="$(printf '%s' "$record" | jq -r '.event_name // "-"')"
+          action="$(printf '%s' "$record" | jq -r '.action // "-"')"
+          target_url="$(printf '%s' "$record" | jq -r '.target_url // "-"')"
+
+          echo "event_id=$event_id" >> "$GITHUB_OUTPUT"
+          echo "event_date=$event_date" >> "$GITHUB_OUTPUT"
+          echo "severity=$severity" >> "$GITHUB_OUTPUT"
+          echo "actor=$actor" >> "$GITHUB_OUTPUT"
+          echo "event_name=$event_name" >> "$GITHUB_OUTPUT"
+          echo "action=$action" >> "$GITHUB_OUTPUT"
+          echo "target_url=$target_url" >> "$GITHUB_OUTPUT"
+          echo "alert_needed=true" >> "$GITHUB_OUTPUT"
+          echo "alert_branch=audit-log" >> "$GITHUB_OUTPUT"
 
           apply_record_to_worktree() {
             echo "$record" >> audit/events.ndjson
 
-            event_date="$(printf '%s' "$record" | jq -r '.timestamp[0:10]')"
             event_dir="audit/events/${event_date}"
             mkdir -p "$event_dir"
             printf '%s\n' "$record" | jq . > "$event_dir/$event_id.json"
@@ -355,8 +386,8 @@ jobs:
               echo
               echo "This file is generated from \`audit/events.ndjson\`."
               echo
-              echo "| Timestamp (UTC) | Event ID | Actor | Event | Issue | Milestone | Link |"
-              echo "|---|---|---|---|---|---|---|"
+              echo "| Timestamp (UTC) | Severity | Event ID | Actor | Event | Issue | Milestone | Link |"
+              echo "|---|---|---|---|---|---|---|---|"
               tail -n 100 audit/events.ndjson | jq -r '
                 def event_file:
                   if (.event_id != null and .timestamp != null) then
@@ -384,6 +415,7 @@ jobs:
 
                 [
                   (.timestamp // "-"),
+                  (.severity // "INFO"),
                   event_id_cell,
                   (.actor // "-"),
                   (((.event_name // "-") + "." + (.action // "-"))),
@@ -392,10 +424,11 @@ jobs:
                   (.target_url // "-")
                 ]
                 | @tsv
-              ' | while IFS=$'\t' read -r ts event_id_col actor ev issue ms url; do
+              ' | while IFS=$'\t' read -r ts severity_col event_id_col actor ev issue ms url; do
                 safe_issue=$(printf '%s' "$issue" | tr '\n\r' ' ')
                 safe_ms=$(printf '%s' "$ms" | tr '\n\r' ' ')
                 safe_ev=$(printf '%s' "$ev" | tr '\n\r' ' ')
+                safe_sev=$(printf '%s' "$severity_col" | tr '\n\r' ' ')
                 safe_event_id=$(printf '%s' "$event_id_col" | tr '\n\r' ' ')
                 safe_actor=$(printf '%s' "$actor" | tr '\n\r' ' ')
 
@@ -405,7 +438,7 @@ jobs:
                   link_cell="[link]($url)"
                 fi
 
-                printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_event_id" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
+                printf '| %s | %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_sev" "$safe_event_id" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
               done
             } > audit/LAST_100.md
           }
@@ -431,6 +464,7 @@ jobs:
 
             if grep -Fq "\"event_id\":\"$event_id\"" audit/events.ndjson; then
               echo "Event $event_id already present in audit-log; nothing to push"
+              echo "alert_needed=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
@@ -461,6 +495,7 @@ jobs:
           touch audit/events.ndjson
           if grep -Fq "\"event_id\":\"$event_id\"" audit/events.ndjson; then
             echo "Event $event_id already present in audit-log; no staging fallback needed"
+            echo "alert_needed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -468,8 +503,48 @@ jobs:
           git add audit/events.ndjson audit/LAST_100.md audit/events
           git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
 
+          echo "alert_branch=$staging_branch" >> "$GITHUB_OUTPUT"
           git checkout -B "$staging_branch"
           git push origin "HEAD:$staging_branch"
 
           echo "Event preserved on staging branch for later reconciliation"
           exit 0
+
+      - name: Create HIGH severity alert issue
+        if: steps.push_audit.outputs.severity == 'HIGH' && steps.push_audit.outputs.alert_needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          repo="${{ github.repository }}"
+          event_id="${{ steps.push_audit.outputs.event_id }}"
+          event_date="${{ steps.push_audit.outputs.event_date }}"
+          severity="${{ steps.push_audit.outputs.severity }}"
+          actor="${{ steps.push_audit.outputs.actor }}"
+          event_name="${{ steps.push_audit.outputs.event_name }}"
+          action="${{ steps.push_audit.outputs.action }}"
+          target_url="${{ steps.push_audit.outputs.target_url }}"
+          alert_branch="${{ steps.push_audit.outputs.alert_branch }}"
+          event_link="https://github.com/${repo}/blob/${alert_branch}/audit/events/${event_date}/${event_id}.md"
+
+          title="HIGH audit event: ${event_name}.${action} by ${actor} (${event_id:0:12})"
+          body=$(cat <<EOF
+          ## HIGH Severity Audit Event
+
+          - Severity: \`${severity}\`
+          - Actor: \`${actor}\`
+          - Event: \`${event_name}.${action}\`
+          - Target: ${target_url}
+          - Audit Record: ${event_link}
+
+          Please review the audit record and milestone/issue changes.
+          EOF
+          )
+
+          gh issue create \
+            --repo "$repo" \
+            --title "$title" \
+            --body "$body" \
+            --assignee "topherbuckley"
