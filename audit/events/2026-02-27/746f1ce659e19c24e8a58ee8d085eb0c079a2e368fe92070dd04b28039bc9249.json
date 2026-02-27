@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-02-27T15:07:44Z",
+  "event_ts": "2026-02-27T15:07:26Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "22491589165",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 159,
+    "title": "Created migration guide",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/pull/159",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": {
+    "id": 3973440064,
+    "html_url": "https://github.com/tekkura/sr-android/pull/159#issuecomment-3973440064",
+    "created_at": "2026-02-27T15:07:26Z",
+    "updated_at": "2026-02-27T15:07:26Z",
+    "body": "No, this is not the way to bring the changes from fork"
+  },
+  "milestone": null,
+  "changes": null,
+  "target_url": "https://github.com/tekkura/sr-android/pull/159#issuecomment-3973440064",
+  "event_id": "746f1ce659e19c24e8a58ee8d085eb0c079a2e368fe92070dd04b28039bc9249"
+}
