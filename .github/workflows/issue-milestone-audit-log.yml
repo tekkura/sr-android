@@ -35,11 +35,21 @@ jobs:
   append-audit-record:
     runs-on: ubuntu-latest
     steps:
+      - name: Verify audit push token is configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${{ secrets.AUDIT_LOG_PUSH_TOKEN }}" ]; then
+            echo "AUDIT_LOG_PUSH_TOKEN is not configured."
+            exit 1
+          fi
+
       - name: Checkout audit-log branch
         uses: actions/checkout@v4
         with:
           ref: audit-log
           fetch-depth: 0
+          token: ${{ secrets.AUDIT_LOG_PUSH_TOKEN }}
 
       - name: Append event record
         shell: bash
