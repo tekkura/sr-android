@@ -9,6 +9,8 @@ This directory stores append-only audit records for issue and milestone mutation
 
 Each line is one JSON event record.
 
+`LAST_100.md` includes a `Details` column that summarizes content changes (e.g., edited comment body/title/description changes) using payload data from `changes` and current event objects.
+
 ## Event coverage
 
 Workflow: `.github/workflows/issue-milestone-audit-log.yml`

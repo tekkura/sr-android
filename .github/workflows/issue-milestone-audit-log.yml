@@ -112,9 +112,17 @@ jobs:
             echo
             echo "This file is generated from \`audit/events.ndjson\`."
             echo
-            echo "| Timestamp (UTC) | Actor | Event | Issue | Milestone | Link |"
-            echo "|---|---|---|---|---|---|"
+            echo "| Timestamp (UTC) | Actor | Event | Issue | Milestone | Details | Link |"
+            echo "|---|---|---|---|---|---|---|"
             tail -n 100 audit/events.ndjson | jq -r '
+              def clean($s):
+                ($s // "-")
+                | gsub("[\\r\\n]+"; " ")
+                | gsub("\\|"; "\\\\|");
+
+              def trunc($s; $n):
+                if ($s | length) > $n then ($s[0:$n] + "...") else $s end;
+
               def issue_text:
                 if .issue == null then "-"
                 else "#\(.issue.number) \(.issue.title // "")"
@@ -128,20 +136,69 @@ jobs:
                 else "-"
                 end;
 
+              def details_text:
+                if .event_name == "issue_comment" then
+                  (
+                    if .action == "created" then
+                      "comment created: " + trunc(clean(.comment.body); 200)
+                    elif .action == "edited" then
+                      "comment edited"
+                      + (if (.changes != null and .changes.body != null and .changes.body.from != null)
+                          then " | from: " + trunc(clean(.changes.body.from); 120)
+                          else ""
+                         end)
+                      + (if (.comment != null and .comment.body != null)
+                          then " | to: " + trunc(clean(.comment.body); 120)
+                          else ""
+                         end)
+                    elif .action == "deleted" then
+                      "comment deleted"
+                      + (if (.comment != null and .comment.body != null)
+                          then " | last body: " + trunc(clean(.comment.body); 160)
+                          else ""
+                         end)
+                    else
+                      "-"
+                    end
+                  )
+                elif (.changes != null) then
+                  (
+                    [
+                      (if .changes.title then ("title: " + clean(.changes.title.from) + " -> " + clean(.issue.title // .milestone.title // "")) else empty end),
+                      (if .changes.description then ("description changed") else empty end),
+                      (if .changes.body then ("body changed") else empty end),
+                      (if .changes.due_on then ("due_on: " + clean(.changes.due_on.from) + " -> " + clean(.milestone.due_on)) else empty end),
+                      (if .changes.state then ("state: " + clean(.changes.state.from) + " -> " + clean(.issue.state // .milestone.state // "")) else empty end),
+                      (if .changes.milestone then ("milestone changed") else empty end)
+                    ]
+                    | if length == 0 then "-" else join("; ") end
+                  )
+                elif .event_name == "issues" and (.action == "opened" or .action == "closed" or .action == "reopened") then
+                  "issue " + .action
+                elif .event_name == "issues" and (.action == "milestoned" or .action == "demilestoned") then
+                  "issue " + .action
+                elif .event_name == "milestone" and (.action == "opened" or .action == "closed" or .action == "created" or .action == "deleted") then
+                  "milestone " + .action
+                else
+                  "-"
+                end;
+
               [
                 (.timestamp // "-"),
                 (.actor // "-"),
                 (((.event_name // "-") + "." + (.action // "-"))),
                 issue_text,
                 milestone_text,
+                details_text,
                 (.target_url // "-")
               ]
               | @tsv
-            ' | while IFS=$'\t' read -r ts actor ev issue ms url; do
+            ' | while IFS=$'\t' read -r ts actor ev issue ms details url; do
               safe_issue=$(printf '%s' "$issue" | tr '\n\r' ' ')
               safe_ms=$(printf '%s' "$ms" | tr '\n\r' ' ')
               safe_ev=$(printf '%s' "$ev" | tr '\n\r' ' ')
               safe_actor=$(printf '%s' "$actor" | tr '\n\r' ' ')
+              safe_details=$(printf '%s' "$details" | tr '\n\r' ' ')
 
               if [ "$url" = "-" ]; then
                 link_cell='-'
@@ -149,7 +206,7 @@ jobs:
                 link_cell="[link]($url)"
               fi
 
-              printf '| %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$link_cell"
+              printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$safe_details" "$link_cell"
             done
           } > audit/LAST_100.md
 
