@@ -4,6 +4,7 @@ import jp.oist.abcvlib.buildTools
 import jp.oist.abcvlib.compileSdk
 import jp.oist.abcvlib.configureBuildTypes
 import jp.oist.abcvlib.configureKotlinAndroid
+import jp.oist.abcvlib.configureSigningConfig
 import jp.oist.abcvlib.minSdk
 import jp.oist.abcvlib.plugin
 import jp.oist.abcvlib.targetSdk
@@ -34,7 +35,8 @@ class AndroidAppConventionPlugin : Plugin<Project> {
                 }
 
                 configureKotlinAndroid(this)
-                //configureBuildTypes(this)
+                configureBuildTypes(this)
+                configureSigningConfig(this)
             }
 
             dependencies {
