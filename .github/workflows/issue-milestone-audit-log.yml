@@ -290,10 +290,7 @@ jobs:
             if ! git cherry-pick --no-commit "$original_commit"; then
               echo "Cherry-pick conflict on attempt $attempt; aborting and retrying"
               git cherry-pick --abort || true
-              base_delay=$((attempt * 5))
-              if [ "$base_delay" -gt 60 ]; then base_delay=60; fi
-              jitter=$((RANDOM % 10))
-              sleep_seconds=$((base_delay + jitter))
+              sleep_seconds=$((10 + RANDOM % 110))
               echo "Sleeping ${sleep_seconds}s before retry"
               sleep "$sleep_seconds"
               continue
@@ -307,10 +304,7 @@ jobs:
             fi
 
             echo "Push failed on attempt $attempt; retrying"
-            base_delay=$((attempt * 5))
-            if [ "$base_delay" -gt 60 ]; then base_delay=60; fi
-            jitter=$((RANDOM % 10))
-            sleep_seconds=$((base_delay + jitter))
+            sleep_seconds=$((10 + RANDOM % 110))
             echo "Sleeping ${sleep_seconds}s before retry"
             sleep "$sleep_seconds"
           done
