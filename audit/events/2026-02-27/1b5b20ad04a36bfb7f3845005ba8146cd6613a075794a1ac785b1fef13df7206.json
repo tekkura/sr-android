@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-02-27T15:36:48Z",
+  "event_ts": "2026-02-27T15:36:31Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "22492670578",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 41,
+    "title": "Create and load QR code in non UI blocking thread (Non UI coroutine dispatcher when using kotlin)",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/41",
+    "milestone": {
+      "number": 3,
+      "title": "NonPriority"
+    }
+  },
+  "comment": {
+    "id": 3973594710,
+    "html_url": "https://github.com/tekkura/sr-android/issues/41#issuecomment-3973594710",
+    "created_at": "2026-02-27T15:36:31Z",
+    "updated_at": "2026-02-27T15:36:31Z",
+    "body": ">Using abcvlibMainLoop is not required now and should be deprecated in kotlin now for these kinds of use cases. lifecycleScope works on the main thread.\n\n@vashisthg Thats an interesting proposition. Can you detail that idea and its implications in another issue? I think that could be something to include for the next round of funding. Especially if spun in a way to speed the loop up. "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/41#issuecomment-3973594710",
+  "event_id": "1b5b20ad04a36bfb7f3845005ba8146cd6613a075794a1ac785b1fef13df7206"
+}
