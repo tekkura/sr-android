@@ -59,7 +59,7 @@ jobs:
           set -euo pipefail
           mkdir -p audit
 
-          record=$(jq -c '{
+          raw_record=$(jq -c '{
             timestamp: (now | todateiso8601),
             repo: .repository.full_name,
             event_name: env.GITHUB_EVENT_NAME,
@@ -100,7 +100,43 @@ jobs:
             target_url: (.issue.html_url // .milestone.html_url // null)
           }' "$GITHUB_EVENT_PATH")
 
+          event_id=$(printf '%s' "$raw_record" | jq -cS . | sha256sum | awk '{print $1}')
+          record=$(printf '%s' "$raw_record" | jq -c --arg event_id "$event_id" '. + {event_id: $event_id}')
+
           echo "$record" >> audit/events.ndjson
+
+          event_date=$(printf '%s' "$record" | jq -r '.timestamp[0:10]')
+          event_dir="audit/events/${event_date}"
+          mkdir -p "$event_dir"
+
+          printf '%s\n' "$record" | jq . > "$event_dir/$event_id.json"
+
+          {
+            echo "# Audit Event $event_id"
+            echo
+            echo "- Timestamp: $(printf '%s' "$record" | jq -r '.timestamp')"
+            echo "- Actor: $(printf '%s' "$record" | jq -r '.actor')"
+            echo "- Event: $(printf '%s' "$record" | jq -r '.event_name + "." + .action')"
+            echo "- Target URL: $(printf '%s' "$record" | jq -r '.target_url // "-"')"
+            echo
+            echo "## Raw Event"
+            echo
+            echo '```json'
+            printf '%s\n' "$record" | jq .
+            echo '```'
+
+            if printf '%s' "$record" | jq -e '.event_name=="issue_comment" and .action=="edited" and .changes.body.from != null and .comment.body != null' >/dev/null; then
+              before=$(printf '%s' "$record" | jq -r '.changes.body.from')
+              after=$(printf '%s' "$record" | jq -r '.comment.body')
+              echo
+              echo "## Comment Body Diff"
+              echo
+              echo '```diff'
+              printf -- '- %s\n' "$before"
+              printf -- '+ %s\n' "$after"
+              echo '```'
+            fi
+          } > "$event_dir/$event_id.md"
 
       - name: Build human-readable last 100 events
         shell: bash
@@ -112,8 +148,8 @@ jobs:
             echo
             echo "This file is generated from \`audit/events.ndjson\`."
             echo
-            echo "| Timestamp (UTC) | Actor | Event | Issue | Milestone | Details | Link |"
-            echo "|---|---|---|---|---|---|---|"
+            echo "| Timestamp (UTC) | Event ID | Actor | Event | Issue | Milestone | Details | Link |"
+            echo "|---|---|---|---|---|---|---|---|"
             tail -n 100 audit/events.ndjson | jq -r '
               def clean($s):
                 ($s // "-")
@@ -122,6 +158,17 @@ jobs:
 
               def trunc($s; $n):
                 if ($s | length) > $n then ($s[0:$n] + "...") else $s end;
+
+              def event_file:
+                if (.event_id != null and .timestamp != null) then
+                  "events/" + (.timestamp[0:10]) + "/" + .event_id + ".md"
+                else "-"
+                end;
+
+              def event_id_cell:
+                if .event_id == null then "-"
+                else "[" + .event_id[0:12] + "...]" + "(" + event_file + ")"
+                end;
 
               def issue_text:
                 if .issue == null then "-"
@@ -144,17 +191,17 @@ jobs:
                     elif .action == "edited" then
                       "comment edited"
                       + (if (.changes != null and .changes.body != null and .changes.body.from != null)
-                          then " | from: " + trunc(clean(.changes.body.from); 120)
+                          then "; from: " + trunc(clean(.changes.body.from); 120)
                           else ""
                          end)
                       + (if (.comment != null and .comment.body != null)
-                          then " | to: " + trunc(clean(.comment.body); 120)
+                          then "; to: " + trunc(clean(.comment.body); 120)
                           else ""
                          end)
                     elif .action == "deleted" then
                       "comment deleted"
                       + (if (.comment != null and .comment.body != null)
-                          then " | last body: " + trunc(clean(.comment.body); 160)
+                          then "; last body: " + trunc(clean(.comment.body); 160)
                           else ""
                          end)
                     else
@@ -185,6 +232,7 @@ jobs:
 
               [
                 (.timestamp // "-"),
+                event_id_cell,
                 (.actor // "-"),
                 (((.event_name // "-") + "." + (.action // "-"))),
                 issue_text,
@@ -193,10 +241,11 @@ jobs:
                 (.target_url // "-")
               ]
               | @tsv
-            ' | while IFS=$'\t' read -r ts actor ev issue ms details url; do
+            ' | while IFS=$'\t' read -r ts event_id actor ev issue ms details url; do
               safe_issue=$(printf '%s' "$issue" | tr '\n\r' ' ')
               safe_ms=$(printf '%s' "$ms" | tr '\n\r' ' ')
               safe_ev=$(printf '%s' "$ev" | tr '\n\r' ' ')
+              safe_event_id=$(printf '%s' "$event_id" | tr '\n\r' ' ')
               safe_actor=$(printf '%s' "$actor" | tr '\n\r' ' ')
               safe_details=$(printf '%s' "$details" | tr '\n\r' ' ')
 
@@ -206,7 +255,7 @@ jobs:
                 link_cell="[link]($url)"
               fi
 
-              printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$safe_details" "$link_cell"
+              printf '| %s | %s | %s | %s | %s | %s | %s | %s |\n' "$ts" "$safe_event_id" "$safe_actor" "$safe_ev" "$safe_issue" "$safe_ms" "$safe_details" "$link_cell"
             done
           } > audit/LAST_100.md
 
@@ -214,7 +263,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- audit/events.ndjson audit/LAST_100.md; then
+          if [ -z "$(git status --porcelain -- audit/events.ndjson audit/LAST_100.md audit/events)" ]; then
             echo "No audit changes to commit"
             exit 0
           fi
@@ -222,6 +271,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add audit/events.ndjson audit/LAST_100.md
+          git add audit/events.ndjson audit/LAST_100.md audit/events
           git commit -m "chore(audit): log ${{ github.event_name }}.${{ github.event.action }}"
-          git push origin HEAD:audit-log
+
+          for attempt in 1 2 3; do
+            echo "Push attempt $attempt"
+            git fetch origin audit-log
+            git rebase origin/audit-log
+
+            if git push origin HEAD:audit-log; then
+              echo "Push succeeded"
+              exit 0
+            fi
+
+            echo "Push failed; retrying after short delay"
+            sleep 2
+          done
+
+          echo "Failed to push audit update after 3 attempts"
+          exit 1

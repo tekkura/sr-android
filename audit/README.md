@@ -6,10 +6,14 @@ This directory stores append-only audit records for issue and milestone mutation
 
 - `audit/events.ndjson`
 - `audit/LAST_100.md` (generated rolling human-readable view)
+- `audit/events/YYYY-MM-DD/<event_id>.json` (canonical per-event snapshot)
+- `audit/events/YYYY-MM-DD/<event_id>.md` (human-readable per-event detail)
 
 Each line is one JSON event record.
 
-`LAST_100.md` includes a `Details` column that summarizes content changes (e.g., edited comment body/title/description changes) using payload data from `changes` and current event objects.
+`LAST_100.md` includes:
+- `Event ID` (hash-derived ID linking to per-event detail file)
+- `Details` summary for content mutations (comments/title/body/description/state, etc.)
 
 ## Event coverage
 
