@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-02-27T15:50:47Z",
+  "event_ts": "2026-02-27T15:50:29Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "22493191541",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 139,
+    "title": "Require milestone migration guide and base-branch setup for PermissionHandlingUpdates",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/139",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 3973676209,
+    "html_url": "https://github.com/tekkura/sr-android/issues/139#issuecomment-3973676209",
+    "created_at": "2026-02-27T15:50:29Z",
+    "updated_at": "2026-02-27T15:50:29Z",
+    "body": "@Ma7moud3ly Sounds good. I just initialized all the missing milestone branches so feel free to open a PR against:\nhttps://github.com/tekkura/sr-android/tree/milestone/PermissionHandlingUpdates\n\nwith the guide contents. \n\nAlso another thing I'd like to confirm here. The dependency on the `io.github.nishkarsh:android-permissions` was to be refactored out in favor of modern native methods to Android. \n\nIt is still in:\n\n  - Dependency wired in module:\n      - libs/abcvlib/build.gradle.kts:48 → api(libs.android.permissions)\n  - Version catalog alias:\n      - gradle/libs.versions.toml:77 → io.github.nishkarsh:android-permissions\n  - Actual API usage in code:\n      - libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/Publisher.java:11\n      - libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/Publisher.java:54\n      - libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/MicrophoneData.java:14\n\nDoes this fit easily into this milestone for you? This was one of the original main goals of it. "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/139#issuecomment-3973676209",
+  "event_id": "e1649b67840e6ba8269bf02c6eac736f4fc3d57351dd4f172dd12fc291d469c7"
+}
