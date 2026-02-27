@@ -1,0 +1,1 @@
+Add proper signing to release builds to support seamless deployment and optional publishing to Google Play. Implementing a consistent signing configuration will eliminate the need to manually overwrite or delete prior builds and will streamline the app-to-device update workflow.
