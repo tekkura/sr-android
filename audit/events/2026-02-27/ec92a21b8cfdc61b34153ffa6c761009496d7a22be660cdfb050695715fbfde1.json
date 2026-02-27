@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-02-27T13:36:50Z",
+  "event_ts": "2026-02-27T13:36:34Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "milestone",
+  "action": "edited",
+  "actor": "topherbuckley",
+  "run_id": "22488407261",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "comment": null,
+  "milestone": {
+    "number": 12,
+    "title": "PermissionHandlingUpdates1",
+    "state": "open",
+    "due_on": "2026-03-02T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/12",
+    "description": "Milestone spec moved to: [docs/milestones/PermissionHandlingUpdates.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/PermissionHandlingUpdates.md)"
+  },
+  "changes": {
+    "title": {
+      "from": "PermissionHandlingUpdates"
+    }
+  },
+  "target_url": "https://github.com/tekkura/sr-android/milestone/12",
+  "event_id": "ec92a21b8cfdc61b34153ffa6c761009496d7a22be660cdfb050695715fbfde1"
+}
