@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-02-27T15:35:15Z",
+  "event_ts": "2026-02-27T15:34:59Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "topherbuckley",
+  "run_id": "22492610705",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 41,
+    "title": "Create and load QR code in non UI blocking thread (Non UI coroutine dispatcher when using kotlin)",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/41",
+    "milestone": {
+      "number": 3,
+      "title": "NonPriority"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 3,
+    "title": "NonPriority",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/3",
+    "description": "Milestone spec moved to: [docs/milestones/NonPriority.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/NonPriority.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/41",
+  "event_id": "aac0244ba5392401b42b97d08d849295eaed29585e6ad244bde04a8a5da71068"
+}
