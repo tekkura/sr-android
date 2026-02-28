@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-02-28T02:02:13Z",
+  "event_ts": "2026-02-28T02:01:56Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "22510981123",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 162,
+    "title": "Created a migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/162",
+    "milestone": {
+      "number": 8,
+      "title": "TensorFlowLite2LiteRT"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 8,
+    "title": "TensorFlowLite2LiteRT",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/8",
+    "description": "Milestone spec moved to: [docs/milestones/TensorFlowLite2LiteRT.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/TensorFlowLite2LiteRT.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/162",
+  "event_id": "fa5fdf7949370566a21952882f3991e00c7a34e73617c70b69b57a32c4053ca6"
+}
