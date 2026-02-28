@@ -11,51 +11,73 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+    env:
+      RELEASE_STORE_FILE: release.jks
+      RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+      RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+      RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
     steps:
-    - name: checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        fetch-tags: 'true'
-    - name: Build
-      with:
-        gradle-encryption-key: ${{ secrets.GradleEncryptionKey }}
-        github-user: ${{ github.actor }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-      uses: ./.github/actions/build-apk
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          ${{ github.workspace }}/apps/basicSubscriber/build/outputs/apk/debug/basicSubscriber-debug.apk
-          ${{ github.workspace }}/apps/basicSubscriber/build/outputs/apk/release/basicSubscriber-release-unsigned.apk
-          ${{ github.workspace }}/apps/basicAssembler/build/outputs/apk/debug/basicAssembler-debug.apk
-          ${{ github.workspace }}/apps/basicAssembler/build/outputs/apk/release/basicAssembler-release-unsigned.apk
-          ${{ github.workspace }}/apps/backAndForth/build/outputs/apk/debug/backAndForth-debug.apk
-          ${{ github.workspace }}/apps/backAndForth/build/outputs/apk/release/backAndForth-release-unsigned.apk
-          ${{ github.workspace }}/apps/basicCharger/build/outputs/apk/debug/basicCharger-debug.apk
-          ${{ github.workspace }}/apps/basicCharger/build/outputs/apk/release/basicCharger-release-unsigned.apk
-          ${{ github.workspace }}/apps/basicQRReceiver/build/outputs/apk/debug/basicQRReceiver-debug.apk
-          ${{ github.workspace }}/apps/basicQRReceiver/build/outputs/apk/release/basicQRReceiver-release-unsigned.apk
-          ${{ github.workspace }}/apps/basicQRTransmitter/build/outputs/apk/debug/basicQRTransmitter-debug.apk
-          ${{ github.workspace }}/apps/basicQRTransmitter/build/outputs/apk/release/basicQRTransmitter-release-unsigned.apk
-          ${{ github.workspace }}/libs/abcvlib/build/outputs/aar/abcvlib-release.aar
-          ${{ github.workspace }}/libs/abcvlib/build/outputs/aar/abcvlib-debug.aar
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_name: ${{ github.ref_name }}
-        generate_release_notes: true
-    - name: Print environment variables
-      run: |
-        echo "GITHUB_ACTOR: $GITHUB_ACTOR"
-        echo "GITHUB_TOKEN: $GITHUB_TOKEN"
-      env:
-        GITHUB_ACTOR: ${{ github.actor }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Publish package
-      run: ./gradlew publish
-      env:
-        GITHUB_USER: ${{ github.actor }}
-        GITHUB_ACTOR: ${{ github.actor }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: 'true'
+
+      - name: Decode Keystore
+        env:
+          ENCODED_STRING: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ENCODED_STRING" ]; then
+            echo "$ENCODED_STRING" | base64 --decode > $RELEASE_STORE_FILE
+          else
+            echo "Warning: RELEASE_KEYSTORE_BASE64 secret is missing. Release build will be unsigned."
+          fi
+        shell: bash
+
+      - name: Build
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          gradle-encryption-key: ${{ secrets.GradleEncryptionKey }}
+          github-user: ${{ github.actor }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./.github/actions/build-apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ github.workspace }}/apps/basicSubscriber/build/outputs/apk/debug/basicSubscriber-debug.apk
+            ${{ github.workspace }}/apps/basicSubscriber/build/outputs/apk/release/basicSubscriber-release.apk
+            ${{ github.workspace }}/apps/basicAssembler/build/outputs/apk/debug/basicAssembler-debug.apk
+            ${{ github.workspace }}/apps/basicAssembler/build/outputs/apk/release/basicAssembler-release.apk
+            ${{ github.workspace }}/apps/backAndForth/build/outputs/apk/debug/backAndForth-debug.apk
+            ${{ github.workspace }}/apps/backAndForth/build/outputs/apk/release/backAndForth-release.apk
+            ${{ github.workspace }}/apps/basicCharger/build/outputs/apk/debug/basicCharger-debug.apk
+            ${{ github.workspace }}/apps/basicCharger/build/outputs/apk/release/basicCharger-release.apk
+            ${{ github.workspace }}/apps/basicQRReceiver/build/outputs/apk/debug/basicQRReceiver-debug.apk
+            ${{ github.workspace }}/apps/basicQRReceiver/build/outputs/apk/release/basicQRReceiver-release.apk
+            ${{ github.workspace }}/apps/basicQRTransmitter/build/outputs/apk/debug/basicQRTransmitter-debug.apk
+            ${{ github.workspace }}/apps/basicQRTransmitter/build/outputs/apk/release/basicQRTransmitter-release.apk
+            ${{ github.workspace }}/libs/abcvlib/build/outputs/aar/abcvlib-release.aar
+            ${{ github.workspace }}/libs/abcvlib/build/outputs/aar/abcvlib-debug.aar
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+
+      - name: Print environment variables
+        run: |
+          echo "GITHUB_ACTOR: $GITHUB_ACTOR"
+          echo "GITHUB_TOKEN: $GITHUB_TOKEN"
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish package
+        run: ./gradlew publish
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
