@@ -160,7 +160,7 @@ class ObjectDetectorData(
             subscriber.onObjectsDetected(
                 bitmap,
                 mpImage,
-                results,
+                results.detections(),
                 inferenceTime,
                 height,
                 width
