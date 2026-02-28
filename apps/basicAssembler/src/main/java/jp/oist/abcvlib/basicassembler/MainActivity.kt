@@ -141,7 +141,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
         val metaParameters = MetaParameters(
             this, 100, maxTimeStepCount,
             100, maxEpisodeCount, null,
-            timeStepDataBuffer, getOutputs(), 1
+            timeStepDataBuffer, outputs, 1
         )
         /*------------------------------------------------------------------------------
         ------------------------------ Initialize and Start Trial ----------------------
