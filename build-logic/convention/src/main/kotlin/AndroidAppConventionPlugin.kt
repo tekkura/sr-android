@@ -35,7 +35,7 @@ class AndroidAppConventionPlugin : Plugin<Project> {
                 }
 
                 configureKotlinAndroid(this)
-                configureBuildTypes(this)
+                //configureBuildTypes(this)
                 configureSigningConfig(this)
             }
 
