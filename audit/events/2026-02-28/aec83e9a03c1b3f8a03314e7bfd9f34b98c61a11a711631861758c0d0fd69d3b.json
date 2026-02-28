@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-02-28T14:42:17Z",
+  "event_ts": "2026-02-28T14:42:03Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "Ma7moud3ly",
+  "run_id": "22522816333",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 166,
+    "title": "HIGH audit event: issues.edited by Ma7moud3ly (38dbdabe3fac)",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/166",
+    "milestone": null
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/166",
+  "event_id": "aec83e9a03c1b3f8a03314e7bfd9f34b98c61a11a711631861758c0d0fd69d3b"
+}
