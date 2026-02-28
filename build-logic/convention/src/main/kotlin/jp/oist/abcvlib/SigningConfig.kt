@@ -3,6 +3,7 @@ package jp.oist.abcvlib
 import com.android.build.api.dsl.ApplicationExtension
 import org.gradle.api.Project
 import java.io.File
+import java.util.Properties
 
 private const val RELEASE_STORE_FILE = "RELEASE_STORE_FILE"
 private const val RELEASE_STORE_PASSWORD = "RELEASE_STORE_PASSWORD"
@@ -13,28 +14,36 @@ private const val SIGNING_CONFIG_NAME = "release"
 internal fun Project.configureSigningConfig(
     commonExtension: ApplicationExtension,
 ) {
-    commonExtension.apply {
-        val storeFileProperty = providers.gradleProperty(RELEASE_STORE_FILE)
-            .orElse(providers.environmentVariable(RELEASE_STORE_FILE))
-        val storePasswordProperty = providers.gradleProperty(RELEASE_STORE_PASSWORD)
-            .orElse(providers.environmentVariable(RELEASE_STORE_PASSWORD))
-        val keyAliasProperty = providers.gradleProperty(RELEASE_KEY_ALIAS)
-            .orElse(providers.environmentVariable(RELEASE_KEY_ALIAS))
-        val keyPasswordProperty = providers.gradleProperty(RELEASE_KEY_PASSWORD)
-            .orElse(providers.environmentVariable(RELEASE_KEY_PASSWORD))
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { localProperties.load(it) }
+    }
 
-        val isSigningConfigured = storeFileProperty.isPresent &&
-                storePasswordProperty.isPresent &&
-                keyAliasProperty.isPresent &&
-                keyPasswordProperty.isPresent
+    // Helper to get property from local.properties, then gradle properties, then env
+    fun getProperty(key: String): String? {
+        return localProperties.getProperty(key)
+            ?: providers.environmentVariable(key).orNull
+    }
+
+    commonExtension.apply {
+        val storeFileProperty = getProperty(RELEASE_STORE_FILE)
+        val storePasswordProperty = getProperty(RELEASE_STORE_PASSWORD)
+        val keyAliasProperty = getProperty(RELEASE_KEY_ALIAS)
+        val keyPasswordProperty = getProperty(RELEASE_KEY_PASSWORD)
+
+        val isSigningConfigured = storeFileProperty != null &&
+                storePasswordProperty != null &&
+                keyAliasProperty != null &&
+                keyPasswordProperty != null
 
         signingConfigs {
             create(SIGNING_CONFIG_NAME) {
                 if (isSigningConfigured) {
-                    storeFile = File(storeFileProperty.get())
-                    storePassword = storePasswordProperty.get()
-                    keyAlias = keyAliasProperty.get()
-                    keyPassword = keyPasswordProperty.get()
+                    storeFile = rootProject.file(storeFileProperty!!)
+                    storePassword = storePasswordProperty
+                    keyAlias = keyAliasProperty
+                    keyPassword = keyPasswordProperty
                 }
             }
         }
