@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-02-28T14:36:20Z",
+  "event_ts": "2026-02-28T14:36:03Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "labeled",
+  "actor": "Ma7moud3ly",
+  "run_id": "22522720484",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 164,
+    "title": "[Issue]: MicrophoneData - some properties violates the java2kotlin migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/164",
+    "milestone": {
+      "number": 3,
+      "title": "NonPriority"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/164",
+  "event_id": "3410a9d9ba0cecb3435af1743f59411986990aaf00352c06ed10659f90bcc97e"
+}
