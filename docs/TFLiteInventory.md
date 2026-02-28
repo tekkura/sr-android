@@ -4,13 +4,13 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
 
 ## Summary Table
 
-| Module             | File                              | Model Asset              | Feature                             | Status |
-|:-------------------|:----------------------------------|:-------------------------|:------------------------------------|:-------|
-| `:abcvlib`         | `ObjectDetectorData.kt`           | `model.tflite` (default) | Core Object Detection (Task Vision) | Mapped |
-| `:abcvlib`         | `ObjectDetectorDataSubscriber.kt` | N/A                      | Subscriber Interface                | Mapped |
-| `:handsOnApp`      | `MainActivity.kt`                 | N/A                      | UI: Object detection display        | Mapped |
-| `:basicCharger`    | `MainActivity.kt`                 | N/A                      | Behavior: Object detection usage    | Mapped |
-| `:basicSubscriber` | `MainActivity.kt`                 | N/A                      | UI: Object detection display        | Mapped |
+| Module             | File                              | Model Asset              | Feature                             | Status   |
+|:-------------------|:----------------------------------|:-------------------------|:------------------------------------|:---------|
+| `:abcvlib`         | `ObjectDetectorData.kt`           | `model.tflite` (default) | Core Object Detection (Task Vision) | Migrated |
+| `:abcvlib`         | `ObjectDetectorDataSubscriber.kt` | N/A                      | Subscriber Interface                | Migrated |
+| `:handsOnApp`      | `MainActivity.kt`                 | N/A                      | UI: Object detection display        | Migrated |
+| `:basicCharger`    | `MainActivity.kt`                 | N/A                      | Behavior: Object detection usage    | Migrated |
+| `:basicSubscriber` | `MainActivity.kt`                 | N/A                      | UI: Object detection display        | Migrated |
 
 ---
 
