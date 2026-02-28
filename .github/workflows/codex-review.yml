@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pull_number: ${{ steps.resolve.outputs.pull_number }}
+      head_ref: ${{ steps.resolve.outputs.head_ref }}
       head_sha: ${{ steps.resolve.outputs.head_sha }}
       base_sha: ${{ steps.resolve.outputs.base_sha }}
       pr_body: ${{ steps.resolve.outputs.pr_body }}
@@ -99,6 +100,7 @@ jobs:
             core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
 
             core.setOutput('pull_number', String(pr.number));
+            core.setOutput('head_ref', pr.head?.ref || '');
             core.setOutput('head_sha', pr.head?.sha || '');
             core.setOutput('base_sha', pr.base?.sha || '');
             core.setOutput('pr_body', pr.body || '');
@@ -110,7 +112,10 @@ jobs:
 
   rebase-check:
     needs: resolve-pr-context
-    if: needs.resolve-pr-context.outputs.should_run_downstream == 'true'
+    if: |
+      needs.resolve-pr-context.outputs.should_run_downstream == 'true' &&
+      !startsWith(needs.resolve-pr-context.outputs.head_ref, 'milestone/') &&
+      !startsWith(needs.resolve-pr-context.outputs.head_ref, 'milestones/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR head
