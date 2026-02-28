@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-02-28T15:16:40Z",
+  "event_ts": "2026-02-28T15:16:23Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "22523356566",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 139,
+    "title": "Require milestone migration guide and base-branch setup for PermissionHandlingUpdates",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/139",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 3977296381,
+    "html_url": "https://github.com/tekkura/sr-android/issues/139#issuecomment-3977296381",
+    "created_at": "2026-02-28T15:16:23Z",
+    "updated_at": "2026-02-28T15:16:23Z",
+    "body": "@topherbuckley Now, I'm afraid that expected changes at this milestone doesn't match the name `PermissionHandlingUpdates ` "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/139#issuecomment-3977296381",
+  "event_id": "2fc3e9e56e5d2a4ac7f058f12a0c5dc18da4531ce6d49d0298a62c668a0cf542"
+}
