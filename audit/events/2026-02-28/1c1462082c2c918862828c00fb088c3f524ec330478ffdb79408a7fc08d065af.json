@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-02-28T14:58:59Z",
+  "event_ts": "2026-02-28T14:58:44Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "edited",
+  "actor": "topherbuckley",
+  "run_id": "22523075053",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 139,
+    "title": "Require milestone migration guide and base-branch setup for PermissionHandlingUpdates",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/139",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 3977275112,
+    "html_url": "https://github.com/tekkura/sr-android/issues/139#issuecomment-3977275112",
+    "created_at": "2026-02-28T14:58:26Z",
+    "updated_at": "2026-02-28T14:58:44Z",
+    "body": "> *The library  io.github.nishkarsh:android-permissions still functioning well. We can either\n\n@Ma7moud3ly \n\nIs this the most recent version?\nhttps://github.com/nishkarsh/android-permissions/\n\nIf so, I'd say moving to a modern native approach is necessary as the lib is 4 years old now. If you think it still works fine despite this, then yes, we can keep this in NonPriority and work on it later. "
+  },
+  "milestone": null,
+  "changes": {
+    "body": {
+      "from": "> * io.github.nishkarsh:android-permissions\n\nIs this the most recent version?\nhttps://github.com/nishkarsh/android-permissions/\n\nIf so, I'd say moving to a modern native approach is necessary as the lib is 4 years old now. If you think it still works fine despite this, then yes, we can keep this in NonPriority and work on it later. "
+    }
+  },
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/139#issuecomment-3977275112",
+  "event_id": "1c1462082c2c918862828c00fb088c3f524ec330478ffdb79408a7fc08d065af"
+}
