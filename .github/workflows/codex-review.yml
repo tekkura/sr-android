@@ -39,6 +39,7 @@ jobs:
     outputs:
       pull_number: ${{ steps.resolve.outputs.pull_number }}
       head_ref: ${{ steps.resolve.outputs.head_ref }}
+      base_ref: ${{ steps.resolve.outputs.base_ref }}
       head_sha: ${{ steps.resolve.outputs.head_sha }}
       base_sha: ${{ steps.resolve.outputs.base_sha }}
       pr_body: ${{ steps.resolve.outputs.pr_body }}
@@ -83,24 +84,32 @@ jobs:
             }
 
             const prAuthorAssociation = pr.author_association || '';
+            const headRef = pr.head?.ref || '';
+            const baseRef = pr.base?.ref || '';
+            const isMilestoneBranch = (ref) => ref.startsWith('milestone/') || ref.startsWith('milestones/');
+            const milestoneBranchGatePassed = isMilestoneBranch(headRef) || isMilestoneBranch(baseRef);
             const commandGatePassed = !isIssueComment || (isPullRequestComment && commentCommandMatches);
-            const shouldRunDownstream = commandGatePassed;
+            const shouldRunDownstream = commandGatePassed && milestoneBranchGatePassed;
             let gateReason = 'ok';
 
             if (isIssueComment && !isPullRequestComment) {
               gateReason = 'not_pr_comment';
             } else if (isIssueComment && !commentCommandMatches) {
               gateReason = 'bad_command';
+            } else if (!milestoneBranchGatePassed) {
+              gateReason = 'non_milestone_branch';
             }
 
             core.info(`Gate check: expected event trigger command for issue_comment "${expectedCommand}", received "${receivedCommentBody}"`);
             core.info(`Gate check: expected issue_comment on PR=true, received ${String(isPullRequestComment)}`);
             core.info(`Gate check: expected comment author association in [${expectedAssociations.join(', ')}], received "${receivedCommentAuthorAssociation}"`);
             core.info(`Gate check: expected PR author association in [${expectedAssociations.join(', ')}], received "${prAuthorAssociation}"`);
+            core.info(`Gate check: expected head/base ref under milestone/*, received head_ref="${headRef}", base_ref="${baseRef}", milestoneBranchGatePassed=${String(milestoneBranchGatePassed)}`);
             core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
 
             core.setOutput('pull_number', String(pr.number));
-            core.setOutput('head_ref', pr.head?.ref || '');
+            core.setOutput('head_ref', headRef);
+            core.setOutput('base_ref', baseRef);
             core.setOutput('head_sha', pr.head?.sha || '');
             core.setOutput('base_sha', pr.base?.sha || '');
             core.setOutput('pr_body', pr.body || '');
