@@ -6,15 +6,15 @@ import android.os.SystemClock
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
+import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.core.Delegate
+import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
+import com.google.mediapipe.tasks.vision.core.RunningMode
 import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.util.Logger
+import com.google.mediapipe.tasks.vision.objectdetector.ObjectDetector
 import org.tensorflow.lite.gpu.CompatibilityList
-import org.tensorflow.lite.support.image.ImageProcessor
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.support.image.ops.Rot90Op
-import org.tensorflow.lite.task.core.BaseOptions
-import org.tensorflow.lite.task.vision.detector.ObjectDetector
-import org.tensorflow.lite.task.vision.detector.ObjectDetector.ObjectDetectorOptions
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 
@@ -97,36 +97,33 @@ class ObjectDetectorData(
     }
 
     private fun setupObjectDetector(currentDelegate: delegates, modelPath: String) {
-        val optionsBuilder = ObjectDetectorOptions.builder()
+        val optionsBuilder = ObjectDetector.ObjectDetectorOptions
+            .builder()
             .setScoreThreshold(threshold)
             .setMaxResults(maxResults)
+            .setRunningMode(RunningMode.IMAGE)
 
-        val baseOptionsBuilder = BaseOptions.builder().setNumThreads(numThreads)
+        val baseOptionsBuilder = BaseOptions.builder()
+            .setModelAssetPath(modelPath)
 
-        // Use the specified hardware for running the model. Default to CPU
-        when (currentDelegate) {
-            delegates.DELEGATE_CPU -> {}
-            delegates.DELEGATE_GPU -> {
-                val isSupported: Boolean
-                CompatibilityList().use { compatibilityList ->
-                    // Use the compatibilityList instance here
-                    isSupported = compatibilityList.isDelegateSupportedOnThisDevice
-                }
-                if (isSupported) {
-                    baseOptionsBuilder.useGpu()
-                } else {
-                    Logger.e(TAG, "Could not use GPU")
-                }
+        // Use the specified hardware for running the model.
+        // MediaPipe/LiteRT will handle the internal compatibility check.
+        baseOptionsBuilder.setDelegate(
+            when (currentDelegate) {
+                delegates.DELEGATE_CPU -> Delegate.CPU
+                delegates.DELEGATE_GPU -> Delegate.GPU
+                delegates.DELEGATE_NNAPI -> Delegate.NPU
             }
+        )
 
-            delegates.DELEGATE_NNAPI -> baseOptionsBuilder.useNnapi()
-        }
         optionsBuilder.setBaseOptions(baseOptionsBuilder.build())
 
         // Open the file
         try {
-            objectDetector =
-                ObjectDetector.createFromFileAndOptions(context, modelPath, optionsBuilder.build())
+            objectDetector = ObjectDetector.createFromOptions(
+                context,
+                optionsBuilder.build()
+            )
         } catch (e: IOException) {
             Logger.e(TAG, "Failed to open TFLite model file from assets")
             throw RuntimeException(e)
@@ -147,26 +144,22 @@ class ObjectDetectorData(
     ) {
         // Inference time is the difference between the system time at the start and finish of the
         // process
-
         var inferenceTime = SystemClock.uptimeMillis()
 
-        // Create preprocessor for the image.
-        // See https://www.tensorflow.org/lite/inference_with_metadata/
-        //            lite_support#imageprocessor_architecture
-        val imageProcessor = ImageProcessor.Builder()
-            .add(Rot90Op(-rotation / 90))
+        // Preprocess the image and convert it into a TensorImage for detection.
+        val mpImage = BitmapImageBuilder(bitmap).build()
+
+        val imageProcessingOptions = ImageProcessingOptions.builder()
+            .setRotationDegrees(rotation)
             .build() //todo check if this rotation is correct
 
-        // Preprocess the image and convert it into a TensorImage for detection.
-        val tensorImage: TensorImage = imageProcessor.process(TensorImage.fromBitmap(bitmap))
-
-        val results = objectDetector.detect(tensorImage)
+        val results = objectDetector.detect(mpImage, imageProcessingOptions)
         inferenceTime = SystemClock.uptimeMillis() - inferenceTime
 
         for (subscriber in subscribers) {
             subscriber.onObjectsDetected(
                 bitmap,
-                tensorImage,
+                mpImage,
                 results,
                 inferenceTime,
                 height,

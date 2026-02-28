@@ -1,15 +1,15 @@
 package jp.oist.abcvlib.core.inputs.phone
 
 import android.graphics.Bitmap
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.vision.objectdetector.ObjectDetectorResult
 import jp.oist.abcvlib.core.inputs.Subscriber
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.task.vision.detector.Detection
 
 interface ObjectDetectorDataSubscriber : Subscriber {
     fun onObjectsDetected(
         bitmap: Bitmap,
-        tensorImage: TensorImage,
-        results: MutableList<Detection>,
+        mpImage: MPImage,
+        results: ObjectDetectorResult,
         inferenceTime: Long,
         height: Int,
         width: Int

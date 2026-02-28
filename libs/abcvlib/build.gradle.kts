@@ -34,10 +34,12 @@ dependencies {
     api(libs.androidx.camera.lifecycle)
     api(libs.androidx.camera.view)
     implementation(libs.androidx.camera.extensions)
-    // TensorFlow Lite
-    api(libs.tensorflow.lite.task.vision)
-    implementation(libs.tensorflow.lite.gpu.delegate.plugin)
-    implementation(libs.tensorflow.lite.gpu)
+    // LiteRT
+    implementation(libs.litert)
+    implementation(libs.litert.support)
+    implementation(libs.litert.gpu)
+    //MediaPipe
+    api(libs.tasks.vision)
     // ZXing (QR/Barcode)
     implementation(libs.zxing.core)
     implementation(libs.zxing.android.integration)
