@@ -112,10 +112,7 @@ jobs:
 
   rebase-check:
     needs: resolve-pr-context
-    if: |
-      needs.resolve-pr-context.outputs.should_run_downstream == 'true' &&
-      !startsWith(needs.resolve-pr-context.outputs.head_ref, 'milestone/') &&
-      !startsWith(needs.resolve-pr-context.outputs.head_ref, 'milestones/')
+    if: needs.resolve-pr-context.outputs.should_run_downstream == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR head
@@ -124,7 +121,18 @@ jobs:
           ref: ${{ needs.resolve-pr-context.outputs.head_sha }}
           fetch-depth: 0
 
+      - name: Rebase check bypass for milestone head branches
+        if: |
+          startsWith(needs.resolve-pr-context.outputs.head_ref, 'milestone/') ||
+          startsWith(needs.resolve-pr-context.outputs.head_ref, 'milestones/')
+        shell: bash
+        run: |
+          echo "Bypassing rebase-check for milestone head branch: ${{ needs.resolve-pr-context.outputs.head_ref }}"
+
       - name: Ensure PR is rebased onto base
+        if: |
+          !startsWith(needs.resolve-pr-context.outputs.head_ref, 'milestone/') &&
+          !startsWith(needs.resolve-pr-context.outputs.head_ref, 'milestones/')
         shell: bash
         run: |
           git fetch --no-tags origin ${{ needs.resolve-pr-context.outputs.base_sha }}
