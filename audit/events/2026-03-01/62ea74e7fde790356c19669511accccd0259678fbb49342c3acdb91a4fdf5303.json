@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-01T00:55:17Z",
+  "event_ts": "2026-03-01T00:55:00Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "22532708805",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 160,
+    "title": "AppSigning Created migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/160",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": {
+    "id": 3978749056,
+    "html_url": "https://github.com/tekkura/sr-android/pull/160#issuecomment-3978749056",
+    "created_at": "2026-03-01T00:55:00Z",
+    "updated_at": "2026-03-01T00:55:00Z",
+    "body": "The milestone is solid and well planned ✅.\r\nI have one comment regarding ` automated-release.yml`.. we can consider including it in this milestone as well.\r\nThanks!"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/160#issuecomment-3978749056",
+  "event_id": "62ea74e7fde790356c19669511accccd0259678fbb49342c3acdb91a4fdf5303"
+}
