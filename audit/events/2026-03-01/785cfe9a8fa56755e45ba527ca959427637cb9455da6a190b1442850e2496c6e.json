@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-01T13:40:33Z",
+  "event_ts": "2026-03-01T13:40:17Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "22544603027",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 169,
+    "title": "PermissionHandlingUpdates: update the migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/169",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 3979975489,
+    "html_url": "https://github.com/tekkura/sr-android/pull/169#issuecomment-3979975489",
+    "created_at": "2026-03-01T13:40:17Z",
+    "updated_at": "2026-03-01T13:40:17Z",
+    "body": "@topherbuckley thanks\r\nwaiting for your comments or approval "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/169#issuecomment-3979975489",
+  "event_id": "785cfe9a8fa56755e45ba527ca959427637cb9455da6a190b1442850e2496c6e"
+}
