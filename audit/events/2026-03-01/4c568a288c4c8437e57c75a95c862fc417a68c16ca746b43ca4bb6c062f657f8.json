@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-03-01T15:05:32Z",
+  "event_ts": "2026-03-01T15:05:16Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "edited",
+  "actor": "Ma7moud3ly",
+  "run_id": "22546051148",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 14,
+    "title": "PermissionHandlingUpdates: Permissions Handling ANR Issue",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/14",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 3980149197,
+    "html_url": "https://github.com/tekkura/sr-android/issues/14#issuecomment-3980149197",
+    "created_at": "2026-03-01T14:53:35Z",
+    "updated_at": "2026-03-01T15:05:16Z",
+    "body": "@topherbuckley \n> Rather than just wrapping the `onSerialReady` contents inside a `lifecycleScope.launch` call? i.e.\n\n### This will not work as expected ❌\n- We would need to apply this change across all 9 apps\n- `onSerialReady` in `AbcvlibActivity` is already overridden and is invoked from `MainActivity`.\n\nFor example, in `BasicQrreceiver`:\n\n```kotlin\noverride fun onSerialReady(usbSerial: UsbSerial) {\n    publisherManager = PublisherManager()\n\n    val qrCodeData = QRCodeData.Builder(this, publisherManager, this).build()\n    qrCodeData.addSubscriber(this)\n\n    publisherManager.initializePublishers()\n    publisherManager.startPublishers()\n\n    setSerialCommManager(SerialCommManager(usbSerial))\n    super.onSerialReady(usbSerial)\n}\n```\n-  All of the `MainActivity.onSerialReady` logic would remain at the main thread.\n- Only `super.onSerialReady(usbSerial)` content and `onOutputsReady` will be shifted\n- The apps will still unresponsive \n- The proposed solution aims to centralize one fix to all apps\n- It will not use lambada\nThe expected changed:\n ```kotlin\n            this.usbSerial = UsbSerial(\n                context = this,\n                usbManager = usbManager,\n                serialReadyListener = object : SerialReadyListener {\n                    override fun onSerialReady(usbSerial: UsbSerial) {\n                        lifecycleScope.launch(Dispatchers.Default) {\n                            this@AbcvlibActivity.onSerialReady(usbSerial)\n                        }\n                    }\n                }\n            )\n```"
+  },
+  "milestone": null,
+  "changes": {
+    "body": {
+      "from": "@topherbuckley \n> Rather than just wrapping the `onSerialReady` contents inside a `lifecycleScope.launch` call? i.e.\n\n### This will not work as expected ❌\n- We would need to apply this change across all 9 apps\n- `onSerialReady` in `AbcvlibActivity` is already overridden and is invoked from `MainActivity`.\n\nFor example, in `BasicQrreceiver`:\n\n```kotlin\noverride fun onSerialReady(usbSerial: UsbSerial) {\n    publisherManager = PublisherManager()\n\n    val qrCodeData = QRCodeData.Builder(this, publisherManager, this).build()\n    qrCodeData.addSubscriber(this)\n\n    publisherManager.initializePublishers()\n    publisherManager.startPublishers()\n\n    setSerialCommManager(SerialCommManager(usbSerial))\n    super.onSerialReady(usbSerial)\n}\n```\n-  All of the `MainActivity.onSerialReady` logic would remain at the main thread.\n- Only `super.onSerialReady(usbSerial)` content and `onOutputsReady` will be shifted\n- The apps will still unresponsive "
+    }
+  },
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/14#issuecomment-3980149197",
+  "event_id": "4c568a288c4c8437e57c75a95c862fc417a68c16ca746b43ca4bb6c062f657f8"
+}
