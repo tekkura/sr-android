@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-01T15:02:16Z",
+  "event_ts": "2026-03-01T15:02:00Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "22545990057",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 14,
+    "title": "PermissionHandlingUpdates: Permissions Handling ANR Issue",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/14",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 3980184647,
+    "html_url": "https://github.com/tekkura/sr-android/issues/14#issuecomment-3980184647",
+    "created_at": "2026-03-01T15:02:00Z",
+    "updated_at": "2026-03-01T15:02:00Z",
+    "body": "@topherbuckley \n> What happened to the apparent need to \"Move permission handling to the Activity.\" and \"Request permissions before initializing the USB connection.\"? That you outlined in the issue description? I'm not seeing this mentioned in the kotlin version of the fix, or the migration guide you proposed in https://github.com/tekkura/sr-android/pull/169/changes. Can you clarify if this is no longer needed or should be also included in the migration guide?\n\n- I have explained before that we don't need to modify anything related to the permissions handling.. Kotlin coroutines can make everything work as expected with minor changes.   https://github.com/tekkura/sr-android/issues/14#issuecomment-3966306015\n- While the millstone refers to update permissions handling, the actual changes are related to fix the main thread blocking made by requesting permissions at `Publisher.kt`\n"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/14#issuecomment-3980184647",
+  "event_id": "5ddcee2bed22bf4a6cc0a35bf07a6b3d0108c7fbd85eccdc21d0516a964a423e"
+}
