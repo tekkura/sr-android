@@ -1,0 +1,47 @@
+# Audit Event dadd966a0ff9df93ca15aaece3b30e44ddcb1764dcf34f765e7410f094acee0e
+
+- Timestamp: 2026-03-01T14:53:50Z
+- Actor: Ma7moud3ly
+- Event: issue_comment.created
+- Target URL: https://github.com/tekkura/sr-android/issues/14#issuecomment-3980149197
+
+## Raw Event
+
+```json
+{
+  "timestamp": "2026-03-01T14:53:50Z",
+  "event_ts": "2026-03-01T14:53:35Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "22545845223",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 14,
+    "title": "PermissionHandlingUpdates: Permissions Handling ANR Issue",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/14",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 3980149197,
+    "html_url": "https://github.com/tekkura/sr-android/issues/14#issuecomment-3980149197",
+    "created_at": "2026-03-01T14:53:35Z",
+    "updated_at": "2026-03-01T14:53:35Z",
+    "body": "@topherbuckley \n> Rather than just wrapping the `onSerialReady` contents inside a `lifecycleScope.launch` call? i.e.\n\n### This will not work as expected ❌\n- We would need to apply this change across all 9 apps\n- `onSerialReady` in `AbcvlibActivity` is already overridden and is invoked from `MainActivity`.\n\nFor example, in `BasicQrreceiver`:\n\n```kotlin\noverride fun onSerialReady(usbSerial: UsbSerial) {\n    publisherManager = PublisherManager()\n\n    val qrCodeData = QRCodeData.Builder(this, publisherManager, this).build()\n    qrCodeData.addSubscriber(this)\n\n    publisherManager.initializePublishers()\n    publisherManager.startPublishers()\n\n    setSerialCommManager(SerialCommManager(usbSerial))\n    super.onSerialReady(usbSerial)\n}\n```\n-  All of the `MainActivity.onSerialReady` logic would remain at the main thread.\n- Only `super.onSerialReady(usbSerial)` content and `onOutputsReady` will be shifted\n- The apps will still unresponsive "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/14#issuecomment-3980149197",
+  "event_id": "dadd966a0ff9df93ca15aaece3b30e44ddcb1764dcf34f765e7410f094acee0e"
+}
+```
