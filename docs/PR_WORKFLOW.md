@@ -19,6 +19,22 @@ This repo uses milestone-scoped base branches and a migration guide per mileston
 - All work branches for the milestone must open PRs against the milestone base branch (not main):
   - [milestone-name]/[feature-branch] -> milestone/[milestone-name]
 
+### Editing the guide
+
+- In the process of development or review the migration guide might be considered outdated if:
+  - The initial requirements were missing some important considerations
+  - The requirements have changed
+  - The implementation plan has changed
+
+
+- If that happens, the migration guide can, and needs to be updated. The update process:
+  1. If the migration guide is still in development and no PRs containing it had been opened, just make another commit or rebase the existing one
+  2. If PR containing the migration guide is in review process, dismiss all reviews and notify all reviewers that the migration guide had changed
+  3. If migration guide is already merged into the milestone/[milestone-name] branch and it is the only PR merged there, open a new PR against the milestone/[milestone-name] branch with the corresponding changes and explanation of the intent behind them.
+  4. If migration guide is already merged into the milestone/[milestone-name] branch and it is not the only PR merged there: 
+    4.1 Check all previous PRs to see if they need to be updated in accordance with the new migration guide.
+    4.2 Repeat step 3 for each task where deemed necessary.
+    
 ## 2. Branch Hygiene
 
 - Rebase your work branch onto the milestone base branch before requesting review/merge.
