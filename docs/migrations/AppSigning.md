@@ -1,6 +1,6 @@
 # Migration Guide: App Signing
 
-This guide defines the requirements and checklist for the **AppSigning** milestone. It focuses on establishing a reproducible, documented, and secure release-signing workflow as defined in Issues #1 and #2.
+This guide defines the requirements and checklist for the **AppSigning** milestone. It focuses on establishing a reproducible, documented, and secure release-signing workflow as defined in Issues #148 and #149.
 
 ## Milestone Goal
 Establish a consistent release-signing configuration across all modules to eliminate manual overwrite/delete workflows during deployment and ensure reproducible builds locally and in CI.
@@ -20,21 +20,26 @@ fun getProperty(key: String): String? {
 val storeFileProperty = getProperty("RELEASE_STORE_FILE")
 ```
 
-## Reviewer Checklist
+## Checklist
+### Phase 1. Migration Guide (Issue #140)
+  - Create AppSigning.md file detailing the full migration plan
 
-### 1. Implementation (Issue #1)
+### Phase 2. Implementation (Issue #148)
 - **No Secrets in Repo**: Verify `.jks`, `.keystore`, and plain-text passwords are not committed. Check `.gitignore`.
 - **Dual-Source Loading**: Signing values (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) are loaded using the `localProperties.getProperty(key) ?: providers.environmentVariable(key).orNull` pattern.
 - **Convention Plugin**: Signing logic is centralized in `:build-logic:convention` and applied to all app modules.
 - **Graceful Failure**: The build provides a clear error message or skips signing if properties are missing, rather than failing with a generic NullPointerException.
 - **Isolation**: Ensure `debug` and unsigned workflows remain unaffected.
 
-### 2. Documentation & Process (Issue #2)
+### Phase 3. Documentation & Process (Issue #149)
 - **Two-Step Setup**: Documentation clearly outlines the two steps:
     1.  **Set up keys**: (Local: `local.properties` / CI: GitHub Secrets).
     2.  **Run build**: Execute `./gradlew assembleRelease` / run `automated-release.yml`.
 - **CI Instructions**: Include instructions for Base64 encoding/decoding the keystore file for use in GitHub Actions.
 - **Verification Workflow**: A documented process exists for validating the install and update (overwriting an existing build) to confirm the signing identity is consistent.
+
+## Note for reviewer
+- Each phase must be completed in its own PR that is only focused on one issue.
 
 ## Acceptance Criteria
 
