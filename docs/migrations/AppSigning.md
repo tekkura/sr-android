@@ -20,6 +20,30 @@ fun getProperty(key: String): String? {
 val storeFileProperty = getProperty("RELEASE_STORE_FILE")
 ```
 
+## Concrete CI Implementation Pattern
+To handle the signing in GitHub Actions without committing the keystore, use the following pattern:
+1.  **Secret Management**: Store the keystore file as a Base64 encoded string in a GitHub Secret (e.g., `RELEASE_KEYSTORE_BASE64`).
+2.  **Workflow Step**:
+    ```yaml
+    - name: Prepare Keystore
+      run: |
+        echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > release.jks
+      env:
+        RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+
+    - name: Build with Gradle
+      run: ./gradlew assembleRelease
+      env:
+        RELEASE_STORE_FILE: ${{ github.workspace }}/release.jks
+        RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+
+    - name: Cleanup Keystore
+      run: rm -f release.jks
+    ```
+  - Variables can be declared at step or job level, depending on the context of their usage
+
 ## Checklist
 ### Phase 1. Migration Guide (Issue #140)
   - Create AppSigning.md file detailing the full migration plan
@@ -28,8 +52,9 @@ val storeFileProperty = getProperty("RELEASE_STORE_FILE")
 - **No Secrets in Repo**: Verify `.jks`, `.keystore`, and plain-text passwords are not committed. Check `.gitignore`.
 - **Dual-Source Loading**: Signing values (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) are loaded using the `localProperties.getProperty(key) ?: providers.environmentVariable(key).orNull` pattern.
 - **Convention Plugin**: Signing logic is centralized in `:build-logic:convention` and applied to all app modules.
-- **Graceful Failure**: The build provides a clear error message or skips signing if properties are missing, rather than failing with a generic NullPointerException.
+- **Graceful Failure**: The build provides a clear error message if properties are missing, rather than failing with a generic NullPointerException.
 - **Isolation**: Ensure `debug` and unsigned workflows remain unaffected.
+- **Automated Release** `automated-release.yml` should produce signed releases instead of unsigned ones
 
 ### Phase 3. Documentation & Process (Issue #149)
 - **Two-Step Setup**: Documentation clearly outlines the two steps:
@@ -46,10 +71,18 @@ val storeFileProperty = getProperty("RELEASE_STORE_FILE")
 ### Technical AC
 - A release build can be produced with signing enabled using the documented inputs.
 - `assembleRelease` fails gracefully if signing properties are missing for a release build.
+- **Automatable Check**: Verify the release artifact is signed by the expected certificate fingerprint using `apksigner`:
+  ```bash
+  apksigner verify --print-certs -v app-release.apk
+  ```
 
 ### Process AC
 - A developer can produce and install a signed release APK by following the updated documentation.
-- The update workflow (installing over an existing build) is verified to work without requiring a manual uninstall.
+- **Automatable Check**: Verify the update workflow (installing over an existing build) succeeds:
+  ```bash
+  adb install previous-release.apk
+  adb install new-release.apk
+  ```
 
 ## How to Apply
 1. **Update Convention Plugin**: Implement the dual-source property loading in `build-logic:convention`.
