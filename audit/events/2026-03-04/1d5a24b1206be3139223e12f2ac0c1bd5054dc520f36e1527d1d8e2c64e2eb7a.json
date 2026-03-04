@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-04T19:04:19Z",
+  "event_ts": "2026-03-04T19:03:59Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "22684703929",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 162,
+    "title": "TensorFlowLite2LiteRT Created a migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/162",
+    "milestone": {
+      "number": 8,
+      "title": "TensorFlowLite2LiteRT"
+    }
+  },
+  "comment": {
+    "id": 3999568578,
+    "html_url": "https://github.com/tekkura/sr-android/pull/162#issuecomment-3999568578",
+    "created_at": "2026-03-04T19:03:59Z",
+    "updated_at": "2026-03-04T19:03:59Z",
+    "body": "@topherbuckley what is your opinion on @Ma7moud3ly's idea? I think it is good both for clean architecture and for user experience. However, it would require us to decide what data CustomDetection contains. I don't have enough understanding of the project to decide on it myself (I might, but I'll probably make a wrong judgement)"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/162#issuecomment-3999568578",
+  "event_id": "1d5a24b1206be3139223e12f2ac0c1bd5054dc520f36e1527d1d8e2c64e2eb7a"
+}
