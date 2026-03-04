@@ -2,6 +2,7 @@
 
 This guide outlines the steps required to migrate the project's machine learning implementation from TensorFlow Lite to LiteRT. This migration ensures the project uses the latest supported on-device ML runtime and hardware acceleration APIs.
 Since LiteRT does not have tasks-vision implementation, we would have to migrate to MediaPipe, as suggested by Google's official documentation [TensorFlow Lite is now LiteRT](https://developers.googleblog.com/tensorflow-lite-is-now-litert/)
+MediaPipe contains LiteRT so no additional explicit LiteRT dependencies are required - everything will be covered by MediaPipe.
 
 ## Checklist
 
@@ -18,18 +19,15 @@ Since LiteRT does not have tasks-vision implementation, we would have to migrate
 ### Phase 2: Dependency Migration
 - **Update `libs.versions.toml`**:
     - Add LiteRT versions.
-    - Replace `org.tensorflow:tensorflow-lite-*` artifacts with `com.google.ai.edge.litert:*` (or Play Services equivalent).
-    - Replace `org.tensorflow:tensorflow-lite-task-vision` with `com.google.mediapipe:tasks-vision` as recommended by Google (see below).
+    - Replace `org.tensorflow:tensorflow-lite-*` with `com.google.mediapipe:*` as recommended by Google (see below).
 - **Update module-level `build.gradle.kts`**:
-    - Update dependency references to use the new LiteRT entries.
+    - Update dependency references to use the new MediaPipe entries.
 
 ### Phase 3: Code Migration
-- **Refactor Imports**: Update all `org.tensorflow.lite.*` imports to their LiteRT equivalents.
-- **Update Model Loading**: Migrate from `ObjectDetector` / `Interpreter` to the new LiteRT Task or Runtime APIs.
-- **Update Image Processing**: Migrate `TFLite Support` usage (e.g., `ImageProcessor`, `TensorImage`) to MediaPipe or LiteRT Support.
-- **Update Acceleration Logic**: Migrate GPU Delegate and NNAPI usage to LiteRT Delegates (preferably via Google Play services).
+- **Refactor Imports**: Update all `org.tensorflow.lite.*` imports to their MediaPipe equivalents.
+- **Update Model Loading**: Migrate from `ObjectDetector` / `Interpreter` to the new MediaPipe Task or Runtime APIs.
+- **Update Image Processing**: Migrate `TFLite Support` usage (e.g., `ImageProcessor`, `TensorImage`) to MediaPipe Support.
+- **Update Acceleration Logic**: Migrate GPU Delegate and NNAPI usage to MediaPipe Delegates.
 
 ## Resources
-- [LiteRT on Android Documentation](https://ai.google.dev/edge/lite/android)
-- [LiteRT Task Vision Migration](https://ai.google.dev/edge/lite/android/play_services)
 - [TensorFlow Lite is now LiteRT](https://developers.googleblog.com/tensorflow-lite-is-now-litert/)
