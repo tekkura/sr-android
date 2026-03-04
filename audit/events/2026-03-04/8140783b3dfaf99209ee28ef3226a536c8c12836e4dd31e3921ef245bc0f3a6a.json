@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-03-04T18:33:38Z",
+  "event_ts": "2026-03-04T18:33:19Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "22683560504",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 161,
+    "title": "Added migration guide edit rules",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/161",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3999388866,
+    "html_url": "https://github.com/tekkura/sr-android/pull/161#issuecomment-3999388866",
+    "created_at": "2026-03-04T18:33:19Z",
+    "updated_at": "2026-03-04T18:33:19Z",
+    "body": "Rebased the branch onto main"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/161#issuecomment-3999388866",
+  "event_id": "8140783b3dfaf99209ee28ef3226a536c8c12836e4dd31e3921ef245bc0f3a6a"
+}
