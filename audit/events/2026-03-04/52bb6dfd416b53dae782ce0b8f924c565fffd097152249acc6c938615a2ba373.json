@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-04T07:53:30Z",
+  "event_ts": "2026-03-04T07:53:14Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "22660157192",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 14,
+    "title": "PermissionHandlingUpdates: Permissions Handling ANR Issue",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/14",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 3995879662,
+    "html_url": "https://github.com/tekkura/sr-android/issues/14#issuecomment-3995879662",
+    "created_at": "2026-03-04T07:53:14Z",
+    "updated_at": "2026-03-04T07:53:14Z",
+    "body": "> ### This will not work as expected ❌\n> \n>     * We would need to apply this change across all 9 apps\n> \n>     * `onSerialReady` in `AbcvlibActivity` is already overridden and is invoked from `MainActivity`.\n\nUnderstood. That makes sense. \n\n> * I have explained before that we don't need to modify anything related to the permissions handling.. Kotlin coroutines can make everything work as expected with minor changes.   [PermissionHandlingUpdates: Permissions Handling ANR Issue #14 (comment)](https://github.com/tekkura/sr-android/issues/14#issuecomment-3966306015)\n\nThis didn't answer my question. \nYour proposed kotlin version of the fix in https://github.com/tekkura/sr-android/issues/14#issuecomment-3966306015\nDoes what \"Suggested fix 1\" from https://github.com/tekkura/sr-android/issues/14#issue-3810091744 does (i.e. it allocates the calls to another thread). What I am asking is why the \"Suggested fix 2\" is no longer a part of the kotlin solution, and if it is not necessary, then why not. I'm not arguing for it to stay, I just want to understand why it became unnecessary. \n\n> [@topherbuckley](https://github.com/topherbuckley) I know turning from one solution to another in the same issue is confusing\n> So we can close this and move to [#170](https://github.com/tekkura/sr-android/issues/170)\n\nI'd prefer we keep everything related to this in a single issue if possible. I don't see the benefit of starting a new issue that duplicates content from here. \n\n"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/14#issuecomment-3995879662",
+  "event_id": "52bb6dfd416b53dae782ce0b8f924c565fffd097152249acc6c938615a2ba373"
+}
