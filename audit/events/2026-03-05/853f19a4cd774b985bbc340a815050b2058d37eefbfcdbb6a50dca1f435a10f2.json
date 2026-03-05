@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-05T03:01:25Z",
+  "event_ts": "2026-03-05T03:01:10Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "topherbuckley",
+  "run_id": "22700207712",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 172,
+    "title": "[Issue]: basicAssembler Runtime Error. kotlin.UninitializedPropertyAccessException: lateinit property state has not been initialized",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/172",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 12,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "due_on": "2026-03-02T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/12",
+    "description": "Milestone spec moved to: [docs/milestones/PermissionHandlingUpdates.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/PermissionHandlingUpdates.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/172",
+  "event_id": "853f19a4cd774b985bbc340a815050b2058d37eefbfcdbb6a50dca1f435a10f2"
+}
