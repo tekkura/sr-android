@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-03-05T04:30:32Z",
+  "event_ts": "2026-03-05T04:30:18Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "Ma7moud3ly",
+  "run_id": "22702364272",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 170,
+    "title": "[Issue]:  MainThreadBlocking: Initializing Publishes",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/170",
+    "milestone": null
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/170",
+  "event_id": "d7f6c917b41f18a5cb7246ad58683994422a6a7f5d9dd4d229154572ade0e1d3"
+}
