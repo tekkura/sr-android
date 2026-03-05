@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-05T23:01:56Z",
+  "event_ts": "2026-03-05T22:44:38Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "Ma7moud3ly",
+  "run_id": "22740325612",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 177,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/177",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 12,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "due_on": "2026-03-02T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/12",
+    "description": "Milestone spec moved to: [docs/milestones/PermissionHandlingUpdates.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/PermissionHandlingUpdates.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/177",
+  "event_id": "ca5bdf8b59f987a68a41fcc2bb86e170b17ef275cee87631719ef2b30c167aca"
+}
