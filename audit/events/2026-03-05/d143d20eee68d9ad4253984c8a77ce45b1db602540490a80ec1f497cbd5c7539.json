@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-05T03:29:12Z",
+  "event_ts": "2026-03-05T03:28:56Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "topherbuckley",
+  "run_id": "22700878397",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 172,
+    "title": "[Issue]: basicAssembler Runtime Error. kotlin.UninitializedPropertyAccessException: lateinit property state has not been initialized",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/172",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/172",
+  "event_id": "d143d20eee68d9ad4253984c8a77ce45b1db602540490a80ec1f497cbd5c7539"
+}
