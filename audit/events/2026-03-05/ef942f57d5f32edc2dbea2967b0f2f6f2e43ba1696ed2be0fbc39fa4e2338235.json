@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-05T03:51:14Z",
+  "event_ts": "2026-03-05T03:50:58Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "topherbuckley",
+  "run_id": "22701402909",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 175,
+    "title": "[Issue]: SensorManager Crashes at android 12 +",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/175",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 12,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "due_on": "2026-03-02T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/12",
+    "description": "Milestone spec moved to: [docs/milestones/PermissionHandlingUpdates.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/PermissionHandlingUpdates.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/175",
+  "event_id": "ef942f57d5f32edc2dbea2967b0f2f6f2e43ba1696ed2be0fbc39fa4e2338235"
+}
