@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-05T22:17:22Z",
+  "event_ts": "2026-03-05T22:16:58Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "Ma7moud3ly",
+  "run_id": "22739390080",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 175,
+    "title": "[Issue]: SensorManager Crashes at android 12 +",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/175",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/175",
+  "event_id": "98b8a41cd5ff8e5ffc218e3be7f0464e7893ec84734e7dcc356ed0e97030d925"
+}
