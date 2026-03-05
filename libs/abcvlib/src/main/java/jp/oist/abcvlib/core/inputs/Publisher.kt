@@ -44,7 +44,7 @@ abstract class Publisher<T : Subscriber>(
 ) : PermissionRequestListener {
     protected var subscribers: ArrayList<T> = ArrayList()
 
-    private lateinit var state: PublisherState
+    private var state: PublisherState = PublisherState.STOPPED
     protected val permissionManager: PermissionManager
     protected lateinit var mHandlerThread: HandlerThread
     protected lateinit var handler: Handler
