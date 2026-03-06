@@ -5,15 +5,20 @@
 
 ## Objective
 - Use Kotlin Coroutines to prevent main thread blocking and ensure smooth, asynchronous publisher initialization.
-- Centralize this improvement in the base activity (AbcvlibActivity) to ensure consistent behavior across the application.
+- Centralize permission-handling behavior as much as possible while allowing required supporting changes in dependent permission/lifecycle paths.
 
 ## Scope
-- Files affected: `AbcvlibActivity`.
+- Primary file: `AbcvlibActivity`.
+- Allowed supporting files:
+  - Directly related permission/lifecycle plumbing required to make permission-handling robust (for example `SerialCommManager` when needed for sequencing/thread-safety tied to permission flow).
+  - `AndroidManifest.xml` permission declarations required for this milestone's runtime permission behavior.
 
 ## Rules
 - Move `AbcvlibActivity.onSerialReady` context to `Dispatchers.Default`.
 - Maintain concurrency behavior: moving code to coroutines must not introduce race conditions.
 - Launch coroutines exclusively from `AbcvlibActivity`.
+- Manifest edits in this milestone must be limited to permission declarations only.
+- Changes outside permission-handling/lifecycle correctness are out of scope.
 
 ## Test/Validation Expectations for PR Acceptance
 - At runtime, a newly installed app must:
