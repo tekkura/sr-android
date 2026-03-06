@@ -25,9 +25,14 @@ class SerialCommManager @JvmOverloads constructor(
     private val androidToRP2040Packet = AndroidToRP2040Packet()
     private val rp2040State: RP2040State?
 
+    @Volatile
     private var shutdown = false
+    @Volatile
+    private var running = false
     private var command: ByteArray? = null
     private val commandLock = Object()
+    private val lifecycleLock = Any()
+    private var writerExecutor: ScheduledExecutorServiceWithException? = null
 
     private var startTimeAndroid: Long = 0
     private var cnt: Int = 0
@@ -82,21 +87,42 @@ class SerialCommManager @JvmOverloads constructor(
     // Start method to start the thread
     @JvmOverloads
     fun start(initialDelay: Long = 0, delay: Long = 10) {
-        val priorityFactory = ProcessPriorityThreadFactory(
-            Thread.MAX_PRIORITY,
-            "SerialCommManager_Android2Pi"
-        )
-        val scheduledExecutorService = ScheduledExecutorServiceWithException(1, priorityFactory)
-        scheduledExecutorService.scheduleWithFixedDelay(
-            android2PiWriter,
-            initialDelay,
-            delay,
-            TimeUnit.MILLISECONDS
-        )
+        synchronized(lifecycleLock) {
+            if (running) {
+                Logger.w("serial", "SerialCommManager already started; ignoring duplicate start()")
+                return
+            }
+            shutdown = false
+            val priorityFactory = ProcessPriorityThreadFactory(
+                Thread.MAX_PRIORITY,
+                "SerialCommManager_Android2Pi"
+            )
+            writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory).also {
+                it.scheduleWithFixedDelay(
+                    android2PiWriter,
+                    initialDelay,
+                    delay,
+                    TimeUnit.MILLISECONDS
+                )
+            }
+            running = true
+        }
     }
 
     fun stop() {
-        shutdown = true
+        synchronized(lifecycleLock) {
+            if (!running) {
+                shutdown = true
+                return
+            }
+            shutdown = true
+            synchronized(commandLock) {
+                commandLock.notifyAll()
+            }
+            writerExecutor?.shutdownNow()
+            writerExecutor = null
+            running = false
+        }
     }
 
     //TODO paseFifoPacket() should call the various SerialResponseListener methods.
@@ -304,17 +330,27 @@ class SerialCommManager @JvmOverloads constructor(
     float: right (same as left)
     */
     fun setMotorLevels(left: Float, right: Float, leftBrake: Boolean, rightBrake: Boolean) {
-        synchronized(commandLock) {
-            command =
-                generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
-            commandLock.notify()
+        synchronized(lifecycleLock) {
+            if (!running) {
+                return
+            }
+            synchronized(commandLock) {
+                command =
+                    generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
+                commandLock.notify()
+            }
         }
     }
 
     fun getLog() {
-        synchronized(commandLock) {
-            command = generateGetLogCmd()
-            commandLock.notify()
+        synchronized(lifecycleLock) {
+            if (!running) {
+                return
+            }
+            synchronized(commandLock) {
+                command = generateGetLogCmd()
+                commandLock.notify()
+            }
         }
     }
 
