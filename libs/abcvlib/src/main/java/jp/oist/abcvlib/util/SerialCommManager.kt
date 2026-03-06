@@ -57,23 +57,27 @@ class SerialCommManager @JvmOverloads constructor(
     private fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
         startTimeAndroid = System.nanoTime()
         while (!context.stopRequested.get()) {
-            synchronized(commandLock) {
-                try {
+            val nextCommand: ByteArray? = try {
+                synchronized(commandLock) {
                     // this results in getState commands every 10ms unless another command
                     // (e.g. setMotorLevels) is set, which case wait will return immediately
                     commandLock.wait(10)
                     if (context.stopRequested.get()) {
-                        break
+                        return@synchronized null
                     }
-                    if (command == null) {
-                        command = generateGetStateCmd()
-                    }
-                    sendPacket(command!!)
+                    val localCommand = command ?: generateGetStateCmd()
                     command = null
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
+                    localCommand
                 }
+            } catch (e: InterruptedException) {
+                continue
             }
+
+            if (nextCommand == null) {
+                break
+            }
+
+            sendPacket(nextCommand)
             cnt++
             if (cnt == 100) {
                 durationAndroid = (System.nanoTime() - startTimeAndroid) / 100
@@ -126,10 +130,6 @@ class SerialCommManager @JvmOverloads constructor(
             context.stopRequested.set(true)
             context.writerExecutor?.shutdownNow()
             context.writerExecutor = null
-            synchronized(commandLock) {
-                command = null
-                commandLock.notifyAll()
-            }
         }
     }
 
