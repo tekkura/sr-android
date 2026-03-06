@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-06T03:21:02Z",
+  "event_ts": "2026-03-06T03:20:45Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "topherbuckley",
+  "run_id": "22747548703",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 178,
+    "title": "fix(serial): harden SerialCommManager lifecycle and synchronization",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/178",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 12,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "due_on": "2026-03-02T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/12",
+    "description": "Milestone spec moved to: [docs/milestones/PermissionHandlingUpdates.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/PermissionHandlingUpdates.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/178",
+  "event_id": "862a3789e7d740036b36e240e2bf23265f6c26a28e2b32b904a98b0b867244a8"
+}
