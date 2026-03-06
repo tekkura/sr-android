@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-06T03:44:41Z",
+  "event_ts": "2026-03-06T03:44:25Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "topherbuckley",
+  "run_id": "22748073501",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 179,
+    "title": "docs(migration): allow required permission/lifecycle supporting changes",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/179",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 12,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "due_on": "2026-03-02T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/12",
+    "description": "Milestone spec moved to: [docs/milestones/PermissionHandlingUpdates.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/PermissionHandlingUpdates.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/179",
+  "event_id": "6c7a91f4a2d9e92652d43e191d3a4aaf6ebbed6c15ec4e6b47734f7824a5c9e0"
+}
