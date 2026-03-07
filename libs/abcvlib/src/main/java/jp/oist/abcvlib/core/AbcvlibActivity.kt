@@ -5,6 +5,7 @@ import android.hardware.usb.UsbManager
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Button
+import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import jp.oist.abcvlib.core.outputs.Outputs
@@ -79,6 +80,7 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         }
     }
 
+    @WorkerThread
     override fun onSerialReady(usbSerial: UsbSerial) {
         if (serialCommManager == null) {
             Logger.w(
@@ -105,11 +107,13 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         }
     }
 
+    @WorkerThread
     protected open fun abcvlibMainLoop() {
         // Throw runtime error if this is called and indicate to user that this needs to be overridden
         throw RuntimeException("runAbcvlibActivityMainLoop must be overridden")
     }
 
+    @WorkerThread
     protected open fun onOutputsReady() {
         // Override this method in your MainActivity to do anything that requires the outputs
         Logger.w(
