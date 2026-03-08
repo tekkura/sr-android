@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-08T10:27:34Z",
+  "event_ts": "2026-03-08T10:27:20Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "22819198164",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 177,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/177",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 4018797744,
+    "html_url": "https://github.com/tekkura/sr-android/pull/177#issuecomment-4018797744",
+    "created_at": "2026-03-08T10:27:20Z",
+    "updated_at": "2026-03-08T10:27:20Z",
+    "body": "> > @Ma7moud3ly were you planning to add anything else to this milestone PR before merging? Just wanted to make sure you're not waiting on me for anything here.\r\n> \r\n> @topherbuckley No,feel free to merge to the main\r\n\r\nI'll give the others (@GeorgeChernyshov @vashisthg) 24 hrs to review first to see if they have any comments/issues, then merge otherwise. "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/177#issuecomment-4018797744",
+  "event_id": "28ab171c388320108fdd7b09ee1b365ea2d18c7fbb3fdb0890099e5964921580"
+}
