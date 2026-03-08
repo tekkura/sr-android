@@ -9,6 +9,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 
 /**
@@ -25,9 +26,10 @@ class SerialCommManager @JvmOverloads constructor(
     private val androidToRP2040Packet = AndroidToRP2040Packet()
     private val rp2040State: RP2040State?
 
-    private var shutdown = false
     private var command: ByteArray? = null
     private val commandLock = Object()
+    private val lifecycleLock = Any()
+    private var runContext: RunContext? = null
 
     private var startTimeAndroid: Long = 0
     private var cnt: Int = 0
@@ -47,23 +49,35 @@ class SerialCommManager @JvmOverloads constructor(
     }
 
 
-    private val android2PiWriter: Runnable = Runnable {
+    private class RunContext(
+        val stopRequested: AtomicBoolean = AtomicBoolean(false),
+        var writerExecutor: ScheduledExecutorServiceWithException? = null
+    )
+
+    private fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
         startTimeAndroid = System.nanoTime()
-        while (!shutdown) {
-            synchronized(commandLock) {
-                try {
+        while (!context.stopRequested.get()) {
+            val nextCommand: ByteArray? = try {
+                synchronized(commandLock) {
                     // this results in getState commands every 10ms unless another command
                     // (e.g. setMotorLevels) is set, which case wait will return immediately
                     commandLock.wait(10)
-                    if (command == null) {
-                        command = generateGetStateCmd()
+                    if (context.stopRequested.get()) {
+                        return@synchronized null
                     }
-                    sendPacket(command!!)
+                    val localCommand = command ?: generateGetStateCmd()
                     command = null
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
+                    localCommand
                 }
+            } catch (e: InterruptedException) {
+                continue
             }
+
+            if (nextCommand == null) {
+                break
+            }
+
+            sendPacket(nextCommand)
             cnt++
             if (cnt == 100) {
                 durationAndroid = (System.nanoTime() - startTimeAndroid) / 100
@@ -82,21 +96,41 @@ class SerialCommManager @JvmOverloads constructor(
     // Start method to start the thread
     @JvmOverloads
     fun start(initialDelay: Long = 0, delay: Long = 10) {
-        val priorityFactory = ProcessPriorityThreadFactory(
-            Thread.MAX_PRIORITY,
-            "SerialCommManager_Android2Pi"
-        )
-        val scheduledExecutorService = ScheduledExecutorServiceWithException(1, priorityFactory)
-        scheduledExecutorService.scheduleWithFixedDelay(
-            android2PiWriter,
-            initialDelay,
-            delay,
-            TimeUnit.MILLISECONDS
-        )
+        synchronized(lifecycleLock) {
+            val existing = runContext
+            if (existing != null && !existing.stopRequested.get()) {
+                Logger.w("serial", "SerialCommManager already started; ignoring duplicate start()")
+                return
+            }
+
+            val context = RunContext()
+            val priorityFactory = ProcessPriorityThreadFactory(
+                Thread.MAX_PRIORITY,
+                "SerialCommManager_Android2Pi"
+            )
+            context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory).also {
+                it.scheduleWithFixedDelay(
+                    buildAndroid2PiWriter(context),
+                    initialDelay,
+                    delay,
+                    TimeUnit.MILLISECONDS
+                )
+            }
+            runContext = context
+        }
     }
 
     fun stop() {
-        shutdown = true
+        var contextToStop: RunContext? = null
+        synchronized(lifecycleLock) {
+            contextToStop = runContext
+            runContext = null
+        }
+        contextToStop?.let { context ->
+            context.stopRequested.set(true)
+            context.writerExecutor?.shutdownNow()
+            context.writerExecutor = null
+        }
     }
 
     //TODO paseFifoPacket() should call the various SerialResponseListener methods.
@@ -304,7 +338,17 @@ class SerialCommManager @JvmOverloads constructor(
     float: right (same as left)
     */
     fun setMotorLevels(left: Float, right: Float, leftBrake: Boolean, rightBrake: Boolean) {
+        val activeContext: RunContext
+        synchronized(lifecycleLock) {
+            activeContext = runContext ?: return
+            if (activeContext.stopRequested.get()) {
+                return
+            }
+        }
         synchronized(commandLock) {
+            if (activeContext.stopRequested.get()) {
+                return
+            }
             command =
                 generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
             commandLock.notify()
@@ -312,7 +356,17 @@ class SerialCommManager @JvmOverloads constructor(
     }
 
     fun getLog() {
+        val activeContext: RunContext
+        synchronized(lifecycleLock) {
+            activeContext = runContext ?: return
+            if (activeContext.stopRequested.get()) {
+                return
+            }
+        }
         synchronized(commandLock) {
+            if (activeContext.stopRequested.get()) {
+                return
+            }
             command = generateGetLogCmd()
             commandLock.notify()
         }
