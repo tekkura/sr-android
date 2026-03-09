@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-09T01:06:49Z",
+  "event_ts": "2026-03-09T01:06:34Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "assigned",
+  "actor": "topherbuckley",
+  "run_id": "22834200994",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 146,
+    "title": "Require milestone migration guide and base-branch setup for comprehensiveDemo",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/146",
+    "milestone": {
+      "number": 11,
+      "title": "comprehensiveDemo"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/146",
+  "event_id": "c968a9c4dc69d09c844a3d3979c1619e7a03e85b9e3adaae08b2fc6cfc82d538"
+}
