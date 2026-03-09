@@ -2,7 +2,6 @@ package jp.oist.abcvlib
 
 import com.android.build.api.dsl.ApplicationExtension
 import org.gradle.api.Project
-import java.io.File
 import java.util.Properties
 
 private const val RELEASE_STORE_FILE = "RELEASE_STORE_FILE"
@@ -20,7 +19,7 @@ internal fun Project.configureSigningConfig(
         localPropertiesFile.inputStream().use { localProperties.load(it) }
     }
 
-    // Helper to get property from local.properties, then gradle properties, then env
+    // Helper to get property from local.properties, then env
     fun getProperty(key: String): String? {
         return localProperties.getProperty(key)
             ?: providers.environmentVariable(key).orNull
@@ -32,10 +31,13 @@ internal fun Project.configureSigningConfig(
         val keyAliasProperty = getProperty(RELEASE_KEY_ALIAS)
         val keyPasswordProperty = getProperty(RELEASE_KEY_PASSWORD)
 
-        val isSigningConfigured = storeFileProperty != null &&
-                storePasswordProperty != null &&
-                keyAliasProperty != null &&
-                keyPasswordProperty != null
+        val missingKeys = mutableListOf<String>()
+        if (storeFileProperty == null) missingKeys.add(RELEASE_STORE_FILE)
+        if (storePasswordProperty == null) missingKeys.add(RELEASE_STORE_PASSWORD)
+        if (keyAliasProperty == null) missingKeys.add(RELEASE_KEY_ALIAS)
+        if (keyPasswordProperty == null) missingKeys.add(RELEASE_KEY_PASSWORD)
+
+        val isSigningConfigured = missingKeys.isEmpty()
 
         signingConfigs {
             create(SIGNING_CONFIG_NAME) {
@@ -50,9 +52,19 @@ internal fun Project.configureSigningConfig(
 
         buildTypes {
             getByName(SIGNING_CONFIG_NAME) {
-                if (isSigningConfigured)
+                if (isSigningConfigured) {
                     signingConfig = signingConfigs.getByName(SIGNING_CONFIG_NAME)
-                else println("WARNING: Release signing properties are missing. The release build will not be signed.")
+                } else {
+                    val isReleaseTask = gradle.startParameter.taskNames.any {
+                        it.contains("release", ignoreCase = true) || it.contains("publish", ignoreCase = true)
+                    }
+                    if (isReleaseTask) {
+                        error("Release signing configuration is incomplete. Missing keys: ${missingKeys.joinToString()}. " +
+                                "Please provide these values in 'local.properties' or as environment variables.")
+                    } else {
+                        println("WARNING: Release signing properties are missing (${missingKeys.joinToString()}). Release builds will fail.")
+                    }
+                }
             }
         }
     }
