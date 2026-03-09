@@ -42,6 +42,38 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         uses: ./.github/actions/build-apk
 
+      - name: Verify Signing
+        run: |
+          # Find apksigner in the Android SDK
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -r | head -n 1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "ERROR: apksigner not found."
+            exit 1
+          fi
+          
+          echo "Using apksigner at: $APKSIGNER"
+          
+          # List of APKs to verify
+          APKS=(
+            "apps/basicSubscriber/build/outputs/apk/release/basicSubscriber-release.apk"
+            "apps/basicAssembler/build/outputs/apk/release/basicAssembler-release.apk"
+            "apps/backAndForth/build/outputs/apk/release/backAndForth-release.apk"
+            "apps/basicCharger/build/outputs/apk/release/basicCharger-release.apk"
+            "apps/basicQRReceiver/build/outputs/apk/release/basicQRReceiver-release.apk"
+            "apps/basicQRTransmitter/build/outputs/apk/release/basicQRTransmitter-release.apk"
+          )
+          
+          for apk in "${APKS[@]}"; do
+            if [ -f "$apk" ]; then
+              echo "Verifying $apk..."
+              $APKSIGNER verify --print-certs -v "$apk" || { echo "Verification failed for $apk"; exit 1; }
+            else
+              echo "ERROR: $apk not found. Release build likely failed to produce a signed APK."
+              exit 1
+            fi
+          done
+        shell: bash
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
