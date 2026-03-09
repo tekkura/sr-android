@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-09T01:31:54Z",
+  "event_ts": "2026-03-09T01:31:40Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "GeorgeChernyshov",
+  "run_id": "22834699677",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 140,
+    "title": "Require milestone migration guide and base-branch setup for AppSigning",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/140",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/140",
+  "event_id": "06b799c4329d862d459f94ac6d3c0257e28efbc5f8288f4a80e40068a214f0ae"
+}
