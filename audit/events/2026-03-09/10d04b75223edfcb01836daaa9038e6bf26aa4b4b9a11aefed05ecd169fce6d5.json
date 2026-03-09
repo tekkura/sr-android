@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-09T01:06:47Z",
+  "event_ts": "2026-03-09T01:06:32Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "22834200369",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 146,
+    "title": "Require milestone migration guide and base-branch setup for comprehensiveDemo",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/146",
+    "milestone": {
+      "number": 11,
+      "title": "comprehensiveDemo"
+    }
+  },
+  "comment": {
+    "id": 4020476826,
+    "html_url": "https://github.com/tekkura/sr-android/issues/146#issuecomment-4020476826",
+    "created_at": "2026-03-09T01:06:32Z",
+    "updated_at": "2026-03-09T01:06:32Z",
+    "body": "@Ma7moud3ly , thanks again for your interest and questions. No, this app is not meant to showcase the low level things. I've spoken to the project owner in more detail about this and I think its best if I just implement this milestone myself as the requirements are very specific to robotics control, many of which are not yet implemented by any of the apps and things I've implemented for past demos. I'll assign myself on this one. "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/146#issuecomment-4020476826",
+  "event_id": "10d04b75223edfcb01836daaa9038e6bf26aa4b4b9a11aefed05ecd169fce6d5"
+}
