@@ -31,7 +31,8 @@ jobs:
           if [ -n "$ENCODED_STRING" ]; then
             echo "$ENCODED_STRING" | base64 --decode > $RELEASE_STORE_FILE
           else
-            echo "Warning: RELEASE_KEYSTORE_BASE64 secret is missing. Release build will be unsigned."
+            echo "ERROR: RELEASE_KEYSTORE_BASE64 secret is missing. Automated releases must be signed."
+            exit 1
           fi
         shell: bash
 
