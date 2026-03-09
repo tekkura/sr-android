@@ -78,3 +78,8 @@ jobs:
           GITHUB_USER: ${{ github.actor }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup Keystore
+        if: always()
+        run: rm -f $RELEASE_STORE_FILE
+        shell: bash
