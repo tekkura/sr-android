@@ -14,7 +14,7 @@ MediaPipe contains LiteRT so no additional explicit LiteRT dependencies are requ
     - Document inference invocation path.
     - Document output postprocessing path (e.g., Detection results to UI).
     - Note threading and performance assumptions (e.g., executor usage, GPU delegate).
-    - **Complete Inventory Document**: Create [TFLiteInventory.md](./TFLiteInventory.md) containing full details.
+    - **Complete Inventory Document**: Create [TFLiteInventory.md](./../TFLiteInventory.md) containing full details.
 
 ### Phase 2: Dependency Migration
 - **Update `libs.versions.toml`**:
