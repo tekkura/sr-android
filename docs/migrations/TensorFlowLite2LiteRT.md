@@ -18,8 +18,7 @@ MediaPipe contains LiteRT so no additional explicit LiteRT dependencies are requ
 
 ### Phase 2: Dependency Migration
 - **Update `libs.versions.toml`**:
-    - Add LiteRT versions.
-    - Replace `org.tensorflow:tensorflow-lite-*` with `com.google.mediapipe:*` as recommended by Google (see below).
+    - Replace `org.tensorflow:tensorflow-lite-*` with `com.google.mediapipe:tasks-vision` as recommended by Google (see below). Use version 0.10.33
 - **Update module-level `build.gradle.kts`**:
     - Update dependency references to use the new MediaPipe entries.
 
