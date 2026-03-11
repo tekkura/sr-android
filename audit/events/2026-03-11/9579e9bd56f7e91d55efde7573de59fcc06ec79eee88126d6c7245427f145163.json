@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-11T15:46:13Z",
+  "event_ts": "2026-03-11T15:45:55Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "22961217515",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 181,
+    "title": "App signing/implementation",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/181",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": {
+    "id": 4040158577,
+    "html_url": "https://github.com/tekkura/sr-android/pull/181#issuecomment-4040158577",
+    "created_at": "2026-03-11T15:45:55Z",
+    "updated_at": "2026-03-11T15:45:55Z",
+    "body": "@topherbuckley I have tested this in my fork. Github release is created when prompted and all files are there. Maven publishing fails, but that is to be expected"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/181#issuecomment-4040158577",
+  "event_id": "9579e9bd56f7e91d55efde7573de59fcc06ec79eee88126d6c7245427f145163"
+}
