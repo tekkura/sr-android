@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-11T02:20:02Z",
+  "event_ts": "2026-03-11T02:19:46Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "22933596764",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 154,
+    "title": "Build equivalent demo apps in shortlisted Python Android frameworks",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/154",
+    "milestone": {
+      "number": 10,
+      "title": "pythonDroid"
+    }
+  },
+  "comment": {
+    "id": 4035732085,
+    "html_url": "https://github.com/tekkura/sr-android/issues/154#issuecomment-4035732085",
+    "created_at": "2026-03-11T02:19:46Z",
+    "updated_at": "2026-03-11T02:19:46Z",
+    "body": ">Q2 overrides this in python/abcvlib.py?\n\nYes, the value actual is injected from kotlin\n`loop_delay = 0.010` just a placeholder \n"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/154#issuecomment-4035732085",
+  "event_id": "eb88c240746b6597c9e07ae5c2030aa183d91f218c5b95098498e6dc7e84c008"
+}
