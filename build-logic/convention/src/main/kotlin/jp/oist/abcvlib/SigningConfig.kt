@@ -37,7 +37,6 @@ internal fun Project.configureSigningConfig(
         if (keyAliasProperty.isNullOrBlank()) missingKeys.add(RELEASE_KEY_ALIAS)
         if (keyPasswordProperty.isNullOrBlank()) missingKeys.add(RELEASE_KEY_PASSWORD)
 
-
         val isSigningConfigured = missingKeys.isEmpty()
 
         signingConfigs {
@@ -55,17 +54,25 @@ internal fun Project.configureSigningConfig(
             getByName(SIGNING_CONFIG_NAME) {
                 if (isSigningConfigured) {
                     signingConfig = signingConfigs.getByName(SIGNING_CONFIG_NAME)
-                } else {
-                    val isReleaseTask = gradle.startParameter.taskNames.any {
-                        it.contains("release", ignoreCase = true) || it.contains("publish", ignoreCase = true)
-                    }
-                    if (isReleaseTask) {
-                        error("Release signing configuration is incomplete. Missing keys: ${missingKeys.joinToString()}. " +
-                                "Please provide these values in 'local.properties' or as environment variables.")
-                    } else {
-                        println("WARNING: Release signing properties are missing (${missingKeys.joinToString()}). Release builds will fail.")
-                    }
                 }
+            }
+        }
+
+        /**
+         * Task-graph aware detection.
+         * Note: This catches commands like './gradlew build' or './gradlew assemble' because
+         * 'allTasks' contains the expanded set of sub-tasks (e.g., :app:assembleRelease, :app:packageRelease).
+         */
+        gradle.taskGraph.whenReady {
+            val hasReleaseTask = allTasks.any { task ->
+                task.project == this@configureSigningConfig &&
+                        (task.name.contains("Release", ignoreCase = true) || task.name.contains("Publish", ignoreCase = true))
+            }
+
+            if (hasReleaseTask && !isSigningConfigured) {
+                error("Release signing configuration is incomplete for project '${this@configureSigningConfig.name}'. " +
+                        "Missing keys: ${missingKeys.joinToString()}. " +
+                        "Please provide these values in 'local.properties' or as environment variables.")
             }
         }
     }
