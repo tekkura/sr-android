@@ -43,11 +43,18 @@ jobs:
         uses: ./.github/actions/build-apk
 
       - name: Verify Signing
+        env:
+          EXPECTED_SHA256: ${{ secrets.RELEASE_CERTIFICATE_SHA256 }}
         run: |
           # Find apksigner in the Android SDK
           APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -r | head -n 1)
           if [ -z "$APKSIGNER" ]; then
             echo "ERROR: apksigner not found."
+            exit 1
+          fi
+          
+          if [ -z "$EXPECTED_SHA256" ]; then
+            echo "ERROR: RELEASE_CERTIFICATE_SHA256 secret is missing. Required for identity verification."
             exit 1
           fi
           
@@ -60,9 +67,21 @@ jobs:
             apk="apps/$app/build/outputs/apk/release/$app-release.apk"
             if [ -f "$apk" ]; then
               echo "Verifying $apk..."
-              $APKSIGNER verify --print-certs -v "$apk" || { echo "Verification failed for $apk"; exit 1; }
+          
+              # Extract the SHA-256 fingerprint
+              ACTUAL_SHA256=$($APKSIGNER verify --print-certs "$apk" | grep "SHA-256 digest" | head -n 1 | awk '{print $NF}' | tr '[:lower:]' '[:upper:]' | tr -d ':')
+              NORMALIZED_EXPECTED=$(echo "$EXPECTED_SHA256" | tr '[:lower:]' '[:upper:]' | tr -d ':')
+          
+              if [ "$ACTUAL_SHA256" != "$NORMALIZED_EXPECTED" ]; then
+                echo "ERROR: Signing identity mismatch for $app!"
+                echo "Expected: $NORMALIZED_EXPECTED"
+                echo "Actual:   $ACTUAL_SHA256"
+                exit 1
+              fi
+          
+              echo "Successfully verified signing identity for $app."
             else
-              echo "ERROR: $apk not found. Release build likely failed to produce a signed APK for $app."
+              echo "ERROR: $apk not found. Release build likely failed."
               exit 1
             fi
           done
