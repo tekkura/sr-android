@@ -32,10 +32,11 @@ internal fun Project.configureSigningConfig(
         val keyPasswordProperty = getProperty(RELEASE_KEY_PASSWORD)
 
         val missingKeys = mutableListOf<String>()
-        if (storeFileProperty == null) missingKeys.add(RELEASE_STORE_FILE)
-        if (storePasswordProperty == null) missingKeys.add(RELEASE_STORE_PASSWORD)
-        if (keyAliasProperty == null) missingKeys.add(RELEASE_KEY_ALIAS)
-        if (keyPasswordProperty == null) missingKeys.add(RELEASE_KEY_PASSWORD)
+        if (storeFileProperty.isNullOrBlank()) missingKeys.add(RELEASE_STORE_FILE)
+        if (storePasswordProperty.isNullOrBlank()) missingKeys.add(RELEASE_STORE_PASSWORD)
+        if (keyAliasProperty.isNullOrBlank()) missingKeys.add(RELEASE_KEY_ALIAS)
+        if (keyPasswordProperty.isNullOrBlank()) missingKeys.add(RELEASE_KEY_PASSWORD)
+
 
         val isSigningConfigured = missingKeys.isEmpty()
 
