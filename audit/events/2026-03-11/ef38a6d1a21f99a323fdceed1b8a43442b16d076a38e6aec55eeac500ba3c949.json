@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-11T13:26:07Z",
+  "event_ts": "2026-03-11T13:25:49Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "Ma7moud3ly",
+  "run_id": "22954843313",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 182,
+    "title": "docs(pythonDroid): update the migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/182",
+    "milestone": {
+      "number": 10,
+      "title": "pythonDroid"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 10,
+    "title": "pythonDroid",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/10",
+    "description": "Milestone spec moved to: [docs/milestones/pythonDroid.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/pythonDroid.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/182",
+  "event_id": "ef38a6d1a21f99a323fdceed1b8a43442b16d076a38e6aec55eeac500ba3c949"
+}
