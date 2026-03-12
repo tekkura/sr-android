@@ -4,14 +4,16 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
 
 ## Summary Table
 
-| File                                                                                           | Model Asset                  | Feature                             | Status |
-|:-----------------------------------------------------------------------------------------------|:-----------------------------|:------------------------------------|:-------|
-| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorData.kt`           | `model.tflite` (default)     | Core Object Detection (Task Vision) | Mapped |
-| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorDataSubscriber.kt` | N/A                          | Subscriber Interface                | Mapped |
-| `apps/handsOnApp/src/main/java/jp/oist/abcvlib/handsOnApp/MainActivity.kt`                     | `efficientdet-lite1.tflite`  | UI: Object detection display        | Mapped |
-| `apps/basicCharger/src/main/java/jp/oist/abcvlib/basiccharger/MainActivity.kt`                 | `model.tflite` (default)     | Behavior: Object detection usage    | Mapped |
-| `apps/basicSubscriber/src/main/java/jp/oist/abcvlib/basicsubscriber/MainActivity.kt`           | `model.tflite` (default)     | UI: Object detection display        | Mapped |
-| `build-logic/convention/src/main/kotlin/jp/oist/abcvlib/ModelDownload.kt`                      | `efficientdet-lite0.tflite`  | Build-time provisioning             | Mapped |
+| File                                                                                           | Model Asset                 | Feature                             | Status |
+|:-----------------------------------------------------------------------------------------------|:----------------------------|:------------------------------------|:-------|
+| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorData.kt`           | `model.tflite` (default)    | Core Object Detection (Task Vision) | Mapped |
+| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorDataSubscriber.kt` | N/A                         | Subscriber Interface                | Mapped |
+| `apps/handsOnApp/src/main/java/jp/oist/abcvlib/handsOnApp/MainActivity.kt`                     | `efficientdet-lite1.tflite` | UI: Object detection display        | Mapped |
+| `apps/basicCharger/src/main/java/jp/oist/abcvlib/basiccharger/MainActivity.kt`                 | `model.tflite` (default)    | Behavior: Object detection usage    | Mapped |
+| `apps/basicSubscriber/src/main/java/jp/oist/abcvlib/basicsubscriber/MainActivity.kt`           | `model.tflite` (default)    | UI: Object detection display        | Mapped |
+| `build-logic/convention/src/main/kotlin/jp/oist/abcvlib/ModelDownload.kt`                      | `model.tflite`              | Build-time provisioning             | Mapped |
+| `build-logic/convention/src/main/kotlin/jp/oist/abcvlib/ModelDownload.kt`                      | `efficientdet-lite0.tflite` | Build-time provisioning             | Mapped |
+| `build-logic/convention/src/main/kotlin/jp/oist/abcvlib/ModelDownload.kt`                      | `efficientdet-lite1.tflite` | Build-time provisioning             | Mapped |
 
 ---
 
@@ -69,10 +71,12 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
 ### 6. `build-logic/convention/src/main/kotlin/jp/oist/abcvlib/ModelDownload.kt`
 
 - **Provisioning**:
-    - Downloads `efficientdet-lite0.tflite` from GitHub Release assets.
-    - Places it in `libs/abcvlib/src/main/assets/`.
+    - Downloads `model.tflite` from GitHub Release assets.
+    - Downloads `efficientdet-lite0.tflite` and `efficientdet-lite1.tflite` from 'https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/object_detection/android'.
+    - Places them in `libs/abcvlib/src/main/assets/`.
 - **Runtime Usage**:
-    - **Note**: There is currently no runtime `setModel` call or other selection logic that activates this model in any application. It is provisioned but unused.
+    - There is currently no runtime `setModel(\"efficientdet-lite0.tflite\")` call or other selection logic that activates `efficientdet-lite0.tflite` in any application. It is provisioned but unused.
+    - For usages of `model.tflite` and `efficientdet-lite1.tflite` are used via `setModel`. For the list of call sites, see table above
 
 ---
 
