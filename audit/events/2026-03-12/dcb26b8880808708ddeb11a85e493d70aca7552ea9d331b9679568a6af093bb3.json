@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-12T17:18:32Z",
+  "event_ts": "2026-03-12T17:18:15Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23014695151",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 143,
+    "title": "Require milestone migration guide and base-branch setup for TensorFlowLite2LiteRT",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/143",
+    "milestone": {
+      "number": 8,
+      "title": "TensorFlowLite2LiteRT"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/143",
+  "event_id": "dcb26b8880808708ddeb11a85e493d70aca7552ea9d331b9679568a6af093bb3"
+}
