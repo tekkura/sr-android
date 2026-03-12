@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-12T03:37:27Z",
+  "event_ts": "2026-03-12T03:37:08Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "22985448059",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 162,
+    "title": "TensorFlowLite2LiteRT Created a migration guide",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/162",
+    "milestone": {
+      "number": 8,
+      "title": "TensorFlowLite2LiteRT"
+    }
+  },
+  "comment": {
+    "id": 4043692043,
+    "html_url": "https://github.com/tekkura/sr-android/pull/162#issuecomment-4043692043",
+    "created_at": "2026-03-12T03:37:08Z",
+    "updated_at": "2026-03-12T03:37:08Z",
+    "body": "> @topherbuckley How do I explain to the bot that TFLiteInventory.md should be created and filled in the next PR?\r\n\r\n@GeorgeChernyshov \r\nUse #codex-reply in the specific issue thread:\r\nhttps://github.com/tekkura/sr-android/pull/162#discussion_r2922079259"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/162#issuecomment-4043692043",
+  "event_id": "b5f51085d5e6c98264893f7e6f3926b394c07913e553828d5f41270aaa2cd93c"
+}
