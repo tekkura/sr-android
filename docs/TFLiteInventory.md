@@ -4,13 +4,13 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
 
 ## Summary Table
 
-| File                                                                                           | Model Asset                 | Feature                             | Status |
-|:-----------------------------------------------------------------------------------------------|:----------------------------|:------------------------------------|:-------|
-| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorData.kt`           | `model.tflite` (default)    | Core Object Detection (Task Vision) | Mapped |
-| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorDataSubscriber.kt` | N/A                         | Subscriber Interface                | Mapped |
-| `apps/handsOnApp/src/main/java/jp/oist/abcvlib/handsOnApp/MainActivity.kt`                     | `efficientdet-lite1.tflite` | UI: Object detection display        | Mapped |
-| `apps/basicCharger/src/main/java/jp/oist/abcvlib/basiccharger/MainActivity.kt`                 | N/A                         | Behavior: Object detection usage    | Mapped |
-| `apps/basicSubscriber/src/main/java/jp/oist/abcvlib/basicsubscriber/MainActivity.kt`           | N/A                         | UI: Object detection display        | Mapped |
+| File                                                                                           | Model Asset                  | Feature                             | Status |
+|:-----------------------------------------------------------------------------------------------|:-----------------------------|:------------------------------------|:-------|
+| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorData.kt`           | `model.tflite` (default)     | Core Object Detection (Task Vision) | Mapped |
+| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorDataSubscriber.kt` | N/A                          | Subscriber Interface                | Mapped |
+| `apps/handsOnApp/src/main/java/jp/oist/abcvlib/handsOnApp/MainActivity.kt`                     | `efficientdet-lite1.tflite`  | UI: Object detection display        | Mapped |
+| `apps/basicCharger/src/main/java/jp/oist/abcvlib/basiccharger/MainActivity.kt`                 | `model.tflite` (default)     | Behavior: Object detection usage    | Mapped |
+| `apps/basicSubscriber/src/main/java/jp/oist/abcvlib/basicsubscriber/MainActivity.kt`           | `model.tflite` (default)     | UI: Object detection display        | Mapped |
 
 ---
 
