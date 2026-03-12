@@ -4,19 +4,19 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
 
 ## Summary Table
 
-| Module             | File                              | Model Asset              | Feature                             | Status |
-|:-------------------|:----------------------------------|:-------------------------|:------------------------------------|:-------|
-| `:abcvlib`         | `ObjectDetectorData.kt`           | `model.tflite` (default) | Core Object Detection (Task Vision) | Mapped |
-| `:abcvlib`         | `ObjectDetectorDataSubscriber.kt` | N/A                      | Subscriber Interface                | Mapped |
-| `:handsOnApp`      | `MainActivity.kt`                 | N/A                      | UI: Object detection display        | Mapped |
-| `:basicCharger`    | `MainActivity.kt`                 | N/A                      | Behavior: Object detection usage    | Mapped |
-| `:basicSubscriber` | `MainActivity.kt`                 | N/A                      | UI: Object detection display        | Mapped |
+| File                                                                                           | Model Asset                 | Feature                             | Status |
+|:-----------------------------------------------------------------------------------------------|:----------------------------|:------------------------------------|:-------|
+| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorData.kt`           | `model.tflite` (default)    | Core Object Detection (Task Vision) | Mapped |
+| `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorDataSubscriber.kt` | N/A                         | Subscriber Interface                | Mapped |
+| `apps/handsOnApp/src/main/java/jp/oist/abcvlib/handsOnApp/MainActivity.kt`                     | `efficientdet-lite1.tflite` | UI: Object detection display        | Mapped |
+| `apps/basicCharger/src/main/java/jp/oist/abcvlib/basiccharger/MainActivity.kt`                 | N/A                         | Behavior: Object detection usage    | Mapped |
+| `apps/basicSubscriber/src/main/java/jp/oist/abcvlib/basicsubscriber/MainActivity.kt`           | N/A                         | UI: Object detection display        | Mapped |
 
 ---
 
 ## Detailed Call Sites
 
-### 1. `:abcvlib` - `ObjectDetectorData.kt`
+### 1. `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorData.kt`
 
 - **Model Load**:
     - `objectDetector = ObjectDetector.createFromFileAndOptions(context, modelPath, optionsBuilder.build())`
@@ -34,14 +34,14 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
     - Defaults to 2 threads (`numThreads = 2`).
     - Supports `DELEGATE_CPU`, `DELEGATE_GPU` (via `CompatibilityList`), and `DELEGATE_NNAPI`.
 
-### 2. `:abcvlib` - `ObjectDetectorDataSubscriber.kt`
+### 2. `libs/abcvlib/src/main/java/jp/oist/abcvlib/core/inputs/phone/ObjectDetectorDataSubscriber.kt`
 
 - **Usage**:
     - Defines the interface for receiving `Detection` results.
     - Imports `org.tensorflow.lite.task.vision.detector.Detection` and `org.tensorflow.lite.support.image.TensorImage`.
 - **Inference Invocation**: N/A (Interface only).
 
-### 3. `:handsOnApp` - `MainActivity.kt`
+### 3. `apps/handsOnApp/src/main/java/jp/oist/abcvlib/handsOnApp/MainActivity.kt`
 
 - **Usage**:
     - Implements `ObjectDetectorDataSubscriber`.
@@ -49,7 +49,7 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
     - Displays detected object categories and confidence.
 - **Inference Invocation**: N/A (Consumer).
 
-### 4. `:basicCharger` - `MainActivity.kt`
+### 4. `apps/basicCharger/src/main/java/jp/oist/abcvlib/basiccharger/MainActivity.kt`
 
 - **Usage**:
     - Implements `ObjectDetectorDataSubscriber`.
@@ -57,7 +57,7 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
     - Uses detection for robot behavior (e.g., following/avoiding detected objects).
 - **Inference Invocation**: N/A (Consumer).
 
-### 5. `:basicSubscriber` - `MainActivity.kt`
+### 5. `apps/basicSubscriber/src/main/java/jp/oist/abcvlib/basicsubscriber/MainActivity.kt`
 
 - **Usage**:
     - Implements `ObjectDetectorDataSubscriber`.
@@ -77,7 +77,9 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
 ## Assets & Model Files
 
 - **File**: `libs/abcvlib/src/main/assets/model.tflite`
-    - *Note*: This file might be downloaded dynamically via `ModelDownload.configure(project)` in the build script.
+- **File**: `libs/abcvlib/src/main/assets/efficientdet-lite0.tflite`
+- **File**: `libs/abcvlib/src/main/assets/efficientdet-lite1.tflite`
+    - *Note*: These files might be downloaded dynamically via `ModelDownload.configure(project)` in the build script.
 
 ---
 
