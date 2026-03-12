@@ -11,6 +11,7 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
 | `apps/handsOnApp/src/main/java/jp/oist/abcvlib/handsOnApp/MainActivity.kt`                     | `efficientdet-lite1.tflite`  | UI: Object detection display        | Mapped |
 | `apps/basicCharger/src/main/java/jp/oist/abcvlib/basiccharger/MainActivity.kt`                 | `model.tflite` (default)     | Behavior: Object detection usage    | Mapped |
 | `apps/basicSubscriber/src/main/java/jp/oist/abcvlib/basicsubscriber/MainActivity.kt`           | `model.tflite` (default)     | UI: Object detection display        | Mapped |
+| `build-logic/convention/src/main/kotlin/jp/oist/abcvlib/ModelDownload.kt`                      | `efficientdet-lite0.tflite`  | Build-time provisioning             | Mapped |
 
 ---
 
@@ -65,6 +66,14 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
     - Logs detections.
 - **Inference Invocation**: N/A (Consumer).
 
+### 6. `build-logic/convention/src/main/kotlin/jp/oist/abcvlib/ModelDownload.kt`
+
+- **Provisioning**:
+    - Downloads `efficientdet-lite0.tflite` from GitHub Release assets.
+    - Places it in `libs/abcvlib/src/main/assets/`.
+- **Runtime Usage**:
+    - **Note**: There is currently no runtime `setModel` call or other selection logic that activates this model in any application. It is provisioned but unused.
+
 ---
 
 ## ProGuard Rules
@@ -79,7 +88,7 @@ This document provides a map of all TensorFlow Lite entry points, models, and pr
 - **File**: `libs/abcvlib/src/main/assets/model.tflite`
 - **File**: `libs/abcvlib/src/main/assets/efficientdet-lite0.tflite`
 - **File**: `libs/abcvlib/src/main/assets/efficientdet-lite1.tflite`
-    - *Note*: These files might be downloaded dynamically via `ModelDownload.configure(project)` in the build script.
+    - *Note*: These files are provisioned dynamically via `ModelDownload.configure(project)` in the build script.
 
 ---
 
