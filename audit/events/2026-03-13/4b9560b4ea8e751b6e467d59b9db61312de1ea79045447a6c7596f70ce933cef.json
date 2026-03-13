@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-13T07:02:18Z",
+  "event_ts": "2026-03-13T07:02:01Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23040032090",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 183,
+    "title": "TensorFlowLite2LiteRT Added a document detailing all usages of Tensor…",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/183",
+    "milestone": {
+      "number": 8,
+      "title": "TensorFlowLite2LiteRT"
+    }
+  },
+  "comment": {
+    "id": 4053203203,
+    "html_url": "https://github.com/tekkura/sr-android/pull/183#issuecomment-4053203203",
+    "created_at": "2026-03-13T07:02:01Z",
+    "updated_at": "2026-03-13T07:02:01Z",
+    "body": "@topherbuckley I think the bot is being petty again"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/183#issuecomment-4053203203",
+  "event_id": "4b9560b4ea8e751b6e467d59b9db61312de1ea79045447a6c7596f70ce933cef"
+}
