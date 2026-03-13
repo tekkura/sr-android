@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-13T06:43:12Z",
+  "event_ts": "2026-03-13T06:42:55Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23039519107",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 181,
+    "title": "App signing/implementation",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/181",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": {
+    "id": 4053131398,
+    "html_url": "https://github.com/tekkura/sr-android/pull/181#issuecomment-4053131398",
+    "created_at": "2026-03-13T06:42:55Z",
+    "updated_at": "2026-03-13T06:42:55Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/181#issuecomment-4053131398",
+  "event_id": "9c63ab150584bf3fb61d317f2715f77917085cfd86fa3403d69ee9895d1211f9"
+}
