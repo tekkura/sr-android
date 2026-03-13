@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.media.AudioTimestamp
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.basicsubscriber.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.AbcvlibActivity
 import jp.oist.abcvlib.core.inputs.PublisherManager
@@ -26,8 +28,6 @@ import jp.oist.abcvlib.util.UsbSerial
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.task.vision.detector.Detection
 import java.text.DecimalFormat
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -220,7 +220,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
 
     override fun onObjectsDetected(
         bitmap: Bitmap,
-        tensorImage: TensorImage,
+        mpImage: MPImage,
         results: MutableList<Detection>,
         inferenceTime: Long,
         height: Int,
@@ -229,9 +229,9 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         try {
             // Note you can also get the bounding box here. See https://www.tensorflow.org/lite/api_docs/java/org/tensorflow/lite/task/vision/detector/Detection
             val category =
-                results[0].categories[0] //todo not sure if there will ever be more than one category (multiple detections). If so are they ordered by highest score?
-            val label = category.label
-            val score = String.format(Locale.getDefault(), "%.2f", category.score)
+                results[0].categories()[0] //todo not sure if there will ever be more than one category (multiple detections). If so are they ordered by highest score?
+            val label = category.categoryName()
+            val score = String.format(Locale.getDefault(), "%.2f", category.score())
             val time = String.format(Locale.getDefault(), "%d", inferenceTime)
             guiUpdater.objectDetectorString = label + " : " + score + " : " + time + "ms"
         } catch (e: IndexOutOfBoundsException) {
