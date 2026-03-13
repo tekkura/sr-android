@@ -1,13 +1,16 @@
 {
   "apps": [
-      "basicSubscriber",
-      "basicAssembler",
-      "backAndForth",
-      "basicServer",
-      "basicCharger",
-      "basicQRTransmitter",
-      "basicQRReceiver",
-      "handsOnApp",
-      "pidBalancer"
+    "basicSubscriber",
+    "basicAssembler",
+    "backAndForth",
+    "basicServer",
+    "basicCharger",
+    "basicQRTransmitter",
+    "basicQRReceiver",
+    "handsOnApp",
+    "pidBalancer"
+  ],
+  "libs": [
+    "abcvlib"
   ]
 }
