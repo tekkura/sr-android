@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-13T06:58:14Z",
+  "event_ts": "2026-03-13T06:57:56Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23039920147",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 181,
+    "title": "App signing/implementation",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/181",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": {
+    "id": 4053187933,
+    "html_url": "https://github.com/tekkura/sr-android/pull/181#issuecomment-4053187933",
+    "created_at": "2026-03-13T06:57:56Z",
+    "updated_at": "2026-03-13T06:57:56Z",
+    "body": "@topherbuckley build check won't succeed until the necessary secrets are added.\r\n\r\n1. RELEASE_KEYSTORE_BASE64\r\n2. RELEASE_CERTIFICATE_SHA256\r\n3. RELEASE_STORE_PASSWORD\r\n4. RELEASE_KEY_ALIAS\r\n5. RELEASE_KEY_PASSWORD"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/181#issuecomment-4053187933",
+  "event_id": "cf2091623532c0f4f4bfad63c47893a40ec25bd62d6b15c0d72d6c61bcbff065"
+}
