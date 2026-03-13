@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-13T15:14:56Z",
+  "event_ts": "2026-03-13T15:14:39Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23057368539",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 152,
+    "title": "Inventory all TensorFlow Lite model load and inference call sites",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/152",
+    "milestone": {
+      "number": 8,
+      "title": "TensorFlowLite2LiteRT"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/152",
+  "event_id": "edf498db37c63f120c9c4e5db1b9c1b06a2962e5ac2c0342dcbe623f4831b72c"
+}
