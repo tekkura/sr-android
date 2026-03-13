@@ -8,6 +8,7 @@
       "basicQRTransmitter",
       "basicQRReceiver",
       "handsOnApp",
-      "pidBalancer"
+      "pidBalancer",
+      "backAndForthPython"
   ]
 }
