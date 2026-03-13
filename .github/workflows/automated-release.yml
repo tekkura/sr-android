@@ -116,14 +116,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
 
-      - name: Print environment variables
-        run: |
-          echo "GITHUB_ACTOR: $GITHUB_ACTOR"
-          echo "GITHUB_TOKEN: $GITHUB_TOKEN"
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish package
         run: ./gradlew publish
         env:
