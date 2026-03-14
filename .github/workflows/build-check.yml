@@ -22,6 +22,7 @@ jobs:
     - name: Build
       with:
         gradle-encryption-key: ${{ secrets.GradleEncryptionKey }}
+        gradle-command: assembleDebug testDebugUnitTest lintDebug
         github-user: ${{ github.actor }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
       uses: ./.github/actions/build-apk
