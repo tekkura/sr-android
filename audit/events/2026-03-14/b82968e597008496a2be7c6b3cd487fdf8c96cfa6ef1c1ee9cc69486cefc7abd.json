@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-14T07:12:42Z",
+  "event_ts": "2026-03-14T07:12:25Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23083061027",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 181,
+    "title": "App signing/implementation",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/181",
+    "milestone": {
+      "number": 5,
+      "title": "AppSigning"
+    }
+  },
+  "comment": {
+    "id": 4059883278,
+    "html_url": "https://github.com/tekkura/sr-android/pull/181#issuecomment-4059883278",
+    "created_at": "2026-03-14T07:12:25Z",
+    "updated_at": "2026-03-14T07:12:25Z",
+    "body": "> @topherbuckley RELEASE_KEYSTORE_BASE64 - BASE64-encoded version of your keystore RELEASE_CERTIFICATE_SHA256 - SHA256 of your keystore RELEASE_STORE_PASSWORD - Keystore password RELEASE_KEY_ALIAS - key name RELEASE_KEY_PASSWORD - key password\r\n\r\n@GeorgeChernyshov  I generated those secrets, but it looks like we need to update the build check workflow to get this PR to pass. See:\r\n\r\nhttps://github.com/tekkura/sr-android/pull/187"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/181#issuecomment-4059883278",
+  "event_id": "b82968e597008496a2be7c6b3cd487fdf8c96cfa6ef1c1ee9cc69486cefc7abd"
+}
