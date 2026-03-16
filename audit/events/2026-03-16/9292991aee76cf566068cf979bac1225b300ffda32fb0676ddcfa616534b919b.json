@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-16T16:32:12Z",
+  "event_ts": "2026-03-16T16:31:28Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23154524528",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 185,
+    "title": "Tensor flow lite2 lite rt/implementation",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/185",
+    "milestone": {
+      "number": 8,
+      "title": "TensorFlowLite2LiteRT"
+    }
+  },
+  "comment": {
+    "id": 4068993107,
+    "html_url": "https://github.com/tekkura/sr-android/pull/185#issuecomment-4068993107",
+    "created_at": "2026-03-16T16:31:28Z",
+    "updated_at": "2026-03-16T16:31:28Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/185#issuecomment-4068993107",
+  "event_id": "9292991aee76cf566068cf979bac1225b300ffda32fb0676ddcfa616534b919b"
+}
