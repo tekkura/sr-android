@@ -5,13 +5,19 @@ import android.hardware.usb.UsbManager
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Button
+import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import jp.oist.abcvlib.core.outputs.Outputs
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.ProcessPriorityThreadFactory
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.SerialReadyListener
 import jp.oist.abcvlib.util.UsbSerial
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -35,6 +41,7 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     private var pi2AndroidReader: Runnable? = null
     private var alertDialog: AlertDialog? = null
     private var initialDelay: Long = 0
+    private var serialReadyJob: Job? = null
 
     // Note anything less than 10ms will result in no GET_STATE commands being called and all
     // being overrides by whatever commands are sent in the main loop
@@ -51,13 +58,29 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     private fun usbInitialize() {
         try {
             val usbManager = getSystemService(USB_SERVICE) as UsbManager
-            this.usbSerial = UsbSerial(this, usbManager, this)
+            this.usbSerial = UsbSerial(
+                context = this,
+                usbManager = usbManager,
+                serialReadyListener = object : SerialReadyListener {
+                    override fun onSerialReady(usbSerial: UsbSerial) {
+                        lifecycleScope.launch {
+                            // Cancel the previous serialReadyJob if it exists to avoid multiple executions in parallel.
+                            serialReadyJob?.cancelAndJoin()
+                            // Call Activity's onSerialReady inside (Dispatchers.Default) to avoid blocking the main thread
+                            serialReadyJob = launch(Dispatchers.Default) {
+                                this@AbcvlibActivity.onSerialReady(usbSerial)
+                            }
+                        }
+                    }
+                }
+            )
         } catch (e: IOException) {
             e.printStackTrace()
             showCustomDialog()
         }
     }
 
+    @WorkerThread
     override fun onSerialReady(usbSerial: UsbSerial) {
         if (serialCommManager == null) {
             Logger.w(
@@ -84,11 +107,13 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         }
     }
 
+    @WorkerThread
     protected open fun abcvlibMainLoop() {
         // Throw runtime error if this is called and indicate to user that this needs to be overridden
         throw RuntimeException("runAbcvlibActivityMainLoop must be overridden")
     }
 
+    @WorkerThread
     protected open fun onOutputsReady() {
         // Override this method in your MainActivity to do anything that requires the outputs
         Logger.w(
