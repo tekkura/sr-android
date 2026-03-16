@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-16T11:14:05Z",
+  "event_ts": "2026-03-16T11:13:42Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "23140865165",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 177,
+    "title": "PermissionHandlingUpdates",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/177",
+    "milestone": {
+      "number": 12,
+      "title": "PermissionHandlingUpdates"
+    }
+  },
+  "comment": {
+    "id": 4066910520,
+    "html_url": "https://github.com/tekkura/sr-android/pull/177#issuecomment-4066910520",
+    "created_at": "2026-03-16T11:13:42Z",
+    "updated_at": "2026-03-16T11:13:42Z",
+    "body": "@GeorgeChernyshov @topherbuckley \r\n> I suppose there is a reason to use runnables instead of coroutines.\r\n\r\nBecause this was a java project 🤔\r\n\r\n> coroutines are Kotlin API that allows us to do threading on runtime-level instead of OS-level. It is lightweight and easy to use and, overall, the recommended way to do any threading operations. Mahmoud already integrated some coroutine usage into the project.\r\n\r\nNice! We can start migrating other concurrency tasks to coroutines if needed... However, I hope this out of context suggestion doesn’t block merging this PR"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/177#issuecomment-4066910520",
+  "event_id": "0098d792f9ac5342276b1f12c1b693d595c1a5fdc57ae5e6d523473ce4e7f3c6"
+}
