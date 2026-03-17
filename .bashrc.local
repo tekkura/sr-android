@@ -1,0 +1,10 @@
+  gtn() {
+    git log \
+      --exclude='*/audit-log' --remotes \
+      --exclude='audit-log' --branches \
+      --decorate-refs-exclude='refs/remotes/*/audit-log' \
+      --decorate-refs-exclude='refs/heads/audit-log' \
+      --pretty='format:%C(auto)%h %d %s, %C(green)%an %cd)' \
+      --graph --abbrev-commit --notes --date=relative \
+      "$@"
+  }

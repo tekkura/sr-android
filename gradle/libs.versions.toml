@@ -1,0 +1,94 @@
+[versions]
+# Build configuration
+compileSdk = "36"
+targetSdk = "36"
+minSdk = "30"
+buildTools = "35.0.0"
+jvmTarget = "17"
+
+# Plugins
+agp = "8.13.2"
+kotlin = "1.9.24"
+undercouchDownload = "5.6.0"
+# Android Core
+annotation = "1.9.1"
+appcompat = "1.7.1"
+activity = "1.12.2"
+fragment = "1.8.9"
+coreKtx = "1.17.0"
+constraintlayout = "2.2.1"
+material = "1.13.0"
+lifecycle = "2.10.0"
+navigation = "2.9.6"
+
+# CameraX
+cameraX = "1.5.2"
+# TensorFlow Lite
+tensorflowLiteTaskVision = "0.4.4"
+tensorflowLiteGpu = "2.15.0"
+# IOIO
+ioio = "6.1.0"
+# ZXing
+zxingCore = "3.4.1"
+zxingAndroid = "3.3.0"
+
+# Other
+flatbuffers = "25.2.10"
+androidPermissions = "2.1.8"
+commonsCollections = "4.5.0"
+usbSerial = "3.10.0"
+abcvlibFbclasses = "0.0.1"
+
+[libraries]
+# Android Core
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+androidx-activity = { module = "androidx.activity:activity", version.ref = "activity" }
+androidx-fragment = { module = "androidx.fragment:fragment", version.ref = "fragment" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+# Lifecycle
+androidx-lifecycle-livedata = { module = "androidx.lifecycle:lifecycle-livedata", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+# Navigation
+androidx-navigation-fragment = { module = "androidx.navigation:navigation-fragment", version.ref = "navigation" }
+androidx-navigation-ui = { module = "androidx.navigation:navigation-ui", version.ref = "navigation" }
+# CameraX
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraX" }
+androidx-camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "cameraX" }
+# TensorFlow Lite
+tensorflow-lite-task-vision = { module = "org.tensorflow:tensorflow-lite-task-vision", version.ref = "tensorflowLiteTaskVision" }
+tensorflow-lite-gpu-delegate-plugin = { module = "org.tensorflow:tensorflow-lite-gpu-delegate-plugin", version.ref = "tensorflowLiteTaskVision" }
+tensorflow-lite-gpu = { module = "org.tensorflow:tensorflow-lite-gpu", version.ref = "tensorflowLiteGpu" }
+# IOIO
+ioio-android = { module = "com.github.ytai.ioio:IOIOLibAndroid", version.ref = "ioio" }
+ioio-accessory = { module = "com.github.ytai.ioio:IOIOLibAndroidAccessory", version.ref = "ioio" }
+ioio-bluetooth = { module = "com.github.ytai.ioio:IOIOLibAndroidBluetooth", version.ref = "ioio" }
+ioio-device = { module = "com.github.ytai.ioio:IOIOLibAndroidDevice", version.ref = "ioio" }
+# ZXing (QR/Barcode)
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
+zxing-android-integration = { module = "com.google.zxing:android-integration", version.ref = "zxingAndroid" }
+# Other
+flatbuffers = { module = "com.google.flatbuffers:flatbuffers-java", version.ref = "flatbuffers" }
+usb-serial = { module = "com.github.mik3y:usb-serial-for-android", version.ref = "usbSerial" }
+android-permissions = { module = "io.github.nishkarsh:android-permissions", version.ref = "androidPermissions" }
+commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commonsCollections" }
+abcvlib-fbclasses = { module = "jp.oist.abcvlib.core.learning:fbclasses", version.ref = "abcvlibFbclasses" }
+
+# Dependencies that included at build-logic
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
+kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+download-gradlePlugin = { group = "de.undercouch", name = "gradle-download-task", version.ref = "undercouchDownload" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+undercouch-download = { id = "de.undercouch.download", version.ref = "undercouchDownload" }
+
+# Plugins defined at build-logic
+oist-application = { id = "oist.application" }
+oist-library = { id = "oist.library" }

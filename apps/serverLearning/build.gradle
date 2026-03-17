@@ -1,3 +1,0 @@
-android {
-    namespace 'jp.oist.abcvlib.serverlearning'
-}

@@ -1,0 +1,1 @@
+Investigate available options for developing Android applications in Python to improve accessibility for research users. If viable frameworks or toolchains are identified, create comparable demo applications in each option to evaluate feasibility, performance, deployment workflow, and long-term maintainability.
