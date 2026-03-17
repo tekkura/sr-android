@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-17T11:21:04Z",
+  "event_ts": "2026-03-17T11:20:43Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "23191706621",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 190,
+    "title": "pythonDroid: optional abcvlibMainLoop ",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/190",
+    "milestone": {
+      "number": 10,
+      "title": "pythonDroid"
+    }
+  },
+  "comment": {
+    "id": 4074240024,
+    "html_url": "https://github.com/tekkura/sr-android/pull/190#issuecomment-4074240024",
+    "created_at": "2026-03-17T11:20:43Z",
+    "updated_at": "2026-03-17T11:20:43Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/190#issuecomment-4074240024",
+  "event_id": "cdb68fa4fc76664a9c5ff788638d21bda959c38b949089bec1441c35de7f6c7f"
+}
