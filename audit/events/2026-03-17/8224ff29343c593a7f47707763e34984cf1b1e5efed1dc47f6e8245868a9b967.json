@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-17T12:45:13Z",
+  "event_ts": "2026-03-17T12:39:05Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23194583652",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 28,
+    "title": "Add a script to upload apks in a github release",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/28",
+    "milestone": {
+      "number": 6,
+      "title": "APKDistribution"
+    }
+  },
+  "comment": {
+    "id": 4074662148,
+    "html_url": "https://github.com/tekkura/sr-android/issues/28#issuecomment-4074662148",
+    "created_at": "2026-03-17T12:39:05Z",
+    "updated_at": "2026-03-17T12:39:05Z",
+    "body": "Closing this in favor of the APKDistribution route chosen in 2026.\n\nThe selected direction is:\n- keep APK distribution on GitHub Releases in the canonical repo\n- use JitPack for public `abcvlib` consumption\n\nThe follow-up work is tracked in:\n- #196 Make `abcvlib` buildable on JitPack without GitHub credentials\n- #195 Document APK releases on GitHub and public `abcvlib` consumption via JitPack\n\nThe implementation PR for that route is #199."
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/28#issuecomment-4074662148",
+  "event_id": "8224ff29343c593a7f47707763e34984cf1b1e5efed1dc47f6e8245868a9b967"
+}
