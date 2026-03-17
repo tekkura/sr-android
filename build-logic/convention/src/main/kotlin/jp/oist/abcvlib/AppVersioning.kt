@@ -61,9 +61,14 @@ object AppVersioning {
             val longVersionName = "git describe --tags --long".execute().trim()
             val parts = longVersionName.split("-")
             val fullVersionTag = parts[0]
+            val normalizedVersionTag = fullVersionTag.removePrefix("v")
             val commitCount = parts[1].toInt()
 
-            if (commitCount == 0) fullVersionTag else longVersionName
+            if (commitCount == 0) {
+                normalizedVersionTag
+            } else {
+                longVersionName.replaceFirst(fullVersionTag, normalizedVersionTag)
+            }
         } catch (e: Exception) {
             println("Warning: Failed to fetch git version. Error: ${e.message}")
             DEFAULT_VERSION_NAME
