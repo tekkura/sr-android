@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-03-17T12:19:47Z",
+  "event_ts": "2026-03-17T12:19:13Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "edited",
+  "actor": "topherbuckley",
+  "run_id": "23193840080",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 196,
+    "title": "Make abcvlib buildable on JitPack without GitHub credentials",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/196",
+    "milestone": {
+      "number": 6,
+      "title": "APKDistribution"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": {
+    "body": {
+      "from": ""
+    }
+  },
+  "severity": "HIGH",
+  "target_url": "https://github.com/tekkura/sr-android/issues/196",
+  "event_id": "8c9f67cf21b286134c1a71f40b4b5ff9ae6daf12084633b5619b68e963508b2e"
+}
