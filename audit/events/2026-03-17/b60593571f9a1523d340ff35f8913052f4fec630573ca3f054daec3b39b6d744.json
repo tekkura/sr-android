@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-17T12:39:22Z",
+  "event_ts": "2026-03-17T12:39:05Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "topherbuckley",
+  "run_id": "23194583210",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 27,
+    "title": "Upload aar to maven central.",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/27",
+    "milestone": {
+      "number": 6,
+      "title": "APKDistribution"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/27",
+  "event_id": "b60593571f9a1523d340ff35f8913052f4fec630573ca3f054daec3b39b6d744"
+}
