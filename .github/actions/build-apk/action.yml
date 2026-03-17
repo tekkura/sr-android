@@ -1,5 +1,5 @@
 name: 'Build'
-description: 'Combines checkout, openjdk17 install, setup-gradle, and gradle build into one'
+description: 'Combines checkout, openjdk17 install, setup-gradle, and a configurable Gradle invocation into one'
 inputs:
   gradle-encryption-key:
     description: 'The encryption key to use for caching'
@@ -10,6 +10,10 @@ inputs:
   github-token:
     description: 'GitHub token for authentication'
     required: true
+  gradle-command:
+    description: 'Gradle task list to run'
+    required: false
+    default: 'build'
 runs:
   using: "composite"
   steps:
@@ -32,7 +36,7 @@ runs:
       cache-read-only: false
       cache-overwrite-existing: true
   - name: Build with Gradle
-    run: ./gradlew build
+    run: ./gradlew ${{ inputs.gradle-command }}
     shell: bash
     env:
       GITHUB_USER: ${{ inputs.github-user }}
