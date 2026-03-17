@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-17T12:39:21Z",
+  "event_ts": "2026-03-17T12:39:05Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "topherbuckley",
+  "run_id": "23194582447",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 28,
+    "title": "Add a script to upload apks in a github release",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/28",
+    "milestone": {
+      "number": 6,
+      "title": "APKDistribution"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/28",
+  "event_id": "fb4efab39556eb1dde63e5351583b5ee6326dc9cb008ef6337ff547d6ae943fa"
+}
