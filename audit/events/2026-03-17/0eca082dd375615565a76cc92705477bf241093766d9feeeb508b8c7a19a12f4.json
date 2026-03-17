@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-17T12:38:58Z",
+  "event_ts": "2026-03-17T12:38:43Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "topherbuckley",
+  "run_id": "23194569256",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 199,
+    "title": "Make abcvlib publicly consumable via JitPack",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/199",
+    "milestone": {
+      "number": 6,
+      "title": "APKDistribution"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 6,
+    "title": "APKDistribution",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/6",
+    "description": "Milestone spec moved to: [docs/milestones/APKDistribution.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/APKDistribution.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/199",
+  "event_id": "0eca082dd375615565a76cc92705477bf241093766d9feeeb508b8c7a19a12f4"
+}
