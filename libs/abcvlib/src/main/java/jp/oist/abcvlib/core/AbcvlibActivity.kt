@@ -47,6 +47,7 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     // being overrides by whatever commands are sent in the main loop
     private var delay: Long = 5
     private var isCreated = false
+    private var mainLoopEnabled = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         isCreated = true
@@ -94,11 +95,16 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         initializeOutputs()
         onOutputsReady()
 
-        // Needs to be > 5 in order for object detector not to overwhelm cpu
-        val priority = ProcessPriorityThreadFactory(Thread.MAX_PRIORITY, "AbcvlibActivityMainLoop")
-        Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
-            AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
-        )
+        if (mainLoopEnabled) {
+            // Needs to be > 5 in order for object detector not to overwhelm cpu
+            val priority = ProcessPriorityThreadFactory(
+                Thread.MAX_PRIORITY,
+                "AbcvlibActivityMainLoop"
+            )
+            Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
+                AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
+            )
+        }
     }
 
     private inner class AbcvlibActivityRunnable : Runnable {
@@ -145,6 +151,12 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         this.delay = delay
     }
 
+    protected fun enableMainLoop(enable: Boolean) {
+        if (isCreated) {
+            throw RuntimeException("enableMainLoop must be called before onCreate")
+        }
+        this.mainLoopEnabled = enable
+    }
 
     fun onEncoderCountsRec(left: Int, right: Int) {
         Logger.d("serial", "Left encoder count: $left")
