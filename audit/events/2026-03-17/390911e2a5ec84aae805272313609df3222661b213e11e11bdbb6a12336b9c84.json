@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-03-17T07:00:00Z",
+  "event_ts": "2026-03-17T06:59:42Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "topherbuckley",
+  "run_id": "23182388345",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 192,
+    "title": "[Issue]: enforce abcvlibMainLoop override when main loop is enabled",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/192",
+    "milestone": null
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/192",
+  "event_id": "390911e2a5ec84aae805272313609df3222661b213e11e11bdbb6a12336b9c84"
+}
