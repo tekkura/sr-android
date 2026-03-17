@@ -16,12 +16,10 @@ See `docs/PR_WORKFLOW.md` for the required milestone branch naming, review proce
 The following is a list of tools needed to build either abcvlib or any of the demo applications.
 
 1. Java opensdk v17 or higher, with environmental variable JAVA_HOME set to the root of this sdk e.g. `/usr/lib/jvm/java-1.17.0-openjdk-amd64` (a requirement by modern Android gradle plugin versions)
-2. BOTH git and GitHub command line interface (used to download packages and other larger assets from GitHub Packages)
-3. Local environment variables GITHUB_USER and GITHUB_TOKEN (see [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) for more information on how to create a token. The token must have full "repo" permissions and `read:packages` permission.
-![permissions](./media/github_token_permissions.png)
-4. Android SDK Tools (If you prefer the command line, you can use the Android Command Line Tools and avoid using Android Studio)
-5. (Optional) Android Studio
-6. (Optional) Docker can be used to provide all the above tools in a single ready-made image. See the [Docker README](docker/README.md) for more information.
+2. git
+3. Android SDK Tools (If you prefer the command line, you can use the Android Command Line Tools and avoid using Android Studio)
+4. (Optional) Android Studio
+5. (Optional) Docker can be used to provide all the above tools in a single ready-made image. See the [Docker README](docker/README.md) for more information.
 
 ### Building and Installing APKs
 Start by cloning the repository
@@ -113,7 +111,7 @@ Three demo applications exemplify the basic use of the API:
 4. Run `adb connect <ip_address>:<port>` to connect to your smartphone
 
 ## Installing/Rolling back APK versions
-APK builds and abcvlib .aar files are stored in Github Releases.
+APK builds are stored in GitHub Releases.
 1. Download any versioned release in the [releases page](https://github.com/oist/smartphone-robot-android/releases)
 2. Install the APK on your device by running `adb install -r <path_to_apk>`. You may also find the following adb flags helpful:
 
@@ -129,20 +127,20 @@ APK builds and abcvlib .aar files are stored in Github Releases.
 
 
 ## Using abcvlib as an external dependency
-Currently the package is hosted on GitHub Packages. To use it as a dependency in your project, add the following to your build.gradle file:
+`abcvlib` is intended to be consumed publicly via JitPack. To use it as a dependency in your project, add the following to your Gradle build:
 
 ```gradle
 repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/topherbuckley/smartphone-robot-android")
-        credentials {
-            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USER")
-            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
-        }
-    }
+    maven { url = uri("https://jitpack.io") }
 }
 dependencies {
-    implementation 'jp.oist:abcvlib:v1.1.3'
+    implementation("com.github.oist.smartphone-robot-android:abcvlib:<tag>")
 }
 ```
-See more information on how to use GitHub Packages [here](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry).
+
+Replace `<tag>` with the release tag you want to consume, for example `v2.0.0`.
+
+Notes:
+
+- Public consumers do not need GitHub Packages credentials to depend on `abcvlib` through JitPack.
+- Repository-owned publishing workflows may still use GitHub Packages separately from this consumer setup.
