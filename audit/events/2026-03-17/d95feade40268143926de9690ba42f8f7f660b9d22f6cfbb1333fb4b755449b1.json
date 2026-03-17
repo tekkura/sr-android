@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-03-17T12:26:00Z",
+  "event_ts": "2026-03-17T12:25:43Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "topherbuckley",
+  "run_id": "23194075294",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 198,
+    "title": "HIGH audit event: issues.edited by topherbuckley (d0fa88d5431d)",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/198",
+    "milestone": null
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/198",
+  "event_id": "d95feade40268143926de9690ba42f8f7f660b9d22f6cfbb1333fb4b755449b1"
+}
