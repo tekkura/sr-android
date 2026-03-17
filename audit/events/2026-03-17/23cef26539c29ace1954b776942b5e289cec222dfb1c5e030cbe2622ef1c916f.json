@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-17T12:39:35Z",
+  "event_ts": "2026-03-17T12:39:18Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "Ma7moud3ly",
+  "run_id": "23194592055",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 145,
+    "title": "Require milestone migration guide and base-branch setup for pythonDroid",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/145",
+    "milestone": {
+      "number": 10,
+      "title": "pythonDroid"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/145",
+  "event_id": "23cef26539c29ace1954b776942b5e289cec222dfb1c5e030cbe2622ef1c916f"
+}
