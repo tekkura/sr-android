@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">BasicSubscriber Python</string>
+    <string name="voltageBatteryHeader">Battery Voltage: </string>
+    <string name="voltageChargerHeader">Charger Voltage: </string>
+    <string name="tiltAngleHeader">Tilt Angle (deg): </string>
+    <string name="angularVelocityHeader">Angular Velocity (deg/s): </string>
+    <string name="leftWheelHeader">Left Wheel Count: </string>
+    <string name="rightWheelHeader">Right Wheel Count: </string>
+    <string name="soundDataHeader">Sound Data: </string>
+    <string name="frameRateHeader">Frame Rate: </string>
+    <string name="leftWheelHeaderText">Left Wheel C:D:SI:SB:SE</string>
+    <string name="rightWheelHeaderText">Right Wheel C:D:SI:SB:SE</string>
+    <string name="coilVoltageTextValue">0.00</string>
+    <string name="coilVoltageHeaderValue">Coil Voltage: </string>
+    <string name="qrDataHeader">QrCodeData: </string>
+    <string name="objectDetectorHeader">"ObjectDetector: "</string>
+</resources>
