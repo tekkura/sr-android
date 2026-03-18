@@ -76,7 +76,7 @@ flatbuffers = { module = "com.google.flatbuffers:flatbuffers-java", version.ref 
 usb-serial = { module = "com.github.mik3y:usb-serial-for-android", version.ref = "usbSerial" }
 android-permissions = { module = "io.github.nishkarsh:android-permissions", version.ref = "androidPermissions" }
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commonsCollections" }
-abcvlib-fbclasses = { module = "com.github.topherbuckley.smartphone-robot-flatbuffers:fbclasses", version.ref = "abcvlibFbclasses" }
+abcvlib-fbclasses = { module = "com.github.topherbuckley:smartphone-robot-flatbuffers", version.ref = "abcvlibFbclasses" }
 
 # Dependencies that included at build-logic
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
