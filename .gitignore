@@ -12,3 +12,7 @@ config.json
 **/.project
 **/.classpath
 **/.settings/
+
+# Signing secrets
+*.jks
+*.keystore
