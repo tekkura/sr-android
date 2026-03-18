@@ -37,7 +37,7 @@ flatbuffers = "25.2.10"
 androidPermissions = "2.1.8"
 commonsCollections = "4.5.0"
 usbSerial = "3.10.0"
-abcvlibFbclasses = "v0.0.1"
+abcvlibFbclasses = "v0.0.3"
 
 [libraries]
 # Android Core
@@ -76,7 +76,7 @@ flatbuffers = { module = "com.google.flatbuffers:flatbuffers-java", version.ref 
 usb-serial = { module = "com.github.mik3y:usb-serial-for-android", version.ref = "usbSerial" }
 android-permissions = { module = "io.github.nishkarsh:android-permissions", version.ref = "androidPermissions" }
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commonsCollections" }
-abcvlib-fbclasses = { module = "com.github.topherbuckley:smartphone-robot-flatbuffers", version.ref = "abcvlibFbclasses" }
+abcvlib-fbclasses = { module = "com.github.oist:smartphone-robot-flatbuffers", version.ref = "abcvlibFbclasses" }
 
 # Dependencies that included at build-logic
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
