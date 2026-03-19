@@ -127,20 +127,22 @@ APK builds are stored in GitHub Releases.
 
 
 ## Using abcvlib as an external dependency
-`abcvlib` is intended to be consumed publicly via JitPack. To use it as a dependency in your project, add the following to your Gradle build:
+`abcvlib` is intended to be consumed publicly via JitPack.
+
+Add the JitPack repository to your Gradle build:
 
 ```gradle
 repositories {
     maven { url = uri("https://jitpack.io") }
 }
-dependencies {
-    implementation("com.github.oist.smartphone-robot-android:abcvlib:<tag>")
-}
 ```
 
-Replace `<tag>` with the release tag you want to consume, for example `v2.0.0`.
+Then use the dependency coordinates shown on the JitPack page for the release tag you want to consume.
 
 Notes:
 
 - Public consumers do not need GitHub Packages credentials to depend on `abcvlib` through JitPack.
 - Repository-owned publishing workflows may still use GitHub Packages separately from this consumer setup.
+- Git release tags use the form `vX.Y.Z`.
+- The published Maven version is normalized from `vX.Y.Z` to `X.Y.Z` by the checked-in build logic.
+- Use the exact dependency snippet shown for the chosen tag on JitPack rather than assuming a `com.github...` coordinate format.
