@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-19T10:47:51Z",
+  "event_ts": "2026-03-19T10:42:30Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "assigned",
+  "actor": "topherbuckley",
+  "run_id": "23291082625",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 205,
+    "title": "Clarify README JitPack dependency guidance for abcvlib",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/205",
+    "milestone": {
+      "number": 6,
+      "title": "APKDistribution"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/205",
+  "event_id": "e4128d591278dbd9660ebd14035bc563e96a674f078fb25207d35a2a92ee3be4"
+}
