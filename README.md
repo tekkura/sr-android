@@ -1,4 +1,5 @@
 # OIST Smartphone Robot Android Framework
+[![](https://jitpack.io/v/oist/smartphone-robot-android.svg)](https://jitpack.io/#oist/smartphone-robot-android)
 
 The main purpose of this repo is to host the abcvlib development. This is the library governing the OIST Smartphone Robot Android Framework. The framework is designed to provide a simple and easy to use interface for developing Android applications for the OIST Smartphone Robot.
 
@@ -135,14 +136,17 @@ Add the JitPack repository to your Gradle build:
 repositories {
     maven { url = uri("https://jitpack.io") }
 }
-```
 
-Then use the dependency coordinates shown on the JitPack page for the release tag you want to consume.
+dependencies {
+    implementation("com.github.oist.smartphone-robot-android:abcvlib:v2.0.2")
+}
+```
 
 Notes:
 
 - Public consumers do not need GitHub Packages credentials to depend on `abcvlib` through JitPack.
 - Repository-owned publishing workflows may still use GitHub Packages separately from this consumer setup.
+- JitPack consumption uses the repository/module coordinate `com.github.oist.smartphone-robot-android:abcvlib:<tag>`.
+- This consumer coordinate is separate from the repository-owned Maven publication metadata used elsewhere in the build.
 - Git release tags use the form `vX.Y.Z`.
 - The published Maven version is normalized from `vX.Y.Z` to `X.Y.Z` by the checked-in build logic.
-- Use the exact dependency snippet shown for the chosen tag on JitPack rather than assuming a `com.github...` coordinate format.
