@@ -5,6 +5,8 @@ import android.graphics.Matrix
 import android.os.Bundle
 import androidx.core.graphics.scale
 import androidx.lifecycle.lifecycleScope
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.core.AbcvlibActivity
 import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
@@ -20,8 +22,6 @@ import jp.oist.abcvlib.util.UsbSerial
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.task.vision.detector.Detection
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -130,7 +130,7 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
 
     override fun onObjectsDetected(
         bitmap: Bitmap,
-        tensorImage: TensorImage,
+        mpImage: MPImage,
         results: MutableList<Detection>,
         inferenceTime: Long,
         height: Int,
@@ -150,13 +150,13 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
                 rotatedBitmap.width * 4, rotatedBitmap.height * 4
             )
             debugInfo.image = scaledBitmap
-            val category = results[0].categories[0]
-            imageLabel = category.label
+            val category = results[0].categories()[0]
+            imageLabel = category.categoryName()
             debugInfo.text3 = String.format(
                 Locale.getDefault(),
                 "Label: %s (score: %.2f)",
                 imageLabel,
-                category.score
+                category.score()
             )
         } catch (e: IndexOutOfBoundsException) {
             imageLabel = "Nothing"

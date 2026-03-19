@@ -25,9 +25,8 @@ navigation = "2.9.6"
 
 # CameraX
 cameraX = "1.5.2"
-# TensorFlow Lite
-tensorflowLiteTaskVision = "0.4.4"
-tensorflowLiteGpu = "2.15.0"
+#MediaPipe
+tasksVision = "0.10.32"
 # IOIO
 ioio = "6.1.0"
 # ZXing
@@ -61,10 +60,8 @@ androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.r
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraX" }
 androidx-camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "cameraX" }
-# TensorFlow Lite
-tensorflow-lite-task-vision = { module = "org.tensorflow:tensorflow-lite-task-vision", version.ref = "tensorflowLiteTaskVision" }
-tensorflow-lite-gpu-delegate-plugin = { module = "org.tensorflow:tensorflow-lite-gpu-delegate-plugin", version.ref = "tensorflowLiteTaskVision" }
-tensorflow-lite-gpu = { module = "org.tensorflow:tensorflow-lite-gpu", version.ref = "tensorflowLiteGpu" }
+# MediaPipe
+tasks-vision = { module = "com.google.mediapipe:tasks-vision", version.ref = "tasksVision" }
 # IOIO
 ioio-android = { module = "com.github.ytai.ioio:IOIOLibAndroid", version.ref = "ioio" }
 ioio-accessory = { module = "com.github.ytai.ioio:IOIOLibAndroidAccessory", version.ref = "ioio" }
