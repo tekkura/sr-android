@@ -23,13 +23,6 @@ dependencyResolutionManagement {
         mavenCentral()
         mavenLocal()
         maven("https://jitpack.io")
-        maven {
-            url = uri("https://maven.pkg.github.com/topherbuckley/smartphone-robot-flatbuffers")
-            credentials {
-                username = System.getenv("GITHUB_USER")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
     }
 }
 
