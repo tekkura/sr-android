@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-19T09:54:22Z",
+  "event_ts": "2026-03-19T09:54:02Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "topherbuckley",
+  "run_id": "23289305087",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 203,
+    "title": "Merge APKDistribution milestone into main",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/203",
+    "milestone": {
+      "number": 6,
+      "title": "APKDistribution"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/203",
+  "event_id": "e6fc1925454cb8236e295b5f10411ed71a67330b30783081e63aed59cef51391"
+}
