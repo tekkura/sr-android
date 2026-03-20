@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-20T03:16:37Z",
+  "event_ts": "2026-03-20T03:16:07Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23327554244",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 208,
+    "title": "pythonDroid",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/208",
+    "milestone": {
+      "number": 10,
+      "title": "pythonDroid"
+    }
+  },
+  "comment": {
+    "id": 4095162097,
+    "html_url": "https://github.com/tekkura/sr-android/pull/208#issuecomment-4095162097",
+    "created_at": "2026-03-20T03:16:07Z",
+    "updated_at": "2026-03-20T03:16:07Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/208#issuecomment-4095162097",
+  "event_id": "c061bc2eab89c900a4e354c9b1a3218f0b9ca5580b57759f76115e61c0bb6bbc"
+}
