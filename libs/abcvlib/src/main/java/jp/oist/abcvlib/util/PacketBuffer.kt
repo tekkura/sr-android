@@ -9,23 +9,102 @@ import java.util.Arrays
 class PacketBuffer(capacity: Int = (512 * 128) + 8) {
 
     // Maybe make them private
-    var packetDataSize = RP2020_PACKET_SIZE_STATE
-    var packetType: AndroidToRP2040Command = AndroidToRP2040Command.NACK
+    private var packetDataSize = RP2020_PACKET_SIZE_STATE
+    private var packetType: AndroidToRP2040Command = AndroidToRP2040Command.NACK
 
     //Ensure a proper start and stop mark present before adding anything to the fifoQueue
-    var startStopIdx = StartStopIndex(-1, -1)
+    private var startStopIdx = StartStopIndex(-1, -1)
 
     private val _buffer = ByteBuffer.allocate(capacity).apply {
         order(ByteOrder.LITTLE_ENDIAN)
     }
 
-    fun put(bytes: ByteArray) : Boolean {
-        if (_buffer.remaining() < bytes.size) {
-            return false
+    @Synchronized
+    fun consume(bytes: ByteArray) : ParseResult {
+        if (!put(bytes)) {
+            Logger.e("verifyPacket", "Buffer overflow risk: clearing buffer and resynchronizing.")
+            clear()
+
+            return ParseResult.Overflow
         }
 
-        _buffer.put(bytes)
-        return true
+        // If startIdx not yet found, find it
+        if (startStopIdx.startIdx < 0)
+            startStopIndexSearch()
+
+        // If startIdx still not found, return false
+        if (startStopIdx.startIdx < 0) {
+            Logger.v("verifyPacket", "StartIdx not yet found. Waiting for more data")
+            return ParseResult.NotEnoughData
+        }
+
+        Logger.v("verifyPacket", "StartIdx found at " + startStopIdx.startIdx)
+        // if packetType not yet found, find it
+        if (packetType == AndroidToRP2040Command.NACK) {
+            // If position is 0, nothing received yet. If position is 1 only the start mark has been received.
+            // position 2 is the packetType, and positions 3 and 4 are a short for packetSize
+            if (_buffer.position() < RP2040ToAndroidPacket.Offsets.DATA) {
+                Logger.v("verifyPacket", "Nothing other than startIdx found. Waiting for more data")
+                return ParseResult.NotEnoughData
+            }
+
+            val packetTypeByte = _buffer.get(startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE)
+            val parsedPacketType = getEnumByValue(packetTypeByte)
+            if (parsedPacketType == null) {
+                Logger.e("verifyPacket", "Unknown packetType: $packetTypeByte")
+                return ParseResult.InvalidType(packetTypeByte)
+            }
+
+            packetType = parsedPacketType
+
+            // get the packetDataSize. It is stored at index 3 and 4 as a short
+            packetDataSize = _buffer.getShort(
+                startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.DATA_SIZE
+            ).toInt() and 0xFFFF
+
+            if (packetDataSize > 2048) {
+                Logger.e(
+                    "verifyPacket",
+                    "Unreasonable packet size: ${packetDataSize}. Resynchronizing."
+                )
+
+                return ParseResult.InvalidSize(packetDataSize)
+            }
+
+            Logger.v(
+                "verifyPacket",
+                packetType.toString() + " packetType of size " + packetDataSize + " found at "
+                        + (startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE)
+            )
+
+            findStopIndex()
+        }
+
+        if (_buffer.position() < (startStopIdx.stopIdx + 1)) {
+            Logger.d(
+                "verifyPacket", "Data received not yet enough to fill " +
+                        packetType + " packetType. Waiting for more data"
+            )
+
+            Logger.d(
+                "verifyPacket",
+                _buffer.position().toString() +
+                        " bytes recvd thus far. Require " +
+                        startStopIdx.stopIdx + 1
+            )
+
+            return ParseResult.NotEnoughData
+        }
+
+        if (_buffer.get(startStopIdx.stopIdx) != AndroidToRP2040Command.STOP.hexValue)
+            return ParseResult.StopMarkerNotFound
+
+        Logger.i("verifyPacket", "${packetType.name} command received")
+
+        return ParseResult.Success(
+            packetType = packetType,
+            packetData = getCurrentCommandByteArray()
+        )
     }
 
     fun clear() {
@@ -40,10 +119,22 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
 
             clear()
         }
+
+        packetType = AndroidToRP2040Command.NACK
+        startStopIdx = StartStopIndex(-1, -1)
+    }
+
+    private fun put(bytes: ByteArray) : Boolean {
+        if (_buffer.remaining() < bytes.size) {
+            return false
+        }
+
+        _buffer.put(bytes)
+        return true
     }
 
     @Throws(IOException::class)
-    fun startStopIndexSearch() {
+    private fun startStopIndexSearch() {
         val startStopIdx = StartStopIndex(-1, -1)
         var i = 0
         _buffer.flip()
@@ -70,62 +161,12 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
         this.startStopIdx = startStopIdx
     }
 
-    @Throws(
-        NoDataException::class,
-        InvalidPacketTypeException::class,
-        InvalidPacketSizeException::class
-    )
-    fun initializePacket() {
-        // If position is 0, nothing received yet. If position is 1 only the start mark has been received.
-        // position 2 is the packetType, and positions 3 and 4 are a short for packetSize
-        if (_buffer.position() >= RP2040ToAndroidPacket.Offsets.DATA) {
-            val packetTypeByte = _buffer.get(startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE)
-
-            getEnumByValue(packetTypeByte)?.let {
-                packetType = it
-            } ?: throw InvalidPacketTypeException(packetTypeByte)
-
-            // get the packetDataSize. It is stored at index 3 and 4 as a short
-            packetDataSize = _buffer.getShort(
-                startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.DATA_SIZE
-            ).toInt() and 0xFFFF
-
-            if (packetDataSize > 2048) // sanity check for max packet size
-                throw InvalidPacketSizeException(packetDataSize)
-
-            Logger.v(
-                "serial",
-                packetType.toString() + " packetType of size " + packetDataSize + " found at "
-                        + (startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE)
-            )
-        } else throw NoDataException()
-    }
-
-    fun findStopIndex() {
+    private fun findStopIndex() {
         startStopIdx.stopIdx =
             startStopIdx.startIdx + packetDataSize + (RP2040ToAndroidPacket.Offsets.DATA)
     }
 
-    @Throws(
-        NotEnoughDataForTypeException::class,
-        StopMarkerNotFoundException::class
-    )
-    fun checkPacketDataAvailability() : Boolean {
-        // +1 for packetBuffer.position() needing to be 1 after endIdx byte to indicate that you have the stopIdx byte
-        if (_buffer.position() < (startStopIdx.stopIdx + 1))
-            throw NotEnoughDataForTypeException(
-                packetType,
-                _buffer.position(),
-                startStopIdx.stopIdx + 1
-            )
-
-        if (_buffer.get(startStopIdx.stopIdx) != AndroidToRP2040Command.STOP.hexValue)
-            throw StopMarkerNotFoundException()
-
-        return true
-    }
-
-    fun getCurrentCommandByteArray() : ByteArray {
+    private fun getCurrentCommandByteArray() : ByteArray {
         _buffer.position(startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.DATA)
         _buffer.limit(startStopIdx.stopIdx)
         val partialArray = ByteArray(_buffer.remaining())
@@ -152,18 +193,19 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
         }
     }
 
-    class StartStopIndex(var startIdx: Int, var stopIdx: Int)
+    private class StartStopIndex(var startIdx: Int, var stopIdx: Int)
 
-    class InvalidPacketSizeException(val packetSize: Int) : Exception()
-    class InvalidPacketTypeException(val packetTypeByte: Byte) : Exception()
-    class NoDataException : Exception()
-    class NotEnoughDataForTypeException(
-        val packetType: AndroidToRP2040Command,
-        val bytesGiven: Int,
-        val bytesExpected: Int
-    ) : Exception()
-
-    class StopMarkerNotFoundException : Exception()
+    sealed class ParseResult() {
+        data class InvalidSize(val packetSize: Int) : ParseResult()
+        data class InvalidType(val packetTypeByte: Byte) : ParseResult()
+        object NotEnoughData : ParseResult()
+        object Overflow : ParseResult()
+        object StopMarkerNotFound : ParseResult()
+        data class Success(
+            val packetType: AndroidToRP2040Command,
+            val packetData: ByteArray
+        ) : ParseResult()
+    }
 
     companion object {
         private const val RP2020_PACKET_SIZE_STATE = 64
