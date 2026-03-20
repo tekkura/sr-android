@@ -69,8 +69,9 @@ class MainActivity : AbcvlibActivity() {
         val module = py.getModule("abcvlib")
 
         // Inject Android-side instances into Python
+        module.put("context", this)
         module.put("outputs", outputs)
-        module.put("loop_delay", 0.005)  // 5 ms — matches abcvlibMainLoop default
+        module.put("loop_delay", 0.5)  // 500 ms
         // Add further injections as needed, e.g.:
         // module.put("serialCommManager", serialCommManager)
 
@@ -86,7 +87,7 @@ class MainActivity : AbcvlibActivity() {
 ```
 
 **Notes:**
-- `outputs` (and any other `AbcvlibActivity` fields) are injected before calling `run()`, making them available to `main.py` at runtime.
+- `context` (and any other `AbcvlibActivity` fields) are injected before calling `run()`, making them available to `main.py` at runtime.
 - The Python run loop executes on `Dispatchers.Default` to avoid blocking the main thread.
 - Any additional instances needed by specific demos (e.g., `serialCommManager` for `basicSubscriber`) should be injected here in the same pattern.
 
@@ -94,7 +95,7 @@ class MainActivity : AbcvlibActivity() {
 
 ### `abcvlib.py` — Bridge Module
 
-This module is the bridge between the Android layer and the Python control logic. It receives injected Android instances, exposes them to `main.py` via `builtins`, and drives the Arduino-style `setup()` / `loop()` execution model.
+This module is the bridge between the Android layer and the Python control logic. It receives injected Android instances, exposes them to `main.py`, and drives the Arduino-style `setup()` / `loop()` execution model.
 
 ```python
 # src/main/python/abcvlib.py
@@ -104,14 +105,16 @@ import builtins
 import main
 
 # Injected from Kotlin before run() is called
+context = None
 outputs = None
-loop_delay = 0.005  # Default: 5 ms 
+loop_delay = 0.5 
 
 
 def run():
-    # Expose Android instances to main.py globally
+    # Expose Android instances globally to main.py
+    main.context = context
+    # Alternatively, via builtins module
     builtins.outputs = outputs
-    # Expose additional injected instances as needed:
     
     main.setup()
 
@@ -133,6 +136,9 @@ This is the file the developer writes. It follows an Arduino-style pattern with 
 ```python
 # src/main/python/main.py
 
+# Predefined activity context 
+context = None 
+
 def setup():
     """Called once before the loop starts."""
     pass
@@ -149,7 +155,8 @@ def loop():
 |---|---|
 | Python run loop instead of `abcvlibMainLoop` | Avoids repeated JNI crossings (~200/sec would be costly); the Python `while` loop keeps control logic inside the interpreter. |
 | `loop_delay` injected from Kotlin | Keeps the default timing consistent with `abcvlibMainLoop`; the Python side can still override if needed. |
-| `builtins` for sharing Android instances | Provides a simple, global-scope mechanism for passing references from `abcvlib.py` to `main.py` without import coupling. |
+| Global reference assignment (`main` / `builtins`) for sharing Android instances | Provides simple mechanisms for exposing references from `abcvlib.py` to `main.py`, either by direct assignment to the `main` module or via the `builtins` namespace. |
+| Prefer accessing instances via `context` | Recommended to access activity-bound instances (e.g., `usbSerial`, `outputs`) through `context.outputs`, `context.usbSerial`, etc., instead of injecting each instance separately—this keeps the interface cleaner and more maintainable. |
 | `Dispatchers.Default` for coroutine | Runs the blocking Python loop off the main thread; matches the threading model used by the existing Kotlin demos. |
 
 
