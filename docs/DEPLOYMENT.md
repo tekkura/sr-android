@@ -16,9 +16,9 @@ Alternatively, you can add them to your Environment Variables.
 *Note: `RELEASE_STORE_FILE` should be an absolute path or relative to the project root.*
 
 #### GitHub Actions (CI)
-For automated releases via GitHub Actions, you should do the the following:
+For automated releases via GitHub Actions, you should do the following:
 
-1. **Base64 encode your keystore file**: 
+1. **Base64 encode your keystore file**:
    - Linux: `base64 -w 0 your_keystore.jks > keystore_base64.txt`
    - macOS: `base64 your_keystore.jks | tr -d '\n' > keystore_base64.txt`
    - Windows (PowerShell): `[Convert]::ToBase64String([IO.File]::ReadAllBytes('your_keystore.jks')) | Out-File -Encoding ASCII keystore_base64.txt` (or use git bash)
