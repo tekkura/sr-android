@@ -3,7 +3,7 @@ import builtins
 import main
 
 outputs = None
-loop_delay = 0.005
+loop_delay = 0.5
 
 
 def run():
