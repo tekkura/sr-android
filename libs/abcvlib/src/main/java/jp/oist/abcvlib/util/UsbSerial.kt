@@ -18,16 +18,12 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.SerialInputOutputManager
-import jp.oist.abcvlib.util.AndroidToRP2040Command.Companion.getEnumByValue
 import jp.oist.abcvlib.util.ErrorHandler.eLog
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.text.clear
 
 class UsbSerial @Throws(IOException::class) constructor(
     private val context: Context,
@@ -161,49 +157,39 @@ class UsbSerial @Throws(IOException::class) constructor(
         // Run the packet verification in a separate thread
         try {
             lock.lock()
-            val result = packetBuffer.consume(data)
-            when (result) {
-                is PacketBuffer.ParseResult.InvalidSize -> {
-                    onBadPacket()
-                    Logger.d(TAG, "Packet verified")
-                    Logger.d(TAG, "packetReceived.signal()")
-                    packetReceived.signal()
-                }
+            packetBuffer.consume(
+                bytes = data,
+                onResult = { result ->
+                    when (result) {
+                        is PacketBuffer.ParseResult.NotEnoughData -> {
+                            Logger.d(TAG, "Incomplete Packet. Waiting for more data")
+                        }
 
-                is PacketBuffer.ParseResult.InvalidType -> {
-                    packetBuffer.clear()
-                    Logger.d(TAG, "Packet verified")
-                    Logger.d(TAG, "packetReceived.signal()")
-                    packetReceived.signal()
-                }
+                        is PacketBuffer.ParseResult.Overflow -> {
+                            onBadPacket()
+                            Logger.d(TAG, "Buffer overflow.")
+                        }
 
-                is PacketBuffer.ParseResult.NotEnoughData -> {
-                    Logger.d(TAG, "Incomplete Packet. Waiting for more data")
-                }
+                        is PacketBuffer.ParseResult.ReceivedErrorPacket -> {
+                            onBadPacket()
+                            Logger.d(TAG, "Packet verified")
+                            Logger.d(TAG, "packetReceived.signal()")
+                            packetReceived.signal()
+                        }
 
-                is PacketBuffer.ParseResult.Overflow -> {
-                    onBadPacket()
-                    Logger.d(TAG, "Incomplete Packet. Waiting for more data")
-                }
+                        is PacketBuffer.ParseResult.ReceivedPacket -> {
+                            onCompletePacketReceived(
+                                result.packetType,
+                                result.packetData
+                            )
 
-                is PacketBuffer.ParseResult.StopMarkerNotFound -> {
-                    onBadPacket()
-                    Logger.d(TAG, "Packet verified")
-                    Logger.d(TAG, "packetReceived.signal()")
-                    packetReceived.signal()
+                            Logger.d(TAG, "Packet verified")
+                            Logger.d(TAG, "packetReceived.signal()")
+                            packetReceived.signal()
+                        }
+                    }
                 }
-
-                is PacketBuffer.ParseResult.Success -> {
-                    onCompletePacketReceived(
-                        result.packetType,
-                        result.packetData
-                    )
-
-                    Logger.d(TAG, "Packet verified")
-                    Logger.d(TAG, "packetReceived.signal()")
-                    packetReceived.signal()
-                }
-            }
+            )
         } catch (e: IOException) {
             throw RuntimeException(e)
         } finally {
@@ -251,7 +237,6 @@ class UsbSerial @Throws(IOException::class) constructor(
         packetType: AndroidToRP2040Command,
         packetData: ByteArray
     ) {
-        packetBuffer.clear()
         synchronized(fifoQueue) {
             if (fifoQueue.isAtFullCapacity) {
                 Logger.e("serial", "fifoQueue is full")
@@ -271,14 +256,13 @@ class UsbSerial @Throws(IOException::class) constructor(
                 fifoQueue.add(fifoQueuePair) // Add the partialArray to the queue
             }
         }
+
         badPacketCount = 0 // Reset on successful packet
     }
 
     private fun onBadPacket() {
         Logger.e("serial", "Bad packet received. Clearing buffer and sending next command.")
         // Ignore this packet as it is corrupted by some other data being sent between.
-        packetBuffer.clear()
-        packetBuffer.resyncToNextStartMarker()
         badPacketCount++
         if (badPacketCount >= BAD_PACKET_THRESHOLD) {
             Logger.e(
