@@ -39,6 +39,9 @@ commonsCollections = "4.5.0"
 usbSerial = "3.10.0"
 abcvlibFbclasses = "0.0.1"
 
+# Test
+junit = "4.13.2"
+
 [libraries]
 # Android Core
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
@@ -77,6 +80,9 @@ usb-serial = { module = "com.github.mik3y:usb-serial-for-android", version.ref =
 android-permissions = { module = "io.github.nishkarsh:android-permissions", version.ref = "androidPermissions" }
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commonsCollections" }
 abcvlib-fbclasses = { module = "jp.oist.abcvlib.core.learning:fbclasses", version.ref = "abcvlibFbclasses" }
+
+# Test
+junit = { module = "junit:junit", version.ref = "junit" }
 
 # Dependencies that included at build-logic
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
