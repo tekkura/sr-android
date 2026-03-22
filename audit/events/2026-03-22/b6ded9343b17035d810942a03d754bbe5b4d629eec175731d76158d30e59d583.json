@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-22T19:15:02Z",
+  "event_ts": "2026-03-22T19:14:44Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23410460245",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 209,
+    "title": "Instrumentation tests/packet buffer",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/209",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 13,
+    "title": "InstrumentationTests",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/13",
+    "description": "Milestone spec moved to: [docs/milestones/InstrumentationTests.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/InstrumentationTests.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/209",
+  "event_id": "b6ded9343b17035d810942a03d754bbe5b4d629eec175731d76158d30e59d583"
+}
