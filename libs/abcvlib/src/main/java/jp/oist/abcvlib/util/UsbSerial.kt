@@ -172,7 +172,7 @@ class UsbSerial @Throws(IOException::class) constructor(
 
                         is PacketBuffer.ParseResult.ReceivedErrorPacket -> {
                             onBadPacket()
-                            Logger.d(TAG, "Packet verified")
+                            Logger.d(TAG, "Error packet received")
                             Logger.d(TAG, "packetReceived.signal()")
                             packetReceived.signal()
                         }

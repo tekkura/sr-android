@@ -40,6 +40,9 @@ dependencies {
     api(libs.flatbuffers)
     api(libs.android.permissions)
     api(libs.abcvlib.fbclasses)
+
+    // Test
+    testImplementation(libs.junit)
 }
 
 android {
@@ -51,6 +54,9 @@ android {
         val networkConfig = loadNetworkConfig(rootDir)
         buildConfigField("String", "IP", "\"${networkConfig.ip}\"")
         buildConfigField("int", "PORT", "${networkConfig.port}")
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
