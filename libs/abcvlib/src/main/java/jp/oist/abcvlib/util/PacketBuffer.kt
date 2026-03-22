@@ -61,17 +61,22 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                     // position 2 is the packetType, and positions 3 and 4 are a short for packetSize
                     if (_buffer.remaining() < RP2040ToAndroidPacket.Offsets.DATA - 1) {
                         Logger.v("verifyPacket", "Incomplete header. Waiting for more data")
+                        _buffer.position(startIdx)
+                        resetState()
                         onResult(ParseResult.NotEnoughData)
 
-                        _buffer.position(startIdx)
                         break
                     }
 
                     val headerStartPosition = _buffer.position()
                     val packetTypeByte = _buffer.get()
                     val parsedPacketType = getEnumByValue(packetTypeByte)
-                    if (parsedPacketType == null) {
-                        Logger.e("verifyPacket", "Unknown packetType: $packetTypeByte")
+
+                    if (parsedPacketType == null ||
+                        parsedPacketType == AndroidToRP2040Command.START ||
+                        parsedPacketType == AndroidToRP2040Command.STOP
+                    ) {
+                        Logger.e("verifyPacket", "Invalid or reserved packetType: $packetTypeByte")
                         onResult(ParseResult.ReceivedErrorPacket)
                         resync()
 
@@ -117,9 +122,10 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                                     packetDataSize + 1
                         )
 
+                        _buffer.position(startIdx)
+                        resetState()
                         onResult(ParseResult.NotEnoughData)
 
-                        _buffer.position(startIdx)
                         break
                     }
 
@@ -175,33 +181,27 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
 
     private fun resetState() {
         packetType = AndroidToRP2040Command.NACK
-        packetDataSize = RP2040ToAndroidPacket.Offsets.DATA
+        packetDataSize = RP2020_PACKET_SIZE_STATE
         state = PacketBufferState.FINDING_START
         startIdx = -1
-    }
-
-    private fun getCurrentCommandByteArray2(): ByteArray {
-        _buffer.limit(_buffer.position() + packetDataSize - 1)
-        val partialArray = ByteArray(_buffer.remaining())
-        _buffer.get(partialArray)
-
-        return partialArray
     }
 
     fun clear() {
         with(_buffer) {
             // High performance for buffers created with ByteBuffer.allocate()
-            Arrays.fill(
-                array(),
-                arrayOffset(),
-                arrayOffset() + capacity(),
-                0.toByte()
-            )
+            if (hasArray()) {
+                Arrays.fill(
+                    array(),
+                    arrayOffset(),
+                    arrayOffset() + capacity(),
+                    0.toByte()
+                )
+            }
 
             clear()
         }
 
-        packetType = AndroidToRP2040Command.NACK
+        resetState()
     }
 
     private fun put(bytes: ByteArray) : Boolean {
