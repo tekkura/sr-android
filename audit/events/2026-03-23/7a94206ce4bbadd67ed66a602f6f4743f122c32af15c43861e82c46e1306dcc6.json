@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-23T23:30:11Z",
+  "event_ts": "2026-03-23T23:29:55Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23465285239",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 209,
+    "title": "Instrumentation tests/packet buffer",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/209",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "comment": {
+    "id": 4114380004,
+    "html_url": "https://github.com/tekkura/sr-android/pull/209#issuecomment-4114380004",
+    "created_at": "2026-03-23T23:29:55Z",
+    "updated_at": "2026-03-23T23:29:55Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/209#issuecomment-4114380004",
+  "event_id": "7a94206ce4bbadd67ed66a602f6f4743f122c32af15c43861e82c46e1306dcc6"
+}
