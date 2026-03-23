@@ -1,6 +1,7 @@
 package jp.oist.abcvlib.util
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command.Companion.getEnumByValue
+import jp.oist.abcvlib.util.rp2040.RP2040ToAndroidPacket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Arrays
