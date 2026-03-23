@@ -5,6 +5,7 @@ import com.hoho.android.usbserial.driver.SerialTimeoutException
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.util.HexBinConverters.bytesToHex
+import jp.oist.abcvlib.util.rp2040.RP2040State
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
