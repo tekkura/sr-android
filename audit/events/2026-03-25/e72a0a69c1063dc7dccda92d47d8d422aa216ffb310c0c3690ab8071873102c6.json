@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-25T03:19:27Z",
+  "event_ts": "2026-03-25T03:19:10Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "23523258619",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 150,
+    "title": "Select Android ROS integration path (rosbridge vs ros2_java) and document decision",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/150",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "comment": {
+    "id": 4122851081,
+    "html_url": "https://github.com/tekkura/sr-android/issues/150#issuecomment-4122851081",
+    "created_at": "2026-03-25T03:19:10Z",
+    "updated_at": "2026-03-25T03:19:10Z",
+    "body": "@topherbuckley "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/150#issuecomment-4122851081",
+  "event_id": "e72a0a69c1063dc7dccda92d47d8d422aa216ffb310c0c3690ab8071873102c6"
+}
