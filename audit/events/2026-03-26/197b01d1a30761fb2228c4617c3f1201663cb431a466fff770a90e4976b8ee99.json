@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-26T04:54:55Z",
+  "event_ts": "2026-03-26T04:54:38Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "Ma7moud3ly",
+  "run_id": "23578187119",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 215,
+    "title": "ROS: Add Android ROS 2 integration path",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/215",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 7,
+    "title": "ROS",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/7",
+    "description": "Milestone spec moved to: [docs/milestones/ROS.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/ROS.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/215",
+  "event_id": "197b01d1a30761fb2228c4617c3f1201663cb431a466fff770a90e4976b8ee99"
+}
