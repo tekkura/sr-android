@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-03-26T02:44:38Z",
+  "event_ts": "2026-03-26T02:44:21Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "labeled",
+  "actor": "topherbuckley",
+  "run_id": "23574905070",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 213,
+    "title": "Clarify comprehensiveDemo social interaction state machine",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/213",
+    "milestone": null
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/213",
+  "event_id": "4cb19a299ceb0d6f0093afb5ccda5ecc1e5249b134a5d2e1dc8c219256e5e812"
+}
