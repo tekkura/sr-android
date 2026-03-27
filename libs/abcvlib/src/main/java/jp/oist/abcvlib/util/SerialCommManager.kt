@@ -219,8 +219,8 @@ class SerialCommManager @JvmOverloads constructor(
      * -2 if SerialTimeoutException on send
      */
     private fun sendPacket(bytes: ByteArray): Int {
-        require(bytes.size == AndroidToRP2040Packet.packetSize) {
-            "Input byte array must have a length of " + AndroidToRP2040Packet.packetSize
+        require(bytes.size == RP2040OutgoingCommand.PACKET_SIZE) {
+            "Input byte array must have a length of " + RP2040OutgoingCommand.PACKET_SIZE
         }
         try {
             this.usbSerial.send(bytes, 10000)
