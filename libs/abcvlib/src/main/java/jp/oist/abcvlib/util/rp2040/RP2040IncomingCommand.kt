@@ -5,7 +5,13 @@ import jp.oist.abcvlib.util.Logger
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-internal sealed class RP2040Command {
+interface StatusCommand {
+    val motorsState: MotorsState
+    val batteryDetails: BatteryDetails
+    val chargeSideUSB: ChargeSideUSB
+}
+
+sealed class RP2040IncomingCommand {
 
     protected abstract fun serializeData(): ByteArray
     abstract val type: AndroidToRP2040Command
@@ -28,7 +34,7 @@ internal sealed class RP2040Command {
         return buffer.array()
     }
 
-    class Nack(val data: ByteArray) : RP2040Command() {
+    class Nack(val data: ByteArray) : RP2040IncomingCommand() {
         override val type = AndroidToRP2040Command.NACK
 
         override fun serializeData(): ByteArray {
@@ -36,7 +42,7 @@ internal sealed class RP2040Command {
         }
     }
 
-    class Ack(val data: ByteArray) : RP2040Command() {
+    class Ack(val data: ByteArray) : RP2040IncomingCommand() {
         override val type = AndroidToRP2040Command.ACK
 
         override fun serializeData(): ByteArray {
@@ -44,7 +50,7 @@ internal sealed class RP2040Command {
         }
     }
 
-    class GetLog(val logEntries: List<String>) : RP2040Command() {
+    class GetLog(val logEntries: List<String>) : RP2040IncomingCommand() {
         override val type = AndroidToRP2040Command.GET_LOG
 
         override fun serializeData(): ByteArray {
@@ -54,10 +60,10 @@ internal sealed class RP2040Command {
     }
 
     class GetState(
-        val motorsState: MotorsState,
-        val batteryDetails: BatteryDetails,
-        val chargeSideUSB: ChargeSideUSB
-    ) : RP2040Command() {
+        override val motorsState: MotorsState,
+        override val batteryDetails: BatteryDetails,
+        override val chargeSideUSB: ChargeSideUSB
+    ) : RP2040IncomingCommand(), StatusCommand {
         override val type = AndroidToRP2040Command.GET_STATE
 
         override fun serializeData() = motorsState.toBytes() +
@@ -66,10 +72,10 @@ internal sealed class RP2040Command {
     }
 
     class SetMotorLevels(
-        val motorsState: MotorsState,
-        val batteryDetails: BatteryDetails,
-        val chargeSideUSB: ChargeSideUSB
-    ) : RP2040Command() {
+        override val motorsState: MotorsState,
+        override val batteryDetails: BatteryDetails,
+        override val chargeSideUSB: ChargeSideUSB
+    ) : RP2040IncomingCommand(), StatusCommand {
         override val type = AndroidToRP2040Command.SET_MOTOR_LEVELS
 
         override fun serializeData() = motorsState.toBytes() +
@@ -78,10 +84,10 @@ internal sealed class RP2040Command {
     }
 
     class ResetState(
-        val motorsState: MotorsState,
-        val batteryDetails: BatteryDetails,
-        val chargeSideUSB: ChargeSideUSB
-    ) : RP2040Command() {
+        override val motorsState: MotorsState,
+        override val batteryDetails: BatteryDetails,
+        override val chargeSideUSB: ChargeSideUSB
+    ) : RP2040IncomingCommand(), StatusCommand {
         override val type = AndroidToRP2040Command.RESET_STATE
 
         override fun serializeData() = motorsState.toBytes() +
@@ -95,7 +101,7 @@ internal sealed class RP2040Command {
         fun from(
             type: AndroidToRP2040Command,
             data: ByteArray
-        ): RP2040Command? {
+        ): RP2040IncomingCommand? {
             when (type) {
                 AndroidToRP2040Command.NACK -> {
                     return Nack(data)

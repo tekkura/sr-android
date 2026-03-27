@@ -4,7 +4,7 @@ import jp.oist.abcvlib.util.Logger
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-internal class MotorsState {
+class MotorsState {
     class ControlValues {
         var left: Byte = 0
         var right: Byte = 0

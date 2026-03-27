@@ -1,6 +1,7 @@
 package jp.oist.abcvlib.util
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command.Companion.getEnumByValue
+import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040ToAndroidPacket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -152,7 +153,14 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
 
                     _buffer.get() // Position moves past STOP byte
 
-                    onResult(ParseResult.ReceivedPacket(packetType, data))
+                    val command = RP2040IncomingCommand.from(packetType, data)
+
+                    onResult(
+                        if (command != null)
+                            ParseResult.ReceivedPacket(command)
+                        else ParseResult.ReceivedErrorPacket
+                    )
+
                     resetState()
                 }
             }
@@ -219,8 +227,7 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
         object Overflow : ParseResult()
         object ReceivedErrorPacket : ParseResult()
         data class ReceivedPacket(
-            val packetType: AndroidToRP2040Command,
-            val packetData: ByteArray
+            val command: RP2040IncomingCommand
         ) : ParseResult()
     }
 

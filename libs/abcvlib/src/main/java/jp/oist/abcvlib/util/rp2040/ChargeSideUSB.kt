@@ -4,7 +4,7 @@ import jp.oist.abcvlib.util.Logger
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-internal class ChargeSideUSB {
+class ChargeSideUSB {
     var max77976_chg_details: Int = 0
     var ncp3901_wireless_charger_attached: Boolean = false
     var usb_charger_voltage: Short = 0
