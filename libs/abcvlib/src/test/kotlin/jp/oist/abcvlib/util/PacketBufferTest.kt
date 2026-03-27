@@ -1,5 +1,9 @@
 package jp.oist.abcvlib.util
 
+import jp.oist.abcvlib.util.rp2040.BatteryDetails
+import jp.oist.abcvlib.util.rp2040.ChargeSideUSB
+import jp.oist.abcvlib.util.rp2040.MotorsState
+import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -17,22 +21,61 @@ class PacketBufferTest {
         results.clear()
     }
 
-    private fun createPacket(command: AndroidToRP2040Command, payload: ByteArray): ByteArray {
-        val size = payload.size
-        val buffer = ByteBuffer.allocate(1 + 1 + 2 + size + 1)
-        buffer.order(ByteOrder.LITTLE_ENDIAN)
-        buffer.put(AndroidToRP2040Command.START.hexValue)
-        buffer.put(command.hexValue)
-        buffer.putShort(size.toShort())
-        buffer.put(payload)
-        buffer.put(AndroidToRP2040Command.STOP.hexValue)
-        return buffer.array()
-    }
+    private val ackCommand = RP2040IncomingCommand.Ack(byteArrayOf(0x01, 0x02))
+
+    private val getLogCommand = RP2040IncomingCommand.GetLog(listOf("Log 1", "Log 2"))
+
+    private val getStateCommand = RP2040IncomingCommand.GetState(
+        motorsState = MotorsState().apply {
+            controlValues.left = 0x66
+            controlValues.right = 0x34
+            faults.left = 0x00
+            faults.right = 0x01
+            encoderCounts.left = 1
+            encoderCounts.right = 2
+        },
+        batteryDetails = BatteryDetails().apply {
+            voltageMv = 12345
+            temperature = 6789
+            safetyStatus = 0x02
+            stateOfHealth = 0x6
+            flags = 0x2005
+        },
+        chargeSideUSB = ChargeSideUSB().apply {
+            max77976_chg_details = 0x12345678
+            ncp3901_wireless_charger_attached = true
+            usb_charger_voltage = 0x55
+            wireless_charger_vrect = 0x6478
+        }
+    )
+
+    private val resetStateCommand = RP2040IncomingCommand.ResetState(
+        motorsState = MotorsState().apply {
+            controlValues.left = 0x66
+            controlValues.right = 0x34
+            faults.left = 0x00
+            faults.right = 0x01
+            encoderCounts.left = 1
+            encoderCounts.right = 2
+        },
+        batteryDetails = BatteryDetails().apply {
+            voltageMv = 12345
+            temperature = 6789
+            safetyStatus = 0x02
+            stateOfHealth = 0x6
+            flags = 0x2005
+        },
+        chargeSideUSB = ChargeSideUSB().apply {
+            max77976_chg_details = 0x12345678
+            ncp3901_wireless_charger_attached = true
+            usb_charger_voltage = 0x55
+            wireless_charger_vrect = 0x6478
+        }
+    )
 
     @Test
     fun `test consume single complete valid packet`() {
-        val payload = byteArrayOf(0x01, 0x02, 0x03)
-        val packet = createPacket(AndroidToRP2040Command.GET_STATE, payload)
+        val packet = getStateCommand.toBytes()
 
         packetBuffer.consume(packet) { results.add(it) }
 
@@ -40,34 +83,40 @@ class PacketBufferTest {
         val result = results[0]
         assertTrue(result is PacketBuffer.ParseResult.ReceivedPacket)
         if (result is PacketBuffer.ParseResult.ReceivedPacket) {
-            assertEquals(AndroidToRP2040Command.GET_STATE, result.packetType)
-            assertArrayEquals(payload, result.packetData)
+            assertEquals(AndroidToRP2040Command.GET_STATE, result.command.type)
+            assertArrayEquals(
+                getStateCommand.toBytes(),
+                result.command.toBytes()
+            )
         }
     }
 
     @Test
     fun `test consume multiple complete packets`() {
-        val payload1 = byteArrayOf(0x01)
-        val payload2 = byteArrayOf(0x02, 0x03)
-        val packet1 = createPacket(AndroidToRP2040Command.GET_STATE, payload1)
-        val packet2 = createPacket(AndroidToRP2040Command.ACK, payload2)
+        val packet1 = getStateCommand.toBytes()
+        val packet2 = ackCommand.toBytes()
         val combined = packet1 + packet2
 
         packetBuffer.consume(combined) { results.add(it) }
 
         assertEquals(2, results.size)
-        
+
         assertTrue(results[0] is PacketBuffer.ParseResult.ReceivedPacket)
-        assertEquals(AndroidToRP2040Command.GET_STATE, (results[0] as PacketBuffer.ParseResult.ReceivedPacket).packetType)
+        assertEquals(
+            AndroidToRP2040Command.GET_STATE,
+            (results[0] as PacketBuffer.ParseResult.ReceivedPacket).command.type
+        )
         
         assertTrue(results[1] is PacketBuffer.ParseResult.ReceivedPacket)
-        assertEquals(AndroidToRP2040Command.ACK, (results[1] as PacketBuffer.ParseResult.ReceivedPacket).packetType)
+        assertEquals(
+            AndroidToRP2040Command.ACK,
+            (results[1] as PacketBuffer.ParseResult.ReceivedPacket).command.type
+        )
     }
 
     @Test
     fun `test consume packet split across multiple calls`() {
-        val payload = byteArrayOf(0x01, 0x02, 0x03, 0x04)
-        val packet = createPacket(AndroidToRP2040Command.GET_LOG, payload)
+        val packet = getLogCommand.toBytes()
         
         val part1 = packet.sliceArray(0 until 3)
         val part2 = packet.sliceArray(3 until packet.size)
@@ -81,23 +130,39 @@ class PacketBufferTest {
         
         assertEquals("Expected 1 result in second call but got ${results.size}: $results", 1, results.size)
         assertTrue("Expected ReceivedPacket but got ${results[0]}", results[0] is PacketBuffer.ParseResult.ReceivedPacket)
-        assertEquals(AndroidToRP2040Command.GET_LOG, (results[0] as PacketBuffer.ParseResult.ReceivedPacket).packetType)
-        assertArrayEquals(payload, (results[0] as PacketBuffer.ParseResult.ReceivedPacket).packetData)
+
+        val parsedPacket = (results[0] as PacketBuffer.ParseResult.ReceivedPacket)
+        assertEquals(
+            AndroidToRP2040Command.GET_LOG,
+            parsedPacket.command.type
+        )
+
+        assertTrue(parsedPacket.command is RP2040IncomingCommand.GetLog)
+
+        assertArrayEquals(
+            getLogCommand.logEntries.toTypedArray(),
+            (parsedPacket.command as RP2040IncomingCommand.GetLog)
+                .logEntries
+                .toTypedArray()
+        )
     }
 
     @Test
     fun `test consume with leading noise`() {
         val noise = byteArrayOf(0x00, 0x11, 0x22)
         val payload = byteArrayOf(0x44)
-        val packet = createPacket(AndroidToRP2040Command.RESET_STATE, payload)
+        val packet = resetStateCommand.toBytes()
         val combined = noise + packet
 
         packetBuffer.consume(combined) { results.add(it) }
 
         val packets = results.filterIsInstance<PacketBuffer.ParseResult.ReceivedPacket>()
         assertEquals(1, packets.size)
-        assertEquals(AndroidToRP2040Command.RESET_STATE, packets[0].packetType)
-        assertArrayEquals(payload, packets[0].packetData)
+        assertEquals(AndroidToRP2040Command.RESET_STATE, packets[0].command.type)
+        assertArrayEquals(
+            resetStateCommand.toBytes(),
+            packets[0].command.toBytes()
+        )
     }
 
     @Test
@@ -180,7 +245,7 @@ class PacketBufferTest {
 
         assertTrue(results.any { it is PacketBuffer.ParseResult.ReceivedErrorPacket })
     }
-    
+
     @Test
     fun `test resync after error`() {
         // First packet has bad stop marker
@@ -192,19 +257,17 @@ class PacketBufferTest {
             put(0xAA.toByte())
             put(0x00.toByte()) // Bad STOP
         }.array()
-        
-        val goodPayload = byteArrayOf(0xBB.toByte())
-        val goodPacket = createPacket(AndroidToRP2040Command.ACK, goodPayload)
-        
+
+        val goodPacket = ackCommand.toBytes()
         val combined = badPacket + goodPacket
-        
+
         packetBuffer.consume(combined) { results.add(it) }
-        
+
         assertTrue(results.any { it is PacketBuffer.ParseResult.ReceivedErrorPacket })
         val packets = results.filterIsInstance<PacketBuffer.ParseResult.ReceivedPacket>()
         assertEquals(1, packets.size)
-        assertEquals(AndroidToRP2040Command.ACK, packets[0].packetType)
-        assertArrayEquals(goodPayload, packets[0].packetData)
+        assertEquals(AndroidToRP2040Command.ACK, packets[0].command.type)
+        assertArrayEquals(goodPacket, packets[0].command.toBytes())
     }
 
     @Test
@@ -220,13 +283,12 @@ class PacketBufferTest {
         results.clear()
 
         // 3. Send a valid packet.
-        val payload = byteArrayOf(0x05)
-        val validPacket = createPacket(AndroidToRP2040Command.ACK, payload)
+        val validPacket = ackCommand.toBytes()
         packetBuffer.consume(validPacket) { results.add(it) }
 
         val packets = results.filterIsInstance<PacketBuffer.ParseResult.ReceivedPacket>()
         assertEquals("Expected 1 valid packet after overflow recovery", 1, packets.size)
-        assertEquals(AndroidToRP2040Command.ACK, packets[0].packetType)
-        assertArrayEquals(payload, packets[0].packetData)
+        assertEquals(AndroidToRP2040Command.ACK, packets[0].command.type)
+        assertArrayEquals(ackCommand.toBytes(), packets[0].command.toBytes())
     }
 }

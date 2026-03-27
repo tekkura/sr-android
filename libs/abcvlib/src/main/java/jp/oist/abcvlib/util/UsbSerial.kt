@@ -19,6 +19,7 @@ import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import jp.oist.abcvlib.util.ErrorHandler.eLog
+import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -38,7 +39,7 @@ class UsbSerial @Throws(IOException::class) constructor(
     private val cnt = 0
     private var badPacketCount = 0
 
-    internal val fifoQueue: CircularFifoQueue<FifoQueuePair> = CircularFifoQueue<FifoQueuePair>(256)
+    internal val fifoQueue: CircularFifoQueue<RP2040IncomingCommand> = CircularFifoQueue<RP2040IncomingCommand>(256)
     private val packetBuffer = PacketBuffer()
 
     companion object {
@@ -178,10 +179,7 @@ class UsbSerial @Throws(IOException::class) constructor(
                         }
 
                         is PacketBuffer.ParseResult.ReceivedPacket -> {
-                            onCompletePacketReceived(
-                                result.packetType,
-                                result.packetData
-                            )
+                            onCompletePacketReceived(result.command)
 
                             Logger.d(TAG, "Packet verified")
                             Logger.d(TAG, "packetReceived.signal()")
@@ -233,27 +231,19 @@ class UsbSerial @Throws(IOException::class) constructor(
      * @throws IOException if fifoQueue is full
      */
     @Throws(IOException::class)
-    private fun onCompletePacketReceived(
-        packetType: AndroidToRP2040Command,
-        packetData: ByteArray
-    ) {
+    private fun onCompletePacketReceived(command: RP2040IncomingCommand) {
         synchronized(fifoQueue) {
             if (fifoQueue.isAtFullCapacity) {
                 Logger.e("serial", "fifoQueue is full")
                 throw RuntimeException("fifoQueue is full")
             } else {
-                // Log partialArray as array of hex values
                 val sb = StringBuilder()
-                for (b in packetData) {
+                for (b in command.toBytes()) {
                     sb.append(String.format("%02X ", b))
                 }
-                Logger.d("verifyPacket", "Adding Packet: $sb to fifoQueue")
-                val fifoQueuePair = FifoQueuePair(
-                    packetType,
-                    packetData
-                )
 
-                fifoQueue.add(fifoQueuePair) // Add the partialArray to the queue
+                Logger.d("verifyPacket", "Adding Packet: $sb to fifoQueue")
+                fifoQueue.add(command)
             }
         }
 

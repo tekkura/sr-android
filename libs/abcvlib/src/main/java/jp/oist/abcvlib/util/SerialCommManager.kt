@@ -5,7 +5,9 @@ import com.hoho.android.usbserial.driver.SerialTimeoutException
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.util.HexBinConverters.bytesToHex
+import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040State
+import jp.oist.abcvlib.util.rp2040.StatusCommand
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -143,64 +145,47 @@ class SerialCommManager @JvmOverloads constructor(
     //TODO paseFifoPacket() should call the various SerialResponseListener methods.
     internal fun parseFifoPacket() {
         var result = 0
-        val fifoQueuePair: FifoQueuePair?
+        val command: RP2040IncomingCommand?
         var packet: ByteArray?
         // Run the command on a thread handler to allow the queue to keep being added to
         synchronized(usbSerial.fifoQueue) {
-            fifoQueuePair = usbSerial.fifoQueue.poll()
+            command = usbSerial.fifoQueue.poll()
         }
         // Check if there is a packet in the queue (fifoQueue
-        if (fifoQueuePair != null) {
-            packet = fifoQueuePair.byteArray
-
+        if (command != null) {
             // Log packet as an array of hex bytes
-            Logger.i(Thread.currentThread().name, "Received packet: ${bytesToHex(packet)}")
+            Logger.i(Thread.currentThread().name, "Received packet: ${bytesToHex(command.toBytes())}")
 
             // The first byte after the start mark is the command
-            val command = fifoQueuePair.androidToRP2040Command
-            Logger.i(Thread.currentThread().name, "Received $command from pi")
-            if (command == null) {
-                Logger.e("Pi2AndroidReader", "Command not found")
-                return
-            }
+            Logger.i(Thread.currentThread().name, "Received ${command.type} from pi")
+
             when (command) {
-                AndroidToRP2040Command.GET_LOG -> {
-                    parseLog(packet)
+                is RP2040IncomingCommand.GetLog -> {
+                    parseLog(command)
                     result = 1
                 }
 
-                AndroidToRP2040Command.SET_MOTOR_LEVELS,
-                AndroidToRP2040Command.GET_STATE,
-                AndroidToRP2040Command.RESET_STATE -> {
-                    parseStatus(packet)
+                // Covers SetMotorState, ResetState and GetState commands
+                is StatusCommand -> {
+                    parseStatus(command)
                     result = 1
                 }
 
-                AndroidToRP2040Command.NACK -> {
-                    onNack(packet)
+                is RP2040IncomingCommand.Nack -> {
+                    onNack(command.data)
                     Logger.w("Pi2AndroidReader", "Nack issued from device")
                     result = -1
                 }
 
-                AndroidToRP2040Command.ACK -> {
-                    onAck(packet)
+                is RP2040IncomingCommand.Ack -> {
+                    onAck(command.data)
                     result = 1
                     Logger.d("Pi2AndroidReader", "parseAck")
                 }
 
-                AndroidToRP2040Command.START -> {
-                    Logger.e("Pi2AndroidReader", "parseStart. Start should never be a command")
-                    result = -1
-                }
-
-                AndroidToRP2040Command.STOP -> {
-                    Logger.e("Pi2AndroidReader", "parseStop. Stop should never be a command")
-                    result = -1
-                }
-
                 else -> {
-                    Logger.e("Pi2AndroidReader", "parsePacket. Command not found")
                     result = -1
+                    Logger.e("Pi2AndroidReader", "Unknown command received")
                 }
             }
         } else {
@@ -384,53 +369,42 @@ class SerialCommManager @JvmOverloads constructor(
     // ---- Handlers for when data is returned from the mcu ----///
     // ---- Override these defaults with your own handlers -----///
     //----------------------------------------------------------///
-    private fun parseLog(bytes: ByteArray) {
+    private fun parseLog(command: RP2040IncomingCommand.GetLog) {
         Logger.d("serial", "parseLogs")
-        val string = String(bytes, StandardCharsets.US_ASCII)
-        val lines = string.lines()
-        for (line in lines) {
-            Logger.i("rp2040Log", line)
+        command.logEntries.forEach {
+            Logger.i("rp2040Log", it)
         }
     }
 
-    private fun parseStatus(bytes: ByteArray) {
+    private fun parseStatus(command: StatusCommand) {
         Logger.d("serial", "parseStatus")
         if (rp2040State != null) {
-            val byteBuffer = ByteBuffer.wrap(bytes)
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
-            if (rp2040State.motorsState.controlValues.left != byteBuffer.get()) {
+            if (rp2040State.motorsState.controlValues.left != command.motorsState.controlValues.left) {
                 //Logger.e("serial", "Left control value mismatch");
             }
-            if (rp2040State.motorsState.controlValues.right != byteBuffer.get()) {
+            if (rp2040State.motorsState.controlValues.right != command.motorsState.controlValues.right) {
                 //Logger.e("serial", "Right control value mismatch");
             }
-            rp2040State.motorsState.faults.left = byteBuffer.get()
-            rp2040State.motorsState.faults.right = byteBuffer.get()
+            rp2040State.motorsState.faults = command.motorsState.faults
             Logger.v("serial", "left motor fault: " + rp2040State.motorsState.faults.left)
             Logger.v("serial", "right motor fault: " + rp2040State.motorsState.faults.right)
-            rp2040State.motorsState.encoderCounts.left = byteBuffer.getInt()
-            rp2040State.motorsState.encoderCounts.right = byteBuffer.getInt()
+
+            rp2040State.motorsState.encoderCounts = command.motorsState.encoderCounts
             Logger.v("serial", "Left encoder count: " + rp2040State.motorsState.encoderCounts.left)
             Logger.v(
                 "serial",
                 "Right encoder count: " + rp2040State.motorsState.encoderCounts.right
             )
-            rp2040State.batteryDetails.voltageMv = byteBuffer.getShort()
-            rp2040State.batteryDetails.safetyStatus = byteBuffer.get()
-            rp2040State.batteryDetails.temperature = byteBuffer.getShort()
-            rp2040State.batteryDetails.stateOfHealth = byteBuffer.get()
-            rp2040State.batteryDetails.flags = byteBuffer.getShort()
+
+            rp2040State.batteryDetails = command.batteryDetails
             Logger.v("serial", "Battery voltage: " + rp2040State.batteryDetails.voltageMv)
             Logger.v("serial", "Battery voltage in V: " + rp2040State.batteryDetails.getVoltage())
-            rp2040State.chargeSideUSB.max77976_chg_details = byteBuffer.getInt()
-            rp2040State.chargeSideUSB.ncp3901_wireless_charger_attached =
-                byteBuffer.get().toInt() == 1
+
+            rp2040State.chargeSideUSB = command.chargeSideUSB
             Logger.v(
                 "serial",
                 "ncp3901_wireless_charger_attached: " + rp2040State.chargeSideUSB.isWirelessChargerAttached()
             )
-            rp2040State.chargeSideUSB.usb_charger_voltage = byteBuffer.getShort()
-            rp2040State.chargeSideUSB.wireless_charger_vrect = byteBuffer.getShort()
             // Logger.v("serial", "usb_charger_voltage: " + rp2040State.chargeSideUSB.usb_charger_voltage);
             rp2040State.updatePublishers()
         }
