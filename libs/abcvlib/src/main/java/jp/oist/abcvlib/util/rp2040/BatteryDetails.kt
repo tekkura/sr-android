@@ -4,7 +4,7 @@ import jp.oist.abcvlib.util.Logger
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-internal class BatteryDetails {
+class BatteryDetails {
     // Raw byte data
     var voltageMv: Short = 0
     var temperature: Short = 0
