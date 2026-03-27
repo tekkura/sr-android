@@ -20,6 +20,7 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import jp.oist.abcvlib.util.ErrorHandler.eLog
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
+import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -194,6 +195,10 @@ class UsbSerial @Throws(IOException::class) constructor(
             lock.unlock()
         }
     }
+
+    @Throws(IOException::class)
+    internal fun send(command: RP2040OutgoingCommand, timeout: Int) =
+        send(command.toBytes(), timeout)
 
     @Throws(IOException::class)
     internal fun send(packet: ByteArray, timeout: Int) {
