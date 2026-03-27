@@ -11,6 +11,12 @@ sealed class RP2040OutgoingCommand {
 
     protected open fun populatePayload(payload: ByteBuffer) {}
 
+    /*
+    packet[0] = START marker
+    packet[1] = AndroidToRP2040Command
+    packet[2..9] = payload
+    packet[10] = STOP marker
+     */
     fun toBytes(): ByteArray {
         val buffer = ByteBuffer.allocate(PACKET_SIZE).apply {
             order(ByteOrder.LITTLE_ENDIAN)
@@ -106,9 +112,9 @@ sealed class RP2040OutgoingCommand {
 
     companion object {
         // (2) 1 byte for each wheel
-        private const val PAYLOAD_SIZE: Int = 2
+        const val PAYLOAD_SIZE: Int = 2
 
         // Making room for command type, start and stop marks
-        private const val PACKET_SIZE: Int = PAYLOAD_SIZE + 3
+        const val PACKET_SIZE: Int = PAYLOAD_SIZE + 3
     }
 }
