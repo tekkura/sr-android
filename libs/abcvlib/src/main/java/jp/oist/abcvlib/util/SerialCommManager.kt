@@ -5,6 +5,7 @@ import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.util.HexBinConverters.bytesToHex
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
+import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040State
 import jp.oist.abcvlib.util.rp2040.StatusCommand
 import java.io.IOException
@@ -25,11 +26,10 @@ class SerialCommManager @JvmOverloads constructor(
     batteryData: BatteryData? = null,
     wheelData: WheelData? = null
 ) {
-    private val androidToRP2040Packet = AndroidToRP2040Packet()
     private val rp2040State: RP2040State?
 
     private var shutdown = false
-    private var command: ByteArray? = null
+    private var command: RP2040OutgoingCommand? = null
     private val commandLock = Object()
 
     private var startTimeAndroid: Long = 0
@@ -59,9 +59,9 @@ class SerialCommManager @JvmOverloads constructor(
                     // (e.g. setMotorLevels) is set, which case wait will return immediately
                     commandLock.wait(10)
                     if (command == null) {
-                        command = generateGetStateCmd()
+                        command = RP2040OutgoingCommand.GetState()
                     }
-                    sendPacket(command!!)
+                    sendCommand(command!!)
                     command = null
                 } catch (e: InterruptedException) {
                     e.printStackTrace()
@@ -154,6 +154,20 @@ class SerialCommManager @JvmOverloads constructor(
         }
     }
 
+    private fun sendCommand(command: RP2040OutgoingCommand): Int {
+        try {
+            this.usbSerial.send(command, 10000)
+        } catch (e: SerialTimeoutException) {
+            throw RuntimeException(
+                "SerialTimeoutException on send. The serial connection " +
+                        "with the rp2040 is not working as expected and timed out"
+            )
+        } catch (e: IOException) {
+            throw RuntimeException(e)
+        }
+        receivePacket()
+        return 0
+    }
 
     /**
      * Do not use this method unless you are very familiar with the protocol on both the rp2040 and
@@ -190,92 +204,7 @@ class SerialCommManager @JvmOverloads constructor(
         }
     }
 
-    private fun generateSetMotorLevels(
-        androidToRP2040Packet: AndroidToRP2040Packet,
-        left: Float,
-        right: Float,
-        leftBrake: Boolean,
-        rightBrake: Boolean
-    ): ByteArray {
 
-        androidToRP2040Packet.clear()
-        androidToRP2040Packet.setCommand(AndroidToRP2040Command.SET_MOTOR_LEVELS)
-
-        val LOWER_LIMIT = 0.49f
-
-        // Normalize [-1,1] to [-5.06,5.06] as this is the range accepted by the chip
-        // Note - signs are to invert the direction of the motors as the motors are mounted in a
-        // polar opposite direction.
-        val leftNrm = -left * 5.06f
-        val rightNrm = -right * 5.06f
-
-        val DRV8830_IN1_BIT: Byte = 0
-        val DRV8830_IN2_BIT: Byte = 1
-
-        val voltages = floatArrayOf(leftNrm, rightNrm)
-        val abs_voltages = FloatArray(2)
-        val control_values = ByteArray(2)
-        val brakes = booleanArrayOf(leftBrake, rightBrake)
-
-        for (i in voltages.indices) {
-            val voltage = voltages[i] // Get the current voltage
-            control_values[i] = 0 // Reset the control value
-            // Exclude or truncate voltages between -0.48V and 0.48V to 0V
-            // Changing to 0.49 as the scaling function would result in 0x05h for 0.48V and
-            // cause the rp2040 to perform unexpectedly as it is a reserved register value
-            if (voltage >= -LOWER_LIMIT && voltage <= LOWER_LIMIT) {
-                voltages[i] = 0.0f // Update the value in the array
-            } else {
-                // Clamp the voltage within the valid range
-                // Need to clamp here rather than at byte representation to prevent overflow
-                if (voltages[i] < -5.06) {
-                    voltages[i] = -5.06f // Update the value in the array
-                } else if (voltages[i] > 5.06) {
-                    voltages[i] = 5.06f // Update the value in the array
-                }
-
-                abs_voltages[i] = abs(voltages[i])
-                // Convert voltage to control value (-0x3F to 0x3F)
-                control_values[i] = (((64 * abs_voltages[i]) / (4 * 1.285)) - 1).toInt().toByte()
-                // voltage is defined by bits 2-7. Shift the control value to the correct position
-                control_values[i] = (control_values[i].toInt() shl 2).toByte()
-            }
-
-
-            // Set the IN1 and IN2 bits based on the sign of the voltage
-            var cv = control_values[i].toInt()
-            if (brakes[i]) {
-                cv = cv or (1 shl DRV8830_IN1_BIT.toInt())
-                cv = cv or (1 shl DRV8830_IN2_BIT.toInt())
-            } else {
-                if (voltage < 0) {
-                    cv = cv or (1 shl DRV8830_IN1_BIT.toInt())
-                    cv = cv and (1 shl DRV8830_IN2_BIT.toInt()).inv()
-                } else if (voltage > 0) {
-                    cv = cv or (1 shl DRV8830_IN2_BIT.toInt())
-                    cv = cv and (1 shl DRV8830_IN1_BIT.toInt()).inv()
-                } else {
-                    // Standby/Coast: Both IN1 and IN2 set to 0
-                    cv = 0
-                }
-            }
-            control_values[i] = cv.toByte()
-            androidToRP2040Packet.payload.put(control_values[i])
-        }
-        return androidToRP2040Packet.packetToBytes()
-    }
-
-    private fun generateGetLogCmd(): ByteArray {
-        androidToRP2040Packet.clear()
-        androidToRP2040Packet.setCommand(AndroidToRP2040Command.GET_LOG)
-        return androidToRP2040Packet.packetToBytes()
-    }
-
-    private fun generateGetStateCmd(): ByteArray {
-        androidToRP2040Packet.clear()
-        androidToRP2040Packet.setCommand(AndroidToRP2040Command.GET_STATE)
-        return androidToRP2040Packet.packetToBytes()
-    }
 
     //-------------------------------------------------------------------///
     // ---- API function calls for requesting something from the mcu ----///
@@ -291,15 +220,20 @@ class SerialCommManager @JvmOverloads constructor(
     */
     fun setMotorLevels(left: Float, right: Float, leftBrake: Boolean, rightBrake: Boolean) {
         synchronized(commandLock) {
-            command =
-                generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
+            command = RP2040OutgoingCommand.SetMotorLevels(
+                left = left,
+                right = right,
+                leftBrake = leftBrake,
+                rightBrake = rightBrake
+            )
+
             commandLock.notify()
         }
     }
 
     fun getLog() {
         synchronized(commandLock) {
-            command = generateGetLogCmd()
+            command = RP2040OutgoingCommand.GetLog()
             commandLock.notify()
         }
     }
