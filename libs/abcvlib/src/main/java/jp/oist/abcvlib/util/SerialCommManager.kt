@@ -22,7 +22,7 @@ import kotlin.math.abs
  * onReceive()
  */
 class SerialCommManager @JvmOverloads constructor(
-    private val usbSerial: UsbSerial,
+    private val serialTransport: SerialTransport,
     batteryData: BatteryData? = null,
     wheelData: WheelData? = null
 ) {
@@ -108,8 +108,8 @@ class SerialCommManager @JvmOverloads constructor(
         val command: RP2040IncomingCommand?
         var packet: ByteArray?
         // Run the command on a thread handler to allow the queue to keep being added to
-        synchronized(usbSerial.fifoQueue) {
-            command = usbSerial.fifoQueue.poll()
+        synchronized(serialTransport.fifoQueue) {
+            command = serialTransport.fifoQueue.poll()
         }
         // Check if there is a packet in the queue (fifoQueue
         if (command != null) {
@@ -156,7 +156,7 @@ class SerialCommManager @JvmOverloads constructor(
 
     private fun sendCommand(command: RP2040OutgoingCommand): Int {
         try {
-            this.usbSerial.send(command, 10000)
+            this.serialTransport.send(command, 10000)
         } catch (e: SerialTimeoutException) {
             throw RuntimeException(
                 "SerialTimeoutException on send. The serial connection " +
@@ -183,7 +183,7 @@ class SerialCommManager @JvmOverloads constructor(
             "Input byte array must have a length of " + RP2040OutgoingCommand.PACKET_SIZE
         }
         try {
-            this.usbSerial.send(bytes, 10000)
+            serialTransport.send(bytes, 10000)
         } catch (e: SerialTimeoutException) {
             throw RuntimeException(
                 "SerialTimeoutException on send. The serial connection " +
@@ -197,7 +197,7 @@ class SerialCommManager @JvmOverloads constructor(
     }
 
     private fun receivePacket() {
-        val receivedStatus = usbSerial.awaitPacketReceived(10000)
+        val receivedStatus = serialTransport.awaitPacketReceived(10000)
         if (receivedStatus == 1) {
             //Note this is actually calling the functions like parseLog, parseStatus, etc.
             parseFifoPacket()

@@ -31,7 +31,7 @@ class UsbSerial @Throws(IOException::class) constructor(
     private val context: Context,
     private val usbManager: UsbManager,
     private val serialReadyListener: SerialReadyListener
-) : SerialInputOutputManager.Listener {
+) : SerialInputOutputManager.Listener, SerialTransport {
     private lateinit var port: UsbSerialPort
 
     private val timeout: Int = 1000 //1s
@@ -40,7 +40,7 @@ class UsbSerial @Throws(IOException::class) constructor(
     private val cnt = 0
     private var badPacketCount = 0
 
-    internal val fifoQueue: CircularFifoQueue<RP2040IncomingCommand> = CircularFifoQueue<RP2040IncomingCommand>(256)
+    override val fifoQueue: CircularFifoQueue<RP2040IncomingCommand> = CircularFifoQueue<RP2040IncomingCommand>(256)
     private val packetBuffer = PacketBuffer()
 
     companion object {
@@ -197,11 +197,11 @@ class UsbSerial @Throws(IOException::class) constructor(
     }
 
     @Throws(IOException::class)
-    internal fun send(command: RP2040OutgoingCommand, timeout: Int) =
+    override fun send(command: RP2040OutgoingCommand, timeout: Int) =
         send(command.toBytes(), timeout)
 
     @Throws(IOException::class)
-    internal fun send(packet: ByteArray, timeout: Int) {
+    override fun send(packet: ByteArray, timeout: Int) {
         port.write(packet, timeout)
         Logger.i(Thread.currentThread().name, "send()")
     }
@@ -209,7 +209,7 @@ class UsbSerial @Throws(IOException::class) constructor(
     /**
      * Blocks until a response is received
      */
-    internal fun awaitPacketReceived(timeout: Int): Int {
+    override fun awaitPacketReceived(timeout: Int): Int {
         var returnVal = -1
         // Wait until packet is available
         lock.lock()
