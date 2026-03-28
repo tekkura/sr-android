@@ -7,7 +7,7 @@ import org.gradle.kotlin.dsl.register
 object ModelDownload {
 
     private val models = mapOf(
-        "model.tflite" to "https://github.com/oist/smartphone-robot-object-detection/releases/download/0.1.1/model.tflite",
+        "model.tflite" to "https://github.com/oist/smartphone-robot-object-detection/releases/download/2.0.0/smartphone-robot-detector-2.0.0-3-class.tflite",
         "efficientdet-lite0.tflite" to "https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/object_detection/android/lite-model_efficientdet_lite0_detection_metadata_1.tflite",
         "efficientdet-lite1.tflite" to "https://storage.googleapis.com/download.tensorflow.org/models/tflite/task_library/object_detection/android/lite-model_efficientdet_lite1_detection_metadata_1.tflite"
     )
@@ -22,7 +22,7 @@ object ModelDownload {
                 tasks.register<Download>("download_${name.replace(".", "_")}") {
                     src(url)
                     dest("$assetDir/$name")
-                    overwrite(false)
+                    overwrite(name == "model.tflite")
                 }
             }
 
