@@ -19,6 +19,11 @@ internal class MockRP2040 {
     val logEntries = mutableListOf<String>()
 
     /**
+     * Optional callback to notify tests when a command has been processed.
+     */
+    var onCommandProcessed: ((AndroidToRP2040Command) -> Unit)? = null
+
+    /**
      * Processes an incoming raw packet and returns a response packet.
      * Mimics the firmware's request-response cycle.
      */
@@ -57,6 +62,8 @@ internal class MockRP2040 {
                 RP2040IncomingCommand.Ack(byteArrayOf()).toBytes()
             }
         }
+
+        onCommandProcessed?.invoke(type)
 
         return response
     }
