@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-03-28T06:16:49Z",
+  "event_ts": "2026-03-28T06:16:34Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "milestone",
+  "action": "opened",
+  "actor": "topherbuckley",
+  "run_id": "23679173672",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "comment": null,
+  "milestone": {
+    "number": 5,
+    "title": "AppSigning",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/5",
+    "description": "Milestone spec moved to: [docs/milestones/AppSigning.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/AppSigning.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/milestone/5",
+  "event_id": "94e27258709dd0de805ac35f665d084e9918d611719cfd109571a42f5c003e62"
+}
