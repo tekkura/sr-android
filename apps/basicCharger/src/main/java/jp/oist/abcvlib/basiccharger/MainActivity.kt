@@ -5,6 +5,9 @@ import android.graphics.RectF
 import android.os.Bundle
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.lifecycleScope
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.components.containers.Category
+import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.basiccharger.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.AbcvlibActivity
 import jp.oist.abcvlib.core.inputs.PublisherManager
@@ -21,9 +24,6 @@ import jp.oist.abcvlib.util.UsbSerial
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.support.label.Category
-import org.tensorflow.lite.task.vision.detector.Detection
 import java.util.Locale
 import java.util.Random
 import java.util.concurrent.Executors
@@ -195,7 +195,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
 
     override fun onObjectsDetected(
         bitmap: Bitmap,
-        tensorImage: TensorImage,
+        mpImage: MPImage,
         results: MutableList<Detection>,
         inferenceTime: Long,
         height: Int,
@@ -213,12 +213,12 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
             var label = ""
 
             for (result in results) {
-                val currentCategory = result.categories[0]
-                if (currentCategory.label == "puck") {
+                val currentCategory = result.categories()[0]
+                if (currentCategory.categoryName() == "puck") {
                     puckDetected = true
                     category = currentCategory
-                    label = category.label
-                    boundingBox = result.boundingBox
+                    label = category.categoryName()
+                    boundingBox = result.boundingBox()
                     Logger.d("PUCK", "Puck detected")
                     break
                 }
@@ -235,7 +235,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
                 rotatedHeight
             )
             if (category != null) {
-                val score = String.format(Locale.getDefault(), "%.2f", category.score)
+                val score = String.format(Locale.getDefault(), "%.2f", category.score())
                 val time = String.format(Locale.getDefault(), "%d", inferenceTime)
                 Logger.v("PUCK", "ObjectDetector: " + label + " : " + score + " : " + time + "ms")
                 guiUpdater.objectDetectorString = label + " : " + score + " : " + time + "ms"
