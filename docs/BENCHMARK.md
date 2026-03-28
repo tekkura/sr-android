@@ -44,6 +44,8 @@ The following metrics are derived from the timestamps above to measure specific 
 
 ### Benchmark Results (10000 iterations)
 
+#### Initial measurements
+
 Success Rate: 98.12% (9812/10000) 
  
 | Metric                     | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |
@@ -56,3 +58,18 @@ Success Rate: 98.12% (9812/10000)
 | M6: Wake-up Lag            | 0.751     | 0.104    | 8.657    | 1.362    |
 | M7: App Logic              | 2.019     | 0.171    | 15.904   | 3.257    |
 | Total RTT                  | 18.863    | 6.430    | 9949.598 | 22.232   |
+
+#### Byte array logging optimization
+
+Success Rate: 98.59% (9859/10000)
+
+| Metric                     | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |
+|:---------------------------|:----------|:---------|:---------|:---------|
+| M1: Outbound Queueing      | 0.445     | 0.030    | 13.782   | 0.897    |
+| M2: Handling/Serialization | 0.114     | 0.009    | 7.307    | 0.238    |
+| M3: Transport Out          | 1.637     | 0.129    | 12.729   | 2.712    |
+| M4: Robot + Transit In     | 5.620     | 5.116    | 16.563   | 6.027    |
+| M5: Buffer Processing      | 1.263     | 0.140    | 10.629   | 1.899    |
+| M6: Wake-up Lag            | 0.828     | 0.068    | 10.036   | 1.529    |
+| M7: App Logic              | 1.870     | 0.146    | 13.960   | 3.086    |
+| Total RTT                  | 11.778    | 5.717    | 28.377   | 14.651   |
