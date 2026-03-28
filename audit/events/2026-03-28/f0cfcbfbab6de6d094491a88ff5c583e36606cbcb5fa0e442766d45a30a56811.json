@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-28T02:57:17Z",
+  "event_ts": "2026-03-28T02:57:00Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "topherbuckley",
+  "run_id": "23675952750",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 217,
+    "title": "[Issue]: Fix deadband handling in SerialCommManager.generateSetMotorLevels",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/217",
+    "milestone": {
+      "number": 3,
+      "title": "NonPriority"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/217",
+  "event_id": "f0cfcbfbab6de6d094491a88ff5c583e36606cbcb5fa0e442766d45a30a56811"
+}
