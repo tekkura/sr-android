@@ -89,6 +89,45 @@ From here you can start building the project. There is also a terminal applicati
 All state variables are published by the robot and can be subscribed to either directly within your MainActivity class (See apps/basicSubscriber) or via a TimeStepDataBuffer (See apps/basicAssembler) for examples of each. The following diagram shows the architecture of this system.
 ![Subscriber/Publisher Architecture](./media/publisher-subscriber.png)
 
+## Communication Protocol
+
+The communication between the Android phone and the robot firmware utilizes a custom packet-based protocol over USB-Serial.
+
+### Packet Structure
+Packets are framed with start and stop markers to ensure integrity during streaming:
+- **START Marker**: `0xFE`
+- **Command Type**: 1 byte identifying the command.
+- **Payload Size**: 2 bytes (Little Endian) specifying the data length.
+- **Payload**: Variable length data.
+- **STOP Marker**: `0xFF`
+
+### PacketBuffer API
+The `PacketBuffer` class is the primary abstraction for parsing incoming serial data. It manages an internal state machine to handle partial packets and multiple packets received in a single transmission.
+
+#### Usage
+```kotlin
+val packetBuffer = PacketBuffer()
+
+// In the serial read callback:
+packetBuffer.consume(incomingBytes) { result ->
+    when (result) {
+        is PacketBuffer.ParseResult.ReceivedPacket -> {
+            val command = result.command
+            // Handle the parsed RP2040IncomingCommand
+        }
+        is PacketBuffer.ParseResult.ReceivedErrorPacket -> {
+            // Handle malformed packet or framing error
+        }
+        is PacketBuffer.ParseResult.Overflow -> {
+            // Internal buffer limit reached; parser will automatically reset
+        }
+        is PacketBuffer.ParseResult.NotEnoughData -> {
+            // Incomplete packet; waiting for more bytes
+        }
+    }
+}
+```
+
 ## Overview of API
 Three demo applications exemplify the basic use of the API:
 1. backAndForth
@@ -105,6 +144,17 @@ Three demo applications exemplify the basic use of the API:
     i. Synchronized get/set methods
     ii. Circular buffer for writing data, with read data separately
   c. Adds a high-level RL framework (StateSpace, ActionSpace, etc.)
+
+## Testing
+
+The framework includes a comprehensive test suite to ensure reliability and performance.
+
+### 1. Unit Tests
+These tests verify individual components (e.g., packet parsing, command serialization) and run on your local machine.
+
+```bash
+./gradlew :abcvlib:testDebugUnitTest
+```
 
 ## Pairing with a smartphone via wireless debugging
 1. Ensure your smartphone is connected to the same network as your computer
