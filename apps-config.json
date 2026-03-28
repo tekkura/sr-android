@@ -10,6 +10,7 @@
       "handsOnApp",
       "pidBalancer",
       "backAndForthPython",
-      "basicSubscriberPython"
+      "basicSubscriberPython",
+      "rosbridgeTest"
   ]
 }
