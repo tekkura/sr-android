@@ -30,14 +30,13 @@ import java.util.concurrent.locks.ReentrantLock
 class UsbSerial @Throws(IOException::class) constructor(
     private val context: Context,
     private val usbManager: UsbManager,
-    private val serialReadyListener: SerialReadyListener
+    private val serialReadyListener: SerialReadyListener,
+    port: RobotSerialPort? = null
 ) : SerialInputOutputManager.Listener {
-    private lateinit var port: UsbSerialPort
+
+    private lateinit var _port: RobotSerialPort
 
     private val timeout: Int = 1000 //1s
-    private val totalBytesRead: Int = 0 // Track total bytes read
-    private val pwm = floatArrayOf(1.0f, 0.5f, 0.0f, -0.5f, -1.0f)
-    private val cnt = 0
     private var badPacketCount = 0
 
     internal val fifoQueue: CircularFifoQueue<RP2040IncomingCommand> = CircularFifoQueue<RP2040IncomingCommand>(256)
@@ -49,38 +48,43 @@ class UsbSerial @Throws(IOException::class) constructor(
         private val lock = ReentrantLock()
         private val packetReceived: Condition = lock.newCondition()
 
-        // 1024 + 3 for start, command, and stop markers sent as putchar. (i.e. they won't be optimized anyway).
-        private const val RP2020_PACKET_SIZE_LOG = 1027
         private const val ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION"
         private const val BAD_PACKET_THRESHOLD = 5
-
     }
 
     init {
-        // Find all available drivers from attached devices.
-        val deviceList = usbManager.deviceList
+        if (port != null) {
+            // If a port is provided (e.g. for testing), we assume it's already "found"
+            // and we notify the listener immediately to ensure it's ready for the test.
+            _port = port
+            _port.startReading(this)
+            serialReadyListener.onSerialReady(this)
+        } else {
+            // Find all available drivers from attached devices.
+            val deviceList = usbManager.deviceList
 
-        if (deviceList.isEmpty()) {
-            throw IOException("No USB devices found")
-        }
-
-        for (d in deviceList.values) {
-            if (d.manufacturerName == "Seeed" && d.productName == "Seeeduino XIAO") {
-                Logger.i(Thread.currentThread().name, "Found a XIAO. Connecting...")
-                connect(d)
-            } else if (d.manufacturerName.equals("Raspberry Pi") && d.productName.equals("Pico Test Device")) {
-                Logger.i(Thread.currentThread().name, "Found a Pico Test Device. Connecting...")
-                connect(d)
-            } else if (d.manufacturerName == "Raspberry Pi" && d.productName == "Pico") {
-                Logger.i(Thread.currentThread().name, "Found a Pi. Connecting...")
-                connect(d)
+            if (deviceList.isEmpty()) {
+                throw IOException("No USB devices found")
             }
+
+            for (d in deviceList.values) {
+                if (d.manufacturerName == "Seeed" && d.productName == "Seeeduino XIAO") {
+                    Logger.i(Thread.currentThread().name, "Found a XIAO. Connecting...")
+                    connect(d)
+                } else if (d.manufacturerName.equals("Raspberry Pi") && d.productName.equals("Pico Test Device")) {
+                    Logger.i(Thread.currentThread().name, "Found a Pico Test Device. Connecting...")
+                    connect(d)
+                } else if (d.manufacturerName == "Raspberry Pi" && d.productName == "Pico") {
+                    Logger.i(Thread.currentThread().name, "Found a Pi. Connecting...")
+                    connect(d)
+                }
+            }
+            val filter = IntentFilter(ACTION_USB_PERMISSION).apply {
+                addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            }
+            val usbReceiver: BroadcastReceiver = MyBroadcastReceiver()
+            ContextCompat.registerReceiver(context, usbReceiver, filter, RECEIVER_NOT_EXPORTED)
         }
-        val filter = IntentFilter(ACTION_USB_PERMISSION).apply {
-            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
-        }
-        val usbReceiver: BroadcastReceiver = MyBroadcastReceiver()
-        ContextCompat.registerReceiver(context, usbReceiver, filter, RECEIVER_NOT_EXPORTED)
     }
 
     @Throws(IOException::class)
@@ -110,18 +114,20 @@ class UsbSerial @Throws(IOException::class) constructor(
     private fun openPort(connection: UsbDeviceConnection) {
         Logger.i(Thread.currentThread().name, "Opening port")
         val driver = getDriver()
-        val port = driver.ports[0] // Most devices have just one port (port 0)
+        val usbSerialPort = driver.ports[0] // Most devices have just one port (port 0)
         try {
-            port.open(connection)
-            port.setParameters(115200, 8, 1, UsbSerialPort.PARITY_NONE)
-            port.dtr = true
-            this.port = port
-            val usbIoManager = SerialInputOutputManager(port, this)
+            val realPort = RealRobotSerialPort(usbSerialPort)
+            realPort.open(connection)
+            realPort.setParameters(115200, 8, 1, UsbSerialPort.PARITY_NONE)
+            realPort.setDtr(true)
+            
+            this._port = realPort
+            
             // Adding this as there doesn't appear to be any call back in the usbIoManager that
             // will call onSerialReady after initialization. As it stands, there were things occurring
             // in onSerialReady that were being executed before the usbIoManager was initialized.
             Thread.sleep(100)
-            usbIoManager.start()
+            realPort.startReading(this)
             serialReadyListener.onSerialReady(this)
         } catch (e: IOException) {
             e.printStackTrace()
@@ -202,7 +208,7 @@ class UsbSerial @Throws(IOException::class) constructor(
 
     @Throws(IOException::class)
     internal fun send(packet: ByteArray, timeout: Int) {
-        port.write(packet, timeout)
+        _port.write(packet, timeout)
         Logger.i(Thread.currentThread().name, "send()")
     }
 
