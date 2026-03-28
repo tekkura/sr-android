@@ -41,6 +41,8 @@ abcvlibFbclasses = "0.0.1"
 
 # Test
 junit = "4.13.2"
+androidxTestExtJunit = "1.2.1"
+androidxTestRunner = "1.6.2"
 
 [libraries]
 # Android Core
@@ -83,6 +85,8 @@ abcvlib-fbclasses = { module = "jp.oist.abcvlib.core.learning:fbclasses", versio
 
 # Test
 junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 
 # Dependencies that included at build-logic
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle-api", version.ref = "agp" }
