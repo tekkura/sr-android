@@ -1,6 +1,7 @@
 package jp.oist.abcvlib.util.rp2040
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command
+import jp.oist.abcvlib.util.BenchmarkClock
 import java.nio.ByteBuffer
 
 /**
@@ -23,6 +24,13 @@ internal class MockRP2040 {
      * Mimics the firmware's request-response cycle.
      */
     fun processPacket(packet: ByteArray): ByteArray? {
+        // T4: Simulator Receipt
+        BenchmarkClock.mark(4)
+
+        // Simulate firmware processing time to prevent race conditions in tests.
+        // This ensures the Android side has time to enter its 'await' state.
+        Thread.sleep(5)
+
         // Simple manual parsing of the header
         if (packet.size < 4) return null
         

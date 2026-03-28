@@ -151,6 +151,9 @@ class UsbSerial @Throws(IOException::class) constructor(
     }
 
     override fun onNewData(data: ByteArray) {
+        // T5: Response Receipt at Phone
+        BenchmarkClock.mark(5)
+
         // TODO I feel this should be executed in a separate thread otherwise the
         // SerialInputOutputManager thread may be delayed and miss data
 
@@ -174,11 +177,13 @@ class UsbSerial @Throws(IOException::class) constructor(
                         }
 
                         is PacketBuffer.ParseResult.Overflow -> {
+                            BenchmarkClock.recordSuccess(false)
                             onBadPacket()
                             Logger.d(TAG, "Buffer overflow.")
                         }
 
                         is PacketBuffer.ParseResult.ReceivedErrorPacket -> {
+                            BenchmarkClock.recordSuccess(false)
                             onBadPacket()
                             Logger.d(TAG, "Error packet received")
                             Logger.d(TAG, "packetReceived.signal()")
@@ -186,6 +191,7 @@ class UsbSerial @Throws(IOException::class) constructor(
                         }
 
                         is PacketBuffer.ParseResult.ReceivedPacket -> {
+                            BenchmarkClock.recordSuccess(true)
                             onCompletePacketReceived(result.command)
 
                             Logger.d(TAG, "Packet verified")
@@ -208,6 +214,9 @@ class UsbSerial @Throws(IOException::class) constructor(
 
     @Throws(IOException::class)
     internal fun send(packet: ByteArray, timeout: Int) {
+        // T3: Transport Dispatch
+        BenchmarkClock.mark(3)
+
         _port.write(packet, timeout)
         Logger.i(Thread.currentThread().name, "send()")
     }
@@ -255,6 +264,9 @@ class UsbSerial @Throws(IOException::class) constructor(
 
                 Logger.d("verifyPacket", "Adding Packet: $sb to fifoQueue")
                 fifoQueue.add(command)
+
+                // T6: Packet Queue Entry
+                BenchmarkClock.mark(6)
             }
         }
 

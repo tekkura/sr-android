@@ -58,6 +58,10 @@ class SerialCommManager @JvmOverloads constructor(
                     // this results in getState commands every 10ms unless another command
                     // (e.g. setMotorLevels) is set, which case wait will return immediately
                     commandLock.wait(10)
+                    
+                    // T2: Writer Loop Wake-up
+                    BenchmarkClock.mark(2)
+
                     if (command == null) {
                         command = RP2040OutgoingCommand.GetState()
                     }
@@ -198,6 +202,10 @@ class SerialCommManager @JvmOverloads constructor(
 
     private fun receivePacket() {
         val receivedStatus = usbSerial.awaitPacketReceived(10000)
+        
+        // T7: Manager Wake-up
+        BenchmarkClock.mark(7)
+
         if (receivedStatus == 1) {
             //Note this is actually calling the functions like parseLog, parseStatus, etc.
             parseFifoPacket()
@@ -219,6 +227,9 @@ class SerialCommManager @JvmOverloads constructor(
     float: right (same as left)
     */
     fun setMotorLevels(left: Float, right: Float, leftBrake: Boolean, rightBrake: Boolean) {
+        // T1: Command Creation Start
+        BenchmarkClock.mark(1)
+
         synchronized(commandLock) {
             command = RP2040OutgoingCommand.SetMotorLevels(
                 left = left,
@@ -280,6 +291,9 @@ class SerialCommManager @JvmOverloads constructor(
             )
             // Logger.v("serial", "usb_charger_voltage: " + rp2040State.chargeSideUSB.usb_charger_voltage);
             rp2040State.updatePublishers()
+            
+            // T8: State Applied
+            BenchmarkClock.mark(8)
         }
     }
 
