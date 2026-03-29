@@ -10,18 +10,13 @@ import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040State
 import jp.oist.abcvlib.util.rp2040.StatusCommand
 import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.abs
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Class to manage request-response patter between Android phone and USB Serial connection
  * over a separate thread.
- * send()
- * onReceive()
  */
 open class SerialCommManager @JvmOverloads constructor(
     protected val usbSerial: UsbSerial,
@@ -56,7 +51,8 @@ open class SerialCommManager @JvmOverloads constructor(
 
     protected class RunContext(
         val stopRequested: AtomicBoolean = AtomicBoolean(false),
-        var writerExecutor: ScheduledExecutorServiceWithException? = null
+        var writerExecutor: ScheduledExecutorServiceWithException? = null,
+        var delay: AtomicLong = AtomicLong(10)
     )
 
     protected open fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
@@ -66,10 +62,13 @@ open class SerialCommManager @JvmOverloads constructor(
                 synchronized(commandLock) {
                     // this results in getState commands every 10ms unless another command
                     // (e.g. setMotorLevels) is set, which case wait will return immediately
-                    commandLock.wait(10)
+                    if (command == null)
+                        commandLock.wait(context.delay.get())
+
                     if (context.stopRequested.get()) {
                         return@synchronized null
                     }
+
                     val localCommand = command ?: RP2040OutgoingCommand.GetState()
                     command = null
                     localCommand
@@ -112,16 +111,18 @@ open class SerialCommManager @JvmOverloads constructor(
                 return
             }
 
-            val context = RunContext()
+            val context = RunContext().apply {
+                this.delay.set(delay)
+            }
+
             val priorityFactory = ProcessPriorityThreadFactory(
                 Thread.MAX_PRIORITY,
                 "SerialCommManager_Android2Pi"
             )
             context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory).also {
-                it.scheduleWithFixedDelay(
+                it.schedule(
                     buildAndroid2PiWriter(context),
                     initialDelay,
-                    delay,
                     TimeUnit.MILLISECONDS
                 )
             }

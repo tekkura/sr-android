@@ -41,11 +41,13 @@ class LatencyMeasuringSerialCommManager @JvmOverloads constructor(
         while (!context.stopRequested.get()) {
             try {
                 synchronized(commandLock) {
-                    // this results in getState commands every 10ms unless another command
-                    // (e.g. setMotorLevels) is set, which case wait will return immediately
-                    commandLock.wait(10)
-                    if (context.stopRequested.get()) {
-                        return@synchronized null
+                    if (packet == null) {
+                        // this results in getState commands every 10ms unless another command
+                        // (e.g. setMotorLevels) is set, which case wait will return immediately
+                        commandLock.wait(10)
+                        if (context.stopRequested.get()) {
+                            return@synchronized null
+                        }
                     }
 
                     packet?.let {
