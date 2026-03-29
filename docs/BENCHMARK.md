@@ -88,3 +88,18 @@ Success Rate: 98.92% (9892/10000)
 | M6: Wake-up Lag            | 0.774     | 0.090    | 8.612    | 1.225    |
 | M7: App Logic              | 1.972     | 0.148    | 6.632    | 2.984    |
 | Total RTT                  | 11.297    | 5.765    | 32.862   | 13.372   |
+
+#### Updated android2PiWriter to handle the case where the command is already defined when loop starts
+
+Success Rate: 98.93% (9893/10000)
+
+| Metric                     | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |
+|:---------------------------|:----------|:---------|:---------|:---------|
+| M1: Outbound Queueing      | 0.398     | 0.039    | 3.843    | 0.806    |
+| M2: Handling/Serialization | 0.116     | 0.017    | 7.311    | 0.220    |
+| M3: Transport Out          | 1.578     | 0.245    | 9.660    | 2.412    |
+| M4: Robot + Transit In     | 5.604     | 5.152    | 17.768   | 5.939    |
+| M5: Buffer Processing      | 0.865     | 0.150    | 10.946   | 1.201    |
+| M6: Wake-up Lag            | 0.781     | 0.077    | 12.094   | 1.238    |
+| M7: App Logic              | 1.975     | 0.179    | 6.552    | 2.956    |
+| Total RTT                  | 11.316    | 5.887    | 30.910   | 13.340   |

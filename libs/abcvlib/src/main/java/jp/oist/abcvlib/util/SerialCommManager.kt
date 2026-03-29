@@ -9,11 +9,6 @@ import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040State
 import jp.oist.abcvlib.util.rp2040.StatusCommand
 import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.TimeUnit
-import kotlin.math.abs
 
 /**
  * Class to manage request-response patter between Android phone and USB Serial connection
@@ -52,23 +47,23 @@ class SerialCommManager @JvmOverloads constructor(
         startTimeAndroid = System.nanoTime()
         while (!shutdown) {
             synchronized(commandLock) {
-                try {
-                    // this results in getState commands every 10ms unless another command
-                    // (e.g. setMotorLevels) is set, which case wait will return immediately
-                    commandLock.wait(10)
-                    
-                    // T2: Writer Loop Wake-up
-                    BenchmarkClock.mark(2)
-
-                    if (command == null) {
-                        command = RP2040OutgoingCommand.GetState()
+                if (command == null) {
+                    try {
+                        // Wait for a command to be set, or timeout to send a periodic GET_STATE
+                        commandLock.wait(10)
+                    } catch (e: InterruptedException) {
+                        return@Runnable
                     }
-                    sendCommand(command!!)
-                    command = null
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
                 }
+                
+                // T2: Writer Loop Wake-up
+                BenchmarkClock.mark(2)
+
+                val cmdToSend = command ?: RP2040OutgoingCommand.GetState()
+                sendCommand(cmdToSend)
+                command = null
             }
+
             cnt++
             if (cnt == 100) {
                 durationAndroid = (System.nanoTime() - startTimeAndroid) / 100
