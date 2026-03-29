@@ -72,7 +72,7 @@ class FullLoopCommTest {
         publisherManager.startPublishers()
 
         // 3. Start the communication loop
-        commManager.start(initialDelay = 0, delay = 10)
+        commManager.start()
 
         // 4. Trigger a command
         commManager.setMotorLevels(1.0f, -1.0f, false, false)
@@ -101,7 +101,7 @@ class FullLoopCommTest {
         val testLog = "Hello from RP2040"
         simulator.logEntries.add(testLog)
         
-        commManager.start(initialDelay = 0, delay = 10)
+        commManager.start()
         commManager.getLog()
         
         // Give it some time to complete the transaction

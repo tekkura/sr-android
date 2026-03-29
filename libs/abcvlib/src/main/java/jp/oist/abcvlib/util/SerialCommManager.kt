@@ -18,8 +18,6 @@ import kotlin.math.abs
 /**
  * Class to manage request-response patter between Android phone and USB Serial connection
  * over a separate thread.
- * send()
- * onReceive()
  */
 class SerialCommManager @JvmOverloads constructor(
     private val usbSerial: UsbSerial,
@@ -87,23 +85,18 @@ class SerialCommManager @JvmOverloads constructor(
 
 
     // Start method to start the thread
-    @JvmOverloads
-    fun start(initialDelay: Long = 0, delay: Long = 10) {
-        val priorityFactory = ProcessPriorityThreadFactory(
-            Thread.MAX_PRIORITY,
-            "SerialCommManager_Android2Pi"
-        )
-        val scheduledExecutorService = ScheduledExecutorServiceWithException(1, priorityFactory)
-        scheduledExecutorService.scheduleWithFixedDelay(
-            android2PiWriter,
-            initialDelay,
-            delay,
-            TimeUnit.MILLISECONDS
-        )
+    fun start() {
+        shutdown = false
+        val thread = Thread(android2PiWriter, "SerialCommManager_Android2Pi")
+        thread.priority = Thread.MAX_PRIORITY
+        thread.start()
     }
 
     fun stop() {
         shutdown = true
+        synchronized(commandLock) {
+            commandLock.notifyAll()
+        }
     }
 
     //TODO paseFifoPacket() should call the various SerialResponseListener methods.

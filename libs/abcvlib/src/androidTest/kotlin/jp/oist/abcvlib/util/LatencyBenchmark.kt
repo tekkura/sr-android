@@ -58,7 +58,7 @@ class LatencyBenchmark {
         val totalIterations = warmUpIterations + measuredIterations
 
         BenchmarkClock.setEnabled(true)
-        commManager.start(initialDelay = 0, delay = 10)
+        commManager.start()
 
         Log.i("LatencyBenchmark", "Starting benchmark: $warmUpIterations warm-up, $measuredIterations measured.")
 
