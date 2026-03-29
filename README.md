@@ -155,6 +155,20 @@ These tests verify individual components (e.g., packet parsing, command serializ
 ./gradlew :abcvlib:testDebugUnitTest
 ```
 
+### 2. Instrumentation Tests
+These tests verify end-to-end communication using a mocked transport layer to simulate robot hardware. They require a connected Android device or emulator.
+
+```bash
+./gradlew :abcvlib:connectedDebugAndroidTest
+```
+
+### 3. Latency Benchmark
+A specialized test to measure communication round-trip time and identify bottlenecks. For details on the methodology and metrics, see [docs/BENCHMARK.md](docs/BENCHMARK.md).
+
+```bash
+./gradlew :abcvlib:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=jp.oist.abcvlib.util.LatencyBenchmark
+```
+
 ## Pairing with a smartphone via wireless debugging
 1. Ensure your smartphone is connected to the same network as your computer
 2. Enable wireless debugging on your smartphone by following the instructions [here](https://developer.android.com/studio/run/device#wireless)
