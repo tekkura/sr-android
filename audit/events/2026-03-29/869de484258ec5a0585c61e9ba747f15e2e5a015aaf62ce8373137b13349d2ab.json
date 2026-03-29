@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-29T08:30:29Z",
+  "event_ts": "2026-03-29T08:30:12Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23705099217",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 211,
+    "title": "feat(comprehensiveDemo): scaffold integrated demo app",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/211",
+    "milestone": {
+      "number": 11,
+      "title": "comprehensiveDemo"
+    }
+  },
+  "comment": {
+    "id": 4149699800,
+    "html_url": "https://github.com/tekkura/sr-android/pull/211#issuecomment-4149699800",
+    "created_at": "2026-03-29T08:30:12Z",
+    "updated_at": "2026-03-29T08:30:12Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/211#issuecomment-4149699800",
+  "event_id": "869de484258ec5a0585c61e9ba747f15e2e5a015aaf62ce8373137b13349d2ab"
+}
