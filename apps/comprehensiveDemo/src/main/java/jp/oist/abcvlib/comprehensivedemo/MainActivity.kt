@@ -18,6 +18,8 @@ import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.ObjectDetectorData
 import jp.oist.abcvlib.core.inputs.phone.ObjectDetectorDataSubscriber
+import jp.oist.abcvlib.core.inputs.phone.OrientationData
+import jp.oist.abcvlib.core.inputs.phone.OrientationDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.QRCodeData
 import jp.oist.abcvlib.core.inputs.phone.QRCodeDataSubscriber
 import jp.oist.abcvlib.util.ControlLatencyTrace
@@ -43,7 +45,8 @@ import kotlin.time.Duration.Companion.seconds
  * act as placeholders for later milestone PRs.
  */
 class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscriber,
-    WheelDataSubscriber, ObjectDetectorDataSubscriber, QRCodeDataSubscriber {
+    WheelDataSubscriber, OrientationDataSubscriber, ObjectDetectorDataSubscriber,
+    QRCodeDataSubscriber {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var publisherManager: PublisherManager
@@ -64,6 +67,9 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     private var lastApproachLatencyLogAtMs = 0L
     private var latestRobotFrameCapturedAtNs = 0L
     private var latestRobotDetectCompletedAtNs = 0L
+    private var latestThetaDeg = 0.0
+    private var latestAngularVelocityDeg = 0.0
+    private var latestWheelSpeedDeg = 0.0
     private var qrVisibleApplied = false
     private var wasOnCharger = false
     private var recentlyUndockedUntilMs = 0L
@@ -119,6 +125,8 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         batteryData.addSubscriber(this)
         val wheelData = WheelData.Builder(this, publisherManager).build()
         wheelData.addSubscriber(this)
+        val orientationData = OrientationData.Builder(this, publisherManager).build()
+        orientationData.addSubscriber(this)
 
         ObjectDetectorData.Builder(this, publisherManager, this)
             .setDelegate(ObjectDetectorData.delegates.DELEGATE_GPU)
@@ -199,6 +207,16 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         wheelSpeedExpAvgL: Double,
         wheelSpeedExpAvgR: Double
     ) {
+        latestWheelSpeedDeg = (wheelSpeedExpAvgL + wheelSpeedExpAvgR) / 2.0
+    }
+
+    override fun onOrientationUpdate(
+        timestamp: Long,
+        thetaRad: Double,
+        angularVelocityRad: Double
+    ) {
+        latestThetaDeg = OrientationData.getThetaDeg(thetaRad)
+        latestAngularVelocityDeg = OrientationData.getAngularVelocityDeg(angularVelocityRad)
     }
 
     override fun onQRCodeDetected(qrDataDecoded: String) {
@@ -344,6 +362,9 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
             recentlyUndocked = now < recentlyUndockedUntilMs,
             hardwareReady = hardwareReady,
             batteryVoltage = batteryVoltage,
+            thetaDeg = latestThetaDeg,
+            angularVelocityDeg = latestAngularVelocityDeg,
+            wheelSpeedDeg = latestWheelSpeedDeg,
             imageWidth = latestImageWidth,
             imageHeight = latestImageHeight,
             robotDetection = latestRobotDetection,

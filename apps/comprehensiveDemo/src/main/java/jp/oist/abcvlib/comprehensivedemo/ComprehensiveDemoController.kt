@@ -27,6 +27,9 @@ internal data class ControllerState(
     val recentlyUndocked: Boolean,
     val hardwareReady: Boolean,
     val batteryVoltage: Double,
+    val thetaDeg: Double,
+    val angularVelocityDeg: Double,
+    val wheelSpeedDeg: Double,
     val imageWidth: Int,
     val imageHeight: Int,
     val robotDetection: Detection? = null,
@@ -51,6 +54,8 @@ internal class ComprehensiveDemoController : DemoController {
     private var behaviorStartTimeMs = 0L
     private var searchDirection = 1f
     private var lastSearchDirectionChangeMs = 0L
+    private var balanceIntegralError = 0.0
+    private var lastBalanceUpdateMs = 0L
 
     override fun update(state: ControllerState, now: Long) {
         update(state, now, forcedBehavior = null)
@@ -66,15 +71,19 @@ internal class ComprehensiveDemoController : DemoController {
 
     override fun wheelCommand(state: ControllerState, now: Long): WheelCommand {
         return when (currentBehavior) {
-            Behavior.REST_ON_TAIL -> WheelCommand(0f, 0f, true, true)
-            Behavior.GET_UP_AND_BALANCE -> getUpCommand(now)
-            Behavior.SEARCH_AROUND -> searchCommand(now)
-            Behavior.GO_CHARGING -> chargingCommand(state, now)
-            Behavior.APPROACH_ANOTHER_ROBOT -> robotApproachCommand(state, now)
-            Behavior.SEXUAL_DISPLAY -> danceCommand(now)
-            Behavior.SHOW_QR_CODE -> showQrCommand(state)
-            Behavior.ACCEPT_QR_CODE -> acceptQrCommand(state)
+            Behavior.REST_ON_TAIL -> restOnTail()
+            Behavior.GET_UP_AND_BALANCE -> getUpAndBalance(state, now)
+            Behavior.SEARCH_AROUND -> searchAround(now)
+            Behavior.GO_CHARGING -> goCharging(state, now)
+            Behavior.APPROACH_ANOTHER_ROBOT -> approachAnotherRobot(state, now)
+            Behavior.SEXUAL_DISPLAY -> sexualDisplay(now)
+            Behavior.SHOW_QR_CODE -> showQrCode(state)
+            Behavior.ACCEPT_QR_CODE -> acceptQrCode(state)
         }
+    }
+
+    private fun restOnTail(): WheelCommand {
+        return WheelCommand(0f, 0f, true, true)
     }
 
     private fun selectBehavior(
@@ -117,19 +126,64 @@ internal class ComprehensiveDemoController : DemoController {
         }
         currentBehavior = nextBehavior
         behaviorStartTimeMs = now
-    }
-
-    private fun getUpCommand(now: Long): WheelCommand {
-        val elapsed = now - behaviorStartTimeMs
-        return when (((elapsed / 500L) % 4).toInt()) {
-            0 -> WheelCommand(0.35f, 0.35f)
-            1 -> WheelCommand(-0.35f, -0.35f)
-            2 -> WheelCommand(0.25f, -0.25f)
-            else -> WheelCommand(-0.25f, 0.25f)
+        if (nextBehavior == Behavior.GET_UP_AND_BALANCE) {
+            resetBalanceController()
         }
     }
 
-    private fun searchCommand(now: Long): WheelCommand {
+    private fun resetBalanceController() {
+        balanceIntegralError = 0.0
+        lastBalanceUpdateMs = 0L
+    }
+
+    private fun getUpAndBalance(state: ControllerState, now: Long): WheelCommand {
+        if (!state.hardwareReady) {
+            return WheelCommand(0f, 0f)
+        }
+
+        val dtSeconds = if (lastBalanceUpdateMs == 0L) {
+            BALANCE_LOOP_DT_FALLBACK_S
+        } else {
+            ((now - lastBalanceUpdateMs).coerceAtLeast(1L) / 1000.0)
+        }
+        lastBalanceUpdateMs = now
+
+        if (state.thetaDeg < BALANCE_SET_POINT_DEG - BALANCE_MAX_ABS_TILT_DEG) {
+            balanceIntegralError = 0.0
+            return WheelCommand(-BALANCE_RECOVERY_SPEED, -BALANCE_RECOVERY_SPEED)
+        }
+        if (state.thetaDeg > BALANCE_SET_POINT_DEG + BALANCE_MAX_ABS_TILT_DEG) {
+            balanceIntegralError = 0.0
+            return WheelCommand(BALANCE_RECOVERY_SPEED, BALANCE_RECOVERY_SPEED)
+        }
+
+        val tiltErrorDeg = BALANCE_SET_POINT_DEG - state.thetaDeg
+        balanceIntegralError = (balanceIntegralError + tiltErrorDeg * dtSeconds)
+            .coerceIn(-BALANCE_INTEGRAL_CLAMP, BALANCE_INTEGRAL_CLAMP)
+
+        val output = (
+            BALANCE_P_TILT * tiltErrorDeg +
+                BALANCE_I_TILT * balanceIntegralError +
+                BALANCE_D_TILT * state.angularVelocityDeg +
+                BALANCE_P_WHEEL * (0.0 - state.wheelSpeedDeg)
+            )
+            .coerceIn(-BALANCE_MAX_OUTPUT, BALANCE_MAX_OUTPUT)
+            .toFloat()
+
+        Logger.v(
+            "ComprehensiveDemo",
+            "balance thetaDeg=${"%.2f".format(state.thetaDeg)} " +
+                "thetaErrorDeg=${"%.2f".format(tiltErrorDeg)} " +
+                "angularVelocityDeg=${"%.2f".format(state.angularVelocityDeg)} " +
+                "wheelSpeedDeg=${"%.2f".format(state.wheelSpeedDeg)} " +
+                "integral=${"%.2f".format(balanceIntegralError)} " +
+                "output=${"%.3f".format(output)}"
+        )
+
+        return WheelCommand(output, output)
+    }
+
+    private fun searchAround(now: Long): WheelCommand {
         if (now - lastSearchDirectionChangeMs > SEARCH_DIRECTION_CHANGE_MS) {
             searchDirection = if (Random.nextBoolean()) 1f else -1f
             lastSearchDirectionChangeMs = now
@@ -137,9 +191,9 @@ internal class ComprehensiveDemoController : DemoController {
         return WheelCommand(0.3f * searchDirection, -0.3f * searchDirection)
     }
 
-    private fun chargingCommand(state: ControllerState, now: Long): WheelCommand {
-        val puck = state.puckDetection ?: return searchCommand(now)
-        return approachCommand(
+    private fun goCharging(state: ControllerState, now: Long): WheelCommand {
+        val puck = state.puckDetection ?: return searchAround(now)
+        return approach(
             detection = puck,
             state = state,
             forwardBias = 0.42f,
@@ -148,9 +202,9 @@ internal class ComprehensiveDemoController : DemoController {
         )
     }
 
-    private fun robotApproachCommand(state: ControllerState, now: Long): WheelCommand {
-        val robot = state.robotDetection ?: return searchCommand(now)
-        return approachCommand(
+    private fun approachAnotherRobot(state: ControllerState, now: Long): WheelCommand {
+        val robot = state.robotDetection ?: return searchAround(now)
+        return approach(
             detection = robot,
             state = state,
             forwardBias = 0.40f,
@@ -159,7 +213,7 @@ internal class ComprehensiveDemoController : DemoController {
         )
     }
 
-    private fun showQrCommand(state: ControllerState): WheelCommand {
+    private fun showQrCode(state: ControllerState): WheelCommand {
         val robot = state.robotDetection ?: return WheelCommand(0f, 0f)
         val errorX = horizontalError(robot, state)
         return if (abs(errorX) > 0.12f) {
@@ -169,7 +223,7 @@ internal class ComprehensiveDemoController : DemoController {
         }
     }
 
-    private fun acceptQrCommand(state: ControllerState): WheelCommand {
+    private fun acceptQrCode(state: ControllerState): WheelCommand {
         val robot = state.robotDetection ?: return WheelCommand(0f, 0f)
         val errorX = horizontalError(robot, state)
         return if (abs(errorX) > 0.18f) {
@@ -179,7 +233,7 @@ internal class ComprehensiveDemoController : DemoController {
         }
     }
 
-    private fun danceCommand(now: Long): WheelCommand {
+    private fun sexualDisplay(now: Long): WheelCommand {
         val elapsed = now - behaviorStartTimeMs
         return when (((elapsed / 700L) % 4).toInt()) {
             0 -> WheelCommand(0.45f, -0.45f)
@@ -189,7 +243,7 @@ internal class ComprehensiveDemoController : DemoController {
         }
     }
 
-    private fun approachCommand(
+    private fun approach(
         detection: Detection,
         state: ControllerState,
         forwardBias: Float,
@@ -244,6 +298,16 @@ internal class ComprehensiveDemoController : DemoController {
     companion object {
         internal const val BATTERY_LOW_THRESHOLD = 3.65
         private const val SEARCH_DIRECTION_CHANGE_MS = 3_500L
+        private const val BALANCE_SET_POINT_DEG = 2.8
+        private const val BALANCE_P_TILT = -24.0
+        private const val BALANCE_I_TILT = 0.0
+        private const val BALANCE_D_TILT = 1.0
+        private const val BALANCE_P_WHEEL = 0.0
+        private const val BALANCE_MAX_ABS_TILT_DEG = 6.5
+        private const val BALANCE_RECOVERY_SPEED = 0.5f
+        private const val BALANCE_MAX_OUTPUT = 0.65
+        private const val BALANCE_INTEGRAL_CLAMP = 20.0
+        private const val BALANCE_LOOP_DT_FALLBACK_S = 0.02
         // Positive screen-X error means the target appears on the right side of the preview.
         // The drive mixing in approachCommand expects positive turn input to steer left, so this
         // sign aligns screen-space error with the robot's turning convention.
