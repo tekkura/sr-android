@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-03-30T06:16:53Z",
+  "event_ts": "2026-03-30T06:16:34Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "edited",
+  "actor": "topherbuckley",
+  "run_id": "23730734855",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 213,
+    "title": "Clarify comprehensiveDemo social interaction state machine",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/213",
+    "milestone": null
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": {
+    "body": {
+      "from": "## Summary\nClarify the comprehensiveDemo social/mating state machine so the framework keeps the required behaviors available, while the default controller can use a simpler policy.\n\n## Background\nThe current scaffold defines these relevant behaviors:\n- `APPROACH_ANOTHER_ROBOT`\n- `SHOW_QR_CODE`\n- `ACCEPT_QR_CODE`\n- `SEXUAL_DISPLAY`\n\nThe milestone requirements say the user program should be able to check state and choose among all of those behaviors. However, for the current default demo policy, it may be more appropriate to treat QR display/accept as sub-phases of a broader `APPROACH_ANOTHER_ROBOT` interaction instead of separate top-level policy choices.\n\n## Questions To Resolve\n- Should `SHOW_QR_CODE` and `ACCEPT_QR_CODE` remain framework-level behaviors but be collapsed into `APPROACH_ANOTHER_ROBOT` in the default controller?\n- Is QR exchange a true high-level action, or an internal sub-state of social approach?\n- What should trigger transition into `SEXUAL_DISPLAY`?\n- Should later versions incorporate richer mate-selection signals, such as pose/balance quality or an \"attraction score\" inferred from robot motion?\n\n## Acceptance Criteria\n- Define the intended default-controller policy for robot interaction.\n- Define which behaviors must remain individually selectable in the framework/API.\n- Document whether QR exchange is modeled as top-level behavior or sub-state.\n- Document future exploration items for richer mate-selection signals.\n"
+    }
+  },
+  "severity": "HIGH",
+  "target_url": "https://github.com/tekkura/sr-android/issues/213",
+  "event_id": "e1788492638f8e7dc466021dc0649aea8d5d1c494ad08e23b5e00eee539088a1"
+}
