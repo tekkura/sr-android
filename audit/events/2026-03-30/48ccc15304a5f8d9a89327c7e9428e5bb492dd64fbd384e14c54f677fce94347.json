@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-30T11:44:52Z",
+  "event_ts": "2026-03-30T11:44:35Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23743029715",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 225,
+    "title": "Instrumentation tests/phase2",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/225",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "comment": {
+    "id": 4154410307,
+    "html_url": "https://github.com/tekkura/sr-android/pull/225#issuecomment-4154410307",
+    "created_at": "2026-03-30T11:44:35Z",
+    "updated_at": "2026-03-30T11:44:35Z",
+    "body": "> @topherbuckley I had the same concern regarding point 1. I have implemented the explicit check mentioned by the bot, but the results didn't change. So I have decided to remove it to not obscure actual processing logic further.\r\n> Next question is why the results didn't change. In our test we are executing commands one-by-one, waiting for the previous command to be processed. So there can't be any collisions with previous SetMotorState commands unless timeout happens. I think I have solved the timeout issue, so that is ruled out of the way.\r\n> There is also GetState polling that might interfere with our results. And it did before I changed marking logic to check that previous marks had already been set. In theory, there is a chance that GetState command will be queued to process between the moment when SetMotorState is created and the moment it is enqueued, but it is so small that it doesn't affect test results when the explicit check is added (in my testing).\r\n> Point 2 is valid\r\n\r\n@GeorgeChernyshov \r\nThanks for checking this. I agree the concern here is not firmware-side polling, but the Android-side GET_STATE behavior in SerialCommManager.\r\n\r\n  For point 1, my concern is not overlapping SET_MOTOR_LEVELS sends by themselves. It’s that the benchmark advances on an async WheelData callback, not on a response explicitly correlated to the SET_MOTOR_LEVELS\r\n  request for that iteration. Since BenchmarkClock still records against a single global currentIteration, and GET_STATE responses can also drive status updates, there is still a path for a late or unrelated\r\n  status packet to satisfy the latch and/or contribute marks to the current iteration.\r\n\r\n  The fact that adding the explicit check didn’t change the aggregate numbers is useful, but I don’t think it proves the attribution is correct; it only suggests the race is uncommon in your runs. I’d consider\r\n  this resolved if the benchmark either disables GET_STATE polling during the latency test, or ties completion/marking to the specific command/response being measured."
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/225#issuecomment-4154410307",
+  "event_id": "48ccc15304a5f8d9a89327c7e9428e5bb492dd64fbd384e14c54f677fce94347"
+}
