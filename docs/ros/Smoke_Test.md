@@ -37,6 +37,18 @@ The provided compose file already pins `ROS_DISTRO=kilted`, so no extra host env
 The rosbridge service publishes TCP port `9090` to the host, so the Android phone should connect to
 the PC's LAN IP on port `9090`.
 
+**One-command end-to-end smoke test:**
+```bash
+./scripts/ros-smoke/run.sh
+```
+
+This wrapper will:
+- start the Docker rosbridge/pub/echo services
+- install the Android app
+- launch the app with adb intent extras
+- wait for the automatic `SmokeTest PASS/FAIL ...` Logcat summary
+- fail if the Android publish is not observed on `/test_from_android`
+
 **All-in-one — start all services together:**
 ```bash
 sudo docker compose -f docker/rosbridge/docker-compose.yml up --build
@@ -99,10 +111,10 @@ ros2 topic echo /test_from_android std_msgs/msg/String
 
 **Android logcat — pass:**
 ```
-[RosBridge] Connected to ws://192.168.x.x:9090
-[RosBridge] Subscribed to /test_from_ros
-[RosBridge] Received: hello from ros
-[RosBridge] Published to /test_from_android
+I/SmokeTest: connect=PASS
+I/SmokeTest: subscribe=PASS
+I/SmokeTest: publish=PASS
+I/SmokeTest: PASS connect=PASS subscribe=PASS publish=PASS
 ```
 
 **Android logcat — failure examples:**
