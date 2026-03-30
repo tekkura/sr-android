@@ -1,5 +1,6 @@
 package jp.oist.abcvlib.util
 
+import android.graphics.Color
 import androidx.fragment.app.FragmentManager
 import jp.oist.abcvlib.fragments.QRCodeDisplayFragment
 
@@ -9,21 +10,29 @@ class QRCode(
 ) {
     private var codeVisible = false
 
-    fun generate(data2Encode: String) {
-        val qrCodeDisplayFragment = QRCodeDisplayFragment(data2Encode)
+    fun generate(data2Encode: String, foregroundColor: Int = Color.BLACK) {
+        val qrCodeDisplayFragment = QRCodeDisplayFragment(data2Encode, foregroundColor)
         fragmentManager.beginTransaction()
-            .replace(fragmentViewID, qrCodeDisplayFragment)
+            .replace(fragmentViewID, qrCodeDisplayFragment, FRAGMENT_TAG)
             .setReorderingAllowed(true)
-            .addToBackStack("qrCode")
             .commit()
         codeVisible = true
     }
 
     fun close() {
-        if (codeVisible) {
-            fragmentManager.popBackStack()
-        } else {
+        val qrCodeDisplayFragment = fragmentManager.findFragmentByTag(FRAGMENT_TAG)
+        if (qrCodeDisplayFragment == null) {
             Logger.e("QRCode", "Attempted to close nonexistent QR Code")
+            return
         }
+        fragmentManager.beginTransaction()
+            .remove(qrCodeDisplayFragment)
+            .setReorderingAllowed(true)
+            .commit()
+        codeVisible = false
+    }
+
+    private companion object {
+        private const val FRAGMENT_TAG = "qrCode"
     }
 }

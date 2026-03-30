@@ -20,7 +20,8 @@ import java.util.EnumMap
 import androidx.core.graphics.createBitmap
 
 class QRCodeDisplayFragment(
-    private val data2Encode: String
+    private val data2Encode: String,
+    private val foregroundColor: Int
 ) : Fragment(R.layout.q_r_code_display) {
 
     companion object {
@@ -68,7 +69,7 @@ class QRCodeDisplayFragment(
         for (y in 0..<height) {
             val offset = y * width
             for (x in 0..<width) {
-                pixels[offset + x] = if (result.get(x, y)) Color.BLACK else Color.WHITE
+                pixels[offset + x] = if (result.get(x, y)) foregroundColor else Color.WHITE
             }
         }
 
