@@ -111,7 +111,7 @@ internal class ComprehensiveDemoController : DemoController {
 
         Logger.v(
             "ComprehensiveDemo",
-            "selectBehavior previous=$previousBehavior next=$nextBehavior " +
+                "selectBehavior previous=$previousBehavior next=$nextBehavior " +
                 "changed=${nextBehavior != previousBehavior} " +
                 "forced=${forcedBehavior?.name ?: "none"} " +
                 "onCharger=${state.onCharger} " +
@@ -173,6 +173,7 @@ internal class ComprehensiveDemoController : DemoController {
         Logger.v(
             "ComprehensiveDemo",
             "balance thetaDeg=${"%.2f".format(state.thetaDeg)} " +
+                "setPointDeg=${"%.2f".format(BALANCE_SET_POINT_DEG)} " +
                 "thetaErrorDeg=${"%.2f".format(tiltErrorDeg)} " +
                 "angularVelocityDeg=${"%.2f".format(state.angularVelocityDeg)} " +
                 "wheelSpeedDeg=${"%.2f".format(state.wheelSpeedDeg)} " +
@@ -298,12 +299,12 @@ internal class ComprehensiveDemoController : DemoController {
     companion object {
         internal const val BATTERY_LOW_THRESHOLD = 3.65
         private const val SEARCH_DIRECTION_CHANGE_MS = 3_500L
-        private const val BALANCE_SET_POINT_DEG = 2.8
-        private const val BALANCE_P_TILT = -24.0
+        private const val BALANCE_SET_POINT_DEG = 0.0
+        private const val BALANCE_P_TILT = -0.11
         private const val BALANCE_I_TILT = 0.0
-        private const val BALANCE_D_TILT = 1.0
-        private const val BALANCE_P_WHEEL = 0.0
-        private const val BALANCE_MAX_ABS_TILT_DEG = 6.5
+        private const val BALANCE_D_TILT = 0.01
+        private const val BALANCE_P_WHEEL = 0.1
+        private const val BALANCE_MAX_ABS_TILT_DEG = 10.0
         private const val BALANCE_RECOVERY_SPEED = 0.5f
         private const val BALANCE_MAX_OUTPUT = 0.65
         private const val BALANCE_INTEGRAL_CLAMP = 20.0
