@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-03-30T03:37:44Z",
+  "event_ts": "2026-03-30T03:37:27Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "topherbuckley",
+  "run_id": "23726840620",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 228,
+    "title": "Refactor reusable balancer and high-level demo behaviors into abcvlib",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/228",
+    "milestone": null
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/228",
+  "event_id": "6d33d463254966105a2ea88dbbb67d5f7050cd60e224fd67b4f03b3b5d99d68c"
+}
