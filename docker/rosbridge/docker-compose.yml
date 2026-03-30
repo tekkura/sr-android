@@ -1,10 +1,13 @@
 services:
   rosbridge:
     build:
-      context: ../..
-      dockerfile: docker/rosbridge/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     environment:
       ROS_DISTRO: kilted
+      ROS_DOMAIN_ID: "0"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
     ports:
       - "9090:9090"
     command: >
@@ -14,10 +17,13 @@ services:
 
   pub:
     build:
-      context: ../..
-      dockerfile: docker/rosbridge/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     environment:
       ROS_DISTRO: kilted
+      ROS_DOMAIN_ID: "0"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
     network_mode: "service:rosbridge"
     command: >
       bash -lc
@@ -26,10 +32,13 @@ services:
 
   echo:
     build:
-      context: ../..
-      dockerfile: docker/rosbridge/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     environment:
       ROS_DISTRO: kilted
+      ROS_DOMAIN_ID: "0"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
     network_mode: "service:rosbridge"
     command: >
       bash -lc
