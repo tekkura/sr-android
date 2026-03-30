@@ -11,13 +11,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS"/>
 
-    <uses-feature android:name="android.hardware.usb.accessory" />
     <uses-feature android:name="android.hardware.camera.any" />
 
     <application
-        android:supportsRtl="true">
-        <uses-library android:name="com.android.future.usb.accessory" android:required="false" />
-    </application>
+        android:supportsRtl="true" />
 
     <supports-screens android:resizeable="true"
         android:smallScreens="true"

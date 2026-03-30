@@ -4,7 +4,7 @@ import jp.oist.abcvlib.core.inputs.Subscriber
 
 interface WheelDataSubscriber : Subscriber {
     /**
-     * Looping call from IOIOboard with quadrature encoder updates.
+     * Looping call from the microcontroller path with quadrature encoder updates.
      * See [BatteryDataSubscriber.onBatteryVoltageUpdate] for details on looper.
      *
      * @param timestamp in nanoseconds, see [System.nanoTime]

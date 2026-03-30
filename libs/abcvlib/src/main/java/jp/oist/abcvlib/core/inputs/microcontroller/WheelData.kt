@@ -42,7 +42,7 @@ class WheelData(
     }
 
     /**
-     * Listens for updates on the ioio pins monitoring the quadrature encoders.
+     * Listens for updates from the microcontroller-backed quadrature encoder stream.
      * Note these updates are not interrupts, so they do not necessarily represent changes in
      * value, simply a loop that regularly checks the status of the pin (high/low). This method is
      * called from the publisher located in [AbcvlibLooper.loop].

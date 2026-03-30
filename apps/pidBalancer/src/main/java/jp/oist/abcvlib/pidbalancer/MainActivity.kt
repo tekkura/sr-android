@@ -13,7 +13,7 @@ import jp.oist.abcvlib.util.UsbSerial
 import java.util.concurrent.TimeUnit
 
 /**
- * Android application showing connection to IOIOBoard, Hubee Wheels, and Android Sensors
+ * Android application showing connection to the robot hardware, wheels, and Android sensors
  * Initializes socket connection with external python server
  * Runs PID controller locally on Android, but takes PID parameters from python GUI
  * 

@@ -27,8 +27,6 @@ navigation = "2.9.6"
 cameraX = "1.5.2"
 #MediaPipe
 tasksVision = "0.10.32"
-# IOIO
-ioio = "6.1.0"
 # ZXing
 zxingCore = "3.4.1"
 zxingAndroid = "3.3.0"
@@ -62,11 +60,6 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 androidx-camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "cameraX" }
 # MediaPipe
 tasks-vision = { module = "com.google.mediapipe:tasks-vision", version.ref = "tasksVision" }
-# IOIO
-ioio-android = { module = "com.github.ytai.ioio:IOIOLibAndroid", version.ref = "ioio" }
-ioio-accessory = { module = "com.github.ytai.ioio:IOIOLibAndroidAccessory", version.ref = "ioio" }
-ioio-bluetooth = { module = "com.github.ytai.ioio:IOIOLibAndroidBluetooth", version.ref = "ioio" }
-ioio-device = { module = "com.github.ytai.ioio:IOIOLibAndroidDevice", version.ref = "ioio" }
 # ZXing (QR/Barcode)
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxingCore" }
 zxing-android-integration = { module = "com.google.zxing:android-integration", version.ref = "zxingAndroid" }
