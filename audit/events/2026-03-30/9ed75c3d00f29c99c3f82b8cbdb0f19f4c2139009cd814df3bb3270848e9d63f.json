@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-30T10:40:14Z",
+  "event_ts": "2026-03-30T10:39:55Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23740590619",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 225,
+    "title": "Instrumentation tests/phase2",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/225",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "comment": {
+    "id": 4154002057,
+    "html_url": "https://github.com/tekkura/sr-android/pull/225#issuecomment-4154002057",
+    "created_at": "2026-03-30T10:39:55Z",
+    "updated_at": "2026-03-30T10:39:55Z",
+    "body": "@topherbuckley I had the same concern regarding point 1. I have implemented the explicit check mentioned by the bot, but the results didn't change. So I have decided to remove it to not obscure actual processing logic further.\r\nNext question is why the results didn't change. In our test we are executing commands one-by-one, waiting for the previous command to be processed. So there can't be any collisions with previous SetMotorState commands unless timeout happens. I think I have solved the timeout issue, so that is ruled out of the way.\r\nThere is also GetState polling that might interfere with our results. And it did before I changed marking logic to check that previous marks had already been set. In theory, there is a chance that GetState command will be queued to process between the moment when SetMotorState is created and the moment it is enqueued, but it is so small that it doesn't affect test results (in my testing).\r\nPoint 2 is valid"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/225#issuecomment-4154002057",
+  "event_id": "9ed75c3d00f29c99c3f82b8cbdb0f19f4c2139009cd814df3bb3270848e9d63f"
+}
