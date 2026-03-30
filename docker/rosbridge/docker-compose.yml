@@ -1,0 +1,46 @@
+services:
+  rosbridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ROS_DISTRO: kilted
+      ROS_DOMAIN_ID: "0"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+    ports:
+      - "9090:9090"
+    command: >
+      bash -lc
+      "source /opt/ros/$$ROS_DISTRO/setup.bash &&
+      ros2 launch rosbridge_server rosbridge_websocket_launch.xml"
+
+  pub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ROS_DISTRO: kilted
+      ROS_DOMAIN_ID: "0"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+    network_mode: "service:rosbridge"
+    command: >
+      bash -lc
+      "source /opt/ros/$$ROS_DISTRO/setup.bash &&
+      ros2 topic pub /test_from_ros std_msgs/msg/String \"data: 'hello from ros'\" --rate 1"
+
+  echo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ROS_DISTRO: kilted
+      ROS_DOMAIN_ID: "0"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+    network_mode: "service:rosbridge"
+    command: >
+      bash -lc
+      "source /opt/ros/$$ROS_DISTRO/setup.bash &&
+      ros2 topic echo /test_from_android std_msgs/msg/String"
