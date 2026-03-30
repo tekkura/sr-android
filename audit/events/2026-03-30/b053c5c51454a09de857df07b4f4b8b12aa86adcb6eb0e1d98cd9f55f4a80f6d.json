@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-30T05:27:15Z",
+  "event_ts": "2026-03-30T05:26:59Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23729382565",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 223,
+    "title": "Add Docker support for isolated ROS smoke testing",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/223",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "comment": {
+    "id": 4152326269,
+    "html_url": "https://github.com/tekkura/sr-android/pull/223#issuecomment-4152326269",
+    "created_at": "2026-03-30T05:26:59Z",
+    "updated_at": "2026-03-30T05:26:59Z",
+    "body": "> > @Ma7moud3ly testing now, but please don't force push changes over top of my commits. It makes understanding what you changed very difficult. I will recreate my original commit and commit your changes on top of it.\r\n> \r\n> why don't you check compare 🤔 https://github.com/tekkura/sr-android/compare/3060df34731fbf8edd4d67184a198eca9c76f80e..9008350bd9bbe411f873e91504cc982597d983b6\r\n\r\n@Ma7moud3ly I'm not saying I cannot compare them. You overwrote shared history. This is not an acceptable collaborative workflow. Please refrain from doing it in the future."
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/223#issuecomment-4152326269",
+  "event_id": "b053c5c51454a09de857df07b4f4b8b12aa86adcb6eb0e1d98cd9f55f4a80f6d"
+}
