@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-30T06:18:26Z",
+  "event_ts": "2026-03-30T06:18:12Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "topherbuckley",
+  "run_id": "23730782575",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 232,
+    "title": "feat(comprehensiveDemo): integrate scaffolded demo app into main",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/232",
+    "milestone": {
+      "number": 11,
+      "title": "comprehensiveDemo"
+    }
+  },
+  "comment": null,
+  "milestone": {
+    "number": 11,
+    "title": "comprehensiveDemo",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/11",
+    "description": "Milestone spec moved to: [docs/milestones/comprehensiveDemo.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/comprehensiveDemo.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/232",
+  "event_id": "70bf6d84bdafee4495278dd5a810c920f48bce8120677498296745ee16c16fa7"
+}
