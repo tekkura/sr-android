@@ -13,6 +13,14 @@ Verifies that the Android app can connect to `rosbridge`, subscribe to a topic, 
   ```powershell
   netsh advfirewall firewall add rule name="ROS Bridge 9090" dir=in action=allow protocol=TCP localport=9090
   ```
+  Then forward port 9090 from Windows to WSL2 (run as Administrator):
+  ```powershell
+  # Get the WSL2 IP
+  wsl hostname -I
+  # Use the first IP returned (e.g. 172.x.x.x)
+  netsh interface portproxy add v4tov4 listenport=9090 listenaddress=0.0.0.0 connectport=9090 connectaddress=<WSL_IP>
+  ```
+  > **Note:** The WSL2 IP may change on reboot. Re-run `wsl hostname -I` and update the rule if the Android app can no longer connect.
 - Android device and PC on the same LAN
 - Android app built and installed on the device
 
@@ -28,6 +36,13 @@ Run these commands from the repo root.
 The provided compose file already pins `ROS_DISTRO=kilted`, so no extra host environment setup is required.
 The rosbridge service publishes TCP port `9090` to the host, so the Android phone should connect to
 the PC's LAN IP on port `9090`.
+
+**All-in-one — start all services together:**
+```bash
+sudo docker compose -f docker/rosbridge/docker-compose.yml up --build
+```
+
+Or start each service in a separate terminal for easier debugging:
 
 **Terminal 1 — start rosbridge:**
 ```bash
@@ -88,7 +103,13 @@ ros2 topic echo /test_from_android std_msgs/msg/String
 [RosBridge] Subscribed to /test_from_ros
 [RosBridge] Received: hello from ros
 [RosBridge] Published to /test_from_android
-[SmokeTest] PASS: connect=OK  subscribe=OK  publish=OK
+```
+
+**Android logcat — failure examples:**
+```
+[RosBridge] ERROR: Unable to resolve host "192.168.x.xx": No address associated with hostname
+[RosBridge] ERROR: Connection reset
+[RosBridge] ERROR: Failed to parse message
 ```
 
 **Terminal 3 (PC) — pass:**
@@ -96,14 +117,10 @@ ros2 topic echo /test_from_android std_msgs/msg/String
 data: hello from android
 ```
 
-**Android logcat — failure examples:**
+**Terminal 1 (PC) — failure:**
 ```
-[RosBridge] ERROR: Connection failed — check PC IP and rosbridge is running
-[RosBridge] ERROR: No message received on /test_from_ros — check Terminal 2 is publishing
-[RosBridge] ERROR: Publish failed — WebSocket not connected
-[SmokeTest] FAIL: connect=FAIL  subscribe=SKIP  publish=SKIP
+[rosbridge_websocket]: publish: Cannot infer topic type for topic /test_from_android as it is not yet advertised
 ```
-
 ---
 
 ## Pass Criteria
@@ -112,4 +129,4 @@ data: hello from android
 |---|---|
 | Connect | WebSocket handshake succeeds, no error log |
 | Subscribe | At least one message received on `/test_from_ros` |
-| Publish | Message appears in Terminal 3 on the PC |
+| Publish | Message appears on `/test_from_android` topic|
