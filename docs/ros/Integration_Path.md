@@ -1,5 +1,8 @@
 # Android ROS 2 Integration Path
 
+Related note:
+- [ROS vs FlatBuffers in This Project](./ROS_vs_FlatBuffers.md)
+
 ## Deployment Architecture
 
 The robot hardware consists of an Android phone and an RP2040 MCU driving the wheels. The RP2040 connects to the phone over serial (USB OTG). ROS 2 runs on a nearby PC on the same LAN. The Android phone connects to the PC over local Wi-Fi. `rosbridge` runs on the PC and exposes a WebSocket endpoint that the Android app connects to as a plain client.
