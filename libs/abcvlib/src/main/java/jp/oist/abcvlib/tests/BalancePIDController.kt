@@ -48,7 +48,7 @@ class BalancePIDController : AbcvlibController(), WheelDataSubscriber, Orientati
      * @param pWheel proportional controller relative to the wheel distance
      * @param expWeight exponential filter coefficient //todo implement this more clearly
      * @param maxAbsTilt max tilt angle (deg) at which the controller will switch between a linear and non-linear bounce controller.
-     * @throws InterruptedException thrown if shutdown while trying to read/write to the IOIO board.
+     * @throws InterruptedException thrown if shutdown while trying to read/write during controller execution.
      */
     @Synchronized
     @Throws(InterruptedException::class)

@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Most basic Android application showing connection to IOIOBoard and Android Sensors
+ * Most basic Android application showing connection to the robot hardware and Android sensors
  * Shows basics of setting up any standard Android Application framework. This MainActivity class
  * does not implement the various listener interfaces in order to subscribe to updates from various
  * sensor data, but instead sets up a custom

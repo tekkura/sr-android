@@ -24,11 +24,6 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.fragment)
     implementation(libs.androidx.navigation.ui)
-    // IOIOLibAndroid
-    api(libs.ioio.android)
-    implementation(libs.ioio.accessory)
-    implementation(libs.ioio.bluetooth)
-    implementation(libs.ioio.device)
     // CameraX
     api(libs.androidx.camera.camera2)
     api(libs.androidx.camera.lifecycle)

@@ -32,7 +32,7 @@ import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Most basic Android application showing connection to IOIOBoard and Android Sensors
+ * Most basic Android application showing connection to the robot hardware and Android sensors
  * Shows basics of setting up any standard Android Application framework. This MainActivity class
  * implements the various listener interfaces in order to subscribe to updates from various sensor
  * data. Sensor data publishers are running in the background but only write data when a subscriber

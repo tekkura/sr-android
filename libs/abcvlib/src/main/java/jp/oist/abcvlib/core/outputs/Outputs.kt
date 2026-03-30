@@ -1,6 +1,5 @@
 package jp.oist.abcvlib.core.outputs
 
-import ioio.lib.api.exception.ConnectionLostException
 import jp.oist.abcvlib.core.Switches
 import jp.oist.abcvlib.util.ControlLatencyTrace
 import jp.oist.abcvlib.util.Logger
@@ -145,7 +144,6 @@ class Outputs(
         setWheelOutput(left, right, leftBrake, rightBrake, 0.4f)
     }
 
-    @Throws(ConnectionLostException::class)
     fun turnOffWheels() {
         setWheelOutput(0f, 0f, false, false)
     }
