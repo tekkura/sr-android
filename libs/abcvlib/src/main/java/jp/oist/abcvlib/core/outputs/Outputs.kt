@@ -2,6 +2,7 @@ package jp.oist.abcvlib.core.outputs
 
 import ioio.lib.api.exception.ConnectionLostException
 import jp.oist.abcvlib.core.Switches
+import jp.oist.abcvlib.util.ControlLatencyTrace
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.ProcessPriorityThreadFactory
 import jp.oist.abcvlib.util.ScheduledExecutorServiceWithException
@@ -118,6 +119,12 @@ class Outputs(
             Logger.w("Outputs", "New right wheel output $newRight is greater than 1. Clamping.")
             newRight = 1.0f
         }
+
+        ControlLatencyTrace.requestedLeft = left
+        ControlLatencyTrace.requestedRight = right
+        ControlLatencyTrace.sentLeft = newLeft
+        ControlLatencyTrace.sentRight = newRight
+        ControlLatencyTrace.outputsDtMs = dt
 
         serialCommManager.setMotorLevels(newLeft, newRight, leftBrake, rightBrake)
         lastLeft = newLeft

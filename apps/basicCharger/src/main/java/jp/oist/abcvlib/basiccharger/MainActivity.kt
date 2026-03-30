@@ -198,6 +198,9 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         mpImage: MPImage,
         results: MutableList<Detection>,
         inferenceTime: Long,
+        frameCapturedAtNs: Long,
+        detectStartedAtNs: Long,
+        detectCompletedAtNs: Long,
         height: Int,
         width: Int
     ) {

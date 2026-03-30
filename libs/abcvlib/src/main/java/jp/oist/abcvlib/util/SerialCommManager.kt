@@ -1,5 +1,6 @@
 package jp.oist.abcvlib.util
 
+import android.os.SystemClock
 import com.hoho.android.usbserial.driver.SerialTimeoutException
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
@@ -27,6 +28,7 @@ class SerialCommManager @JvmOverloads constructor(
     private val rp2040State: RP2040State?
 
     private var command: ByteArray? = null
+    private var queuedMotorLevelsAtMs: Long = 0L
     private val commandLock = Object()
     private val lifecycleLock = Any()
     private var runContext: RunContext? = null
@@ -77,6 +79,10 @@ class SerialCommManager @JvmOverloads constructor(
                 break
             }
 
+            if (queuedMotorLevelsAtMs > 0L) {
+                ControlLatencyTrace.queueToSendMs = SystemClock.uptimeMillis() - queuedMotorLevelsAtMs
+                queuedMotorLevelsAtMs = 0L
+            }
             sendPacket(nextCommand)
             cnt++
             if (cnt == 100) {
@@ -351,6 +357,7 @@ class SerialCommManager @JvmOverloads constructor(
             }
             command =
                 generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
+            queuedMotorLevelsAtMs = SystemClock.uptimeMillis()
             commandLock.notify()
         }
     }
