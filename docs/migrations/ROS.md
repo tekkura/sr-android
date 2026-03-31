@@ -7,7 +7,7 @@ abcvlib has no Android-side ROS connectivity. This migration adds a standalone `
 ## Objective
 
 - Create a standalone `rosbridgeTest` app with a minimal `RosBridgeClient` that connects to rosbridge over WebSocket, subscribes to a topic, and publishes a topic.
-- Provide a `MainActivity` UI that accepts the ROS PC IP address at runtime and displays pass/fail results for each smoke test step.
+- Provide a `MainActivity` UI that accepts the ROS PC IP address at runtime and displays explicit smoke-test step status for connect, subscribe, and publish-send progress.
 - Wire the new app into the existing multi-module build configuration.
 - Provide a repo-local Docker rosbridge setup and scripted smoke-test wrapper so reviewers can run the end-to-end flow without a host ROS install.
 
@@ -80,10 +80,10 @@ OkHttp is preferred if no existing Ktor dependency is present - it has no additi
 | App builds without error | `./gradlew :rosbridgeTest:assembleDebug` succeeds |
 | Connect step | App connects to rosbridge on a LAN device running `ros2 launch rosbridge_server rosbridge_websocket_launch.xml` |
 | Subscribe step | App receives at least one message from `/test_from_ros` within 5 seconds |
-| Publish step | Message appears on PC via `ros2 topic echo /test_from_android` |
+| Publish step | App reaches `READY connect=PASS subscribe=PASS publish=SENT`, and the message is observed on PC via `ros2 topic echo /test_from_android` or the repo smoke-test wrapper |
 | Failure handling | App shows a clear error message when rosbridge is unreachable |
 | No main thread blocking | UI remains responsive during the entire test flow |
-| Logs | Logcat clearly shows pass/fail outcome for each step |
+| Logs | Logcat clearly shows connect/subscribe step PASS/FAIL states and the app-side `READY ... publish=SENT` status before wrapper-verified end-to-end PASS |
 
 ---
 
