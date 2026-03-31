@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-31T05:12:44Z",
+  "event_ts": "2026-03-31T05:12:30Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23781603558",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 236,
+    "title": "Milestone ROS",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/236",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "comment": {
+    "id": 3013545871,
+    "html_url": "https://github.com/tekkura/sr-android/pull/236#discussion_r3013545871",
+    "created_at": "2026-03-31T05:12:29Z",
+    "updated_at": "2026-03-31T05:12:30Z",
+    "body": "#codex-reply\n\nAddressed via merged #237. Transport failure handling now uses a single app-level failure path instead of dispatching both disconnect and error transitions for the same socket failure. Follow-up fix PR: https://github.com/tekkura/sr-android/pull/237"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/236#discussion_r3013545871",
+  "event_id": "6b48f84bef88a262c39707b018bc20d03ce9ac83f8a01a5fa6ac7c09828b3694"
+}
