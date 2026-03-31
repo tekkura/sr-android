@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-31T04:14:27Z",
+  "event_ts": "2026-03-31T04:14:10Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23780129404",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 236,
+    "title": "Milestone ROS",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/236",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4159748150,
+    "html_url": "https://github.com/tekkura/sr-android/pull/236#issuecomment-4159748150",
+    "created_at": "2026-03-31T04:14:10Z",
+    "updated_at": "2026-03-31T04:14:10Z",
+    "body": "> They were duplicated reviews and a reminder for unresolved comments before and after rebasing for this [#236 (comment)](https://github.com/tekkura/sr-android/pull/236#discussion_r3013218843) nothing critical 🤔\r\n\r\nI understand the intent was just to clean up duplicate Codex comments after rebasing, not to hide anything.\r\n\r\n  That said, this is important for review auditability. Even duplicate or outdated-looking review comments are still part of the decision trail, and deleting them makes it harder for others to understand later\r\n  what was raised, what changed, and why a thread was considered resolved.\r\n\r\n  To make this explicit, I’ve now updated `docs/PR_WORKFLOW.md` so the expectation is clear:\r\n  - PR review comments/replies, including bot comments, should not be deleted\r\n  - if rebases or reruns create duplicate Codex threads, they should be resolved with a short note and linked to the canonical thread instead\r\n\r\n  I also updated the audit-log workflow so PR review comment edits/deletions are captured as audit events.\r\n\r\n  So going forward, even when the comments are “just duplicates,” the expected handling is to preserve them and resolve/link them rather than remove them. The goal here is not to create process overhead for its\r\n  own sake, but to keep the review history understandable and auditable for anyone coming back to the PR later.\r\n"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/236#issuecomment-4159748150",
+  "event_id": "5d4e8c51490ebadcf2cc05881acdbb92402a329167d51d8bdee9dc165079b9dc"
+}
