@@ -46,7 +46,7 @@ This wrapper will:
 - start the Docker rosbridge/pub/echo services
 - install the Android app
 - launch the app with adb intent extras
-- wait for the automatic `SmokeTest PASS/FAIL ...` Logcat summary
+- wait for the automatic `SmokeTest READY/FAIL ...` Logcat summary
 - fail if the Android publish is not observed on `/test_from_android`
 
 **All-in-one — start all services together:**
@@ -113,8 +113,8 @@ ros2 topic echo /test_from_android std_msgs/msg/String
 ```
 I/SmokeTest: connect=PASS
 I/SmokeTest: subscribe=PASS
-I/SmokeTest: publish=PASS
-I/SmokeTest: PASS connect=PASS subscribe=PASS publish=PASS
+I/SmokeTest: publish=SENT
+I/SmokeTest: READY connect=PASS subscribe=PASS publish=SENT
 ```
 
 **Android logcat — failure examples:**
@@ -142,4 +142,4 @@ data: hello_from_android
 |---|---|
 | Connect | WebSocket handshake succeeds, no error log |
 | Subscribe | At least one message received on `/test_from_ros` |
-| Publish | App reports `publish=PASS` and the message appears on `/test_from_android` |
+| Publish | App reports `publish=SENT` and the message appears on `/test_from_android` |

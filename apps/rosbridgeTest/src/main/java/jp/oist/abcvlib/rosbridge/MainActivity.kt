@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
     private enum class StepState {
         NOT_STARTED,
         RUNNING,
+        SENT,
         PASS,
         FAIL
     }
@@ -263,7 +264,7 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
             val publishedOk = advertised && rosBridgeClient.publish(PUBLISH_TOPIC, message)
             withContext(Dispatchers.Main) {
                 if (!smokeTestActive) return@withContext
-                publishState = if (publishedOk) StepState.PASS else StepState.FAIL
+                publishState = if (publishedOk) StepState.SENT else StepState.FAIL
                 logStepState("publish", publishState)
                 renderSmokeTestStatus()
                 emitSmokeSummary()
@@ -301,7 +302,7 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
             publishState == StepState.FAIL ||
             (connectState == StepState.PASS &&
                 subscribeState == StepState.PASS &&
-                publishState == StepState.PASS)
+                publishState == StepState.SENT)
         if (!done) return
 
         smokeSummaryLogged = true
@@ -310,15 +311,15 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
         val overall = if (
             connectState == StepState.PASS &&
             subscribeState == StepState.PASS &&
-            publishState == StepState.PASS
+            publishState == StepState.SENT
         ) {
-            "PASS"
+            "READY"
         } else {
             "FAIL"
         }
         val summary = "$overall connect=$connectState subscribe=$subscribeState publish=$publishState"
         binding.testResult.text = summary
-        if (overall == "PASS") {
+        if (overall == "READY") {
             Logger.i(SMOKE_TEST_TAG, summary)
         } else {
             Logger.e(SMOKE_TEST_TAG, summary)
