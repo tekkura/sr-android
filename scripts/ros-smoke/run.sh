@@ -94,7 +94,7 @@ if [[ -z "$summary" ]]; then
 fi
 
 echo "$summary"
-if [[ "$summary_payload" != PASS\ * ]]; then
+if [[ "$summary_payload" != READY\ * ]]; then
     exit 1
 fi
 
