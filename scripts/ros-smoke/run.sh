@@ -13,7 +13,6 @@ pick_lan_ip() {
     hostname -I | tr ' ' '\n' | awk '
         /^192\.168\./ { print; exit }
         /^10\./ { print; exit }
-        /^172\.(1[6-9]|2[0-9]|3[0-1])\./ { print; exit }
     '
 }
 
