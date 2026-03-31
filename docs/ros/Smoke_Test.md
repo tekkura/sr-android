@@ -126,6 +126,11 @@ I/SmokeTest: READY connect=PASS subscribe=PASS publish=SENT
 
 **Terminal 3 (PC) — pass:**
 ```
+data: <sent_message>
+```
+
+When using the wrapper, the default message is:
+```
 data: hello_from_android
 ```
 

@@ -7,6 +7,7 @@ PACKAGE_NAME="jp.oist.abcvlib.rosbridge"
 ACTIVITY_NAME=".MainActivity"
 SMOKE_MESSAGE="${SMOKE_TEST_MESSAGE:-hello_from_android}"
 TIMEOUT_SECS="${SMOKE_TEST_TIMEOUT_SECS:-45}"
+PUBLISH_WAIT_SECS="${SMOKE_TEST_PUBLISH_WAIT_SECS:-5}"
 
 pick_lan_ip() {
     hostname -I | tr ' ' '\n' | awk '
@@ -98,7 +99,17 @@ if [[ "$summary_payload" != READY\ * ]]; then
     exit 1
 fi
 
-if ! docker compose -f "$COMPOSE_FILE" logs --no-color echo | grep -q "data: $SMOKE_MESSAGE"; then
+publish_deadline=$((SECONDS + PUBLISH_WAIT_SECS))
+publish_seen=0
+while (( SECONDS < publish_deadline )); do
+    if docker compose -f "$COMPOSE_FILE" logs --no-color echo | grep -q "data: $SMOKE_MESSAGE"; then
+        publish_seen=1
+        break
+    fi
+    sleep 1
+done
+
+if [[ "$publish_seen" != "1" ]]; then
     echo "Smoke test did not observe Android publish on /test_from_android" >&2
     echo "--- echo logs ---" >&2
     docker compose -f "$COMPOSE_FILE" logs --no-color echo >&2 || true
