@@ -1,4 +1,4 @@
-name: Issue/Milestone Audit Log
+name: Issue/Milestone/Review Comment Audit Log
 
 on:
   milestone:
@@ -25,10 +25,13 @@ on:
       ]
   issue_comment:
     types: [created, edited, deleted]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
 
 permissions:
   contents: write
   issues: write
+  pull-requests: read
 
 jobs:
   append-audit-record:
@@ -88,6 +91,16 @@ jobs:
                 title: .issue.milestone.title
               } else null end)
             } else null end),
+            pull_request: (if .pull_request then {
+              number: .pull_request.number,
+              title: .pull_request.title,
+              state: .pull_request.state,
+              html_url: .pull_request.html_url,
+              milestone: (if .pull_request.milestone then {
+                number: .pull_request.milestone.number,
+                title: .pull_request.milestone.title
+              } else null end)
+            } else null end),
             comment: (if .comment then {
               id: .comment.id,
               html_url: (.comment.html_url // null),
@@ -109,14 +122,24 @@ jobs:
                  and .action == "edited"
                  and ((.changes.title? // null) != null or (.changes.description? // null) != null)
               then "HIGH"
+              elif env.GITHUB_EVENT_NAME == "issue_comment"
+                 and .action == "deleted"
+              then "HIGH"
+              elif env.GITHUB_EVENT_NAME == "pull_request_review_comment"
+                 and .action == "deleted"
+              then "HIGH"
               elif env.GITHUB_EVENT_NAME == "issues"
                  and .action == "edited"
                  and ((.changes.title? // null) != null or (.changes.body? // null) != null)
               then "HIGH"
+              elif env.GITHUB_EVENT_NAME == "pull_request_review_comment"
+                 and .action == "edited"
+                 and ((.changes.body? // null) != null)
+              then "HIGH"
               else "INFO"
               end
             ),
-            target_url: (.comment.html_url // .issue.html_url // .milestone.html_url // null)
+            target_url: (.comment.html_url // .issue.html_url // .pull_request.html_url // .milestone.html_url // null)
           }' "$GITHUB_EVENT_PATH")
 
           event_id=$(printf '%s' "$raw_record" | jq -cS . | sha256sum | awk '{print $1}')
@@ -179,9 +202,12 @@ jobs:
                   . as $root
                   | def new_value($f):
                       if $root.event_name == "issue_comment" and $f == "body" then $root.comment.body
+                      elif $root.event_name == "pull_request_review_comment" and $f == "body" then $root.comment.body
                       elif $root.event_name == "issues" and $root.issue != null and ($root.issue[$f] != null) then $root.issue[$f]
+                      elif $root.event_name == "pull_request_review_comment" and $root.pull_request != null and ($root.pull_request[$f] != null) then $root.pull_request[$f]
                       elif $root.event_name == "milestone" and $root.milestone != null and ($root.milestone[$f] != null) then $root.milestone[$f]
                       elif $root.issue != null and ($root.issue[$f] != null) then $root.issue[$f]
+                      elif $root.pull_request != null and ($root.pull_request[$f] != null) then $root.pull_request[$f]
                       elif $root.milestone != null and ($root.milestone[$f] != null) then $root.milestone[$f]
                       else null end;
 
@@ -226,13 +252,18 @@ jobs:
                 end;
 
               def issue_text:
-                if .issue == null then "-"
-                else "[#\(.issue.number)](\(.issue.html_url // "#"))"
+                if .issue != null then
+                  "[#\(.issue.number)](\(.issue.html_url // "#"))"
+                elif .pull_request != null then
+                  "[PR #\(.pull_request.number)](\(.pull_request.html_url // "#"))"
+                else "-"
                 end;
 
               def milestone_text:
                 if .milestone != null then
                   "[#\(.milestone.number)](\(.milestone.html_url // "#"))"
+                elif (.pull_request != null and .pull_request.milestone != null) then
+                  "[#\(.pull_request.milestone.number)](https://github.com/\(.repo)/milestone/\(.pull_request.milestone.number))"
                 elif (.issue != null and .issue.milestone != null) then
                   "[#\(.issue.milestone.number)](https://github.com/\(.repo)/milestone/\(.issue.milestone.number))"
                 else "-"
@@ -359,9 +390,12 @@ jobs:
                     . as $root
                     | def new_value($f):
                         if $root.event_name == "issue_comment" and $f == "body" then $root.comment.body
+                        elif $root.event_name == "pull_request_review_comment" and $f == "body" then $root.comment.body
                         elif $root.event_name == "issues" and $root.issue != null and ($root.issue[$f] != null) then $root.issue[$f]
+                        elif $root.event_name == "pull_request_review_comment" and $root.pull_request != null and ($root.pull_request[$f] != null) then $root.pull_request[$f]
                         elif $root.event_name == "milestone" and $root.milestone != null and ($root.milestone[$f] != null) then $root.milestone[$f]
                         elif $root.issue != null and ($root.issue[$f] != null) then $root.issue[$f]
+                        elif $root.pull_request != null and ($root.pull_request[$f] != null) then $root.pull_request[$f]
                         elif $root.milestone != null and ($root.milestone[$f] != null) then $root.milestone[$f]
                         else null end;
 
@@ -401,13 +435,18 @@ jobs:
                   end;
 
                 def issue_text:
-                  if .issue == null then "-"
-                  else "[#\(.issue.number)](\(.issue.html_url // "#"))"
+                  if .issue != null then
+                    "[#\(.issue.number)](\(.issue.html_url // "#"))"
+                  elif .pull_request != null then
+                    "[PR #\(.pull_request.number)](\(.pull_request.html_url // "#"))"
+                  else "-"
                   end;
 
                 def milestone_text:
                   if .milestone != null then
                     "[#\(.milestone.number)](\(.milestone.html_url // "#"))"
+                  elif (.pull_request != null and .pull_request.milestone != null) then
+                    "[#\(.pull_request.milestone.number)](https://github.com/\(.repo)/milestone/\(.pull_request.milestone.number))"
                   elif (.issue != null and .issue.milestone != null) then
                     "[#\(.issue.milestone.number)](https://github.com/\(.repo)/milestone/\(.issue.milestone.number))"
                   else "-"
