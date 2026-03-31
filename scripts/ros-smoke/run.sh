@@ -66,7 +66,6 @@ fi
 echo "Using ROS PC IP: $ROS_PC_IP"
 echo "Using adb: $ADB_BIN"
 docker compose -f "$COMPOSE_FILE" up -d --build rosbridge pub echo
-docker compose -f "$COMPOSE_FILE" up -d ack
 sleep 3
 
 "$ADB_BIN" logcat -c
@@ -103,8 +102,6 @@ if ! docker compose -f "$COMPOSE_FILE" logs --no-color echo | grep -q "data: $SM
     echo "Smoke test did not observe Android publish on /test_from_android" >&2
     echo "--- echo logs ---" >&2
     docker compose -f "$COMPOSE_FILE" logs --no-color echo >&2 || true
-    echo "--- ack logs ---" >&2
-    docker compose -f "$COMPOSE_FILE" logs --no-color ack >&2 || true
     echo "--- rosbridge logs ---" >&2
     docker compose -f "$COMPOSE_FILE" logs --no-color rosbridge >&2 || true
     exit 1

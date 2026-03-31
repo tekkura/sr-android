@@ -117,13 +117,13 @@ class RosBridgeClient(private val listener: RosBridgeClientListener) {
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             isConnected = false
-            listener.onDisconnected()
             val message = t.message?.takeIf { it.isNotBlank() }
             if (message != null) {
                 listener.onError(message)
                 Logger.e(TAG, "ERROR: $message")
             } else {
-                Logger.d(TAG, "WebSocket failure without message")
+                listener.onError("Connection failed")
+                Logger.e(TAG, "ERROR: Connection failed")
             }
         }
     }
