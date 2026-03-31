@@ -1,19 +1,19 @@
 {
   "apps": [
-      "basicSubscriber",
-      "basicAssembler",
-      "backAndForth",
-      "basicServer",
-      "basicCharger",
-      "basicQRTransmitter",
-      "basicQRReceiver",
-      "handsOnApp",
-      "pidBalancer",
-      "backAndForthPython",
-      "basicSubscriberPython",
-      "rosbridgeTest"
+    "basicSubscriber",
+    "basicAssembler",
+    "backAndForth",
+    "basicServer",
+    "basicCharger",
+    "basicQRTransmitter",
+    "basicQRReceiver",
+    "handsOnApp",
+    "pidBalancer",
+    "backAndForthPython",
+    "basicSubscriberPython",
+    "rosbridgeTest"
   ],
   "libs": [
-      "abcvlib"
+    "abcvlib"
   ]
 }
