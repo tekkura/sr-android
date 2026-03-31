@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-03-31T03:07:57Z",
+  "event_ts": "2026-03-31T03:07:41Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "Ma7moud3ly",
+  "run_id": "23778533907",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 151,
+    "title": "Implement Android ROS connectivity smoke test for selected integration path",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/151",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/151",
+  "event_id": "d8205bb12c47b1d05c9f11bf39e00cdaa1239a0d0a70d317971c480df72bb721"
+}
