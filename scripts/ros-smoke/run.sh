@@ -41,6 +41,11 @@ resolve_adb() {
 }
 
 cleanup() {
+    if [[ "${KEEP_ROS_SMOKE_SERVICES:-0}" == "1" ]]; then
+        echo "Keeping ROS smoke-test services running (KEEP_ROS_SMOKE_SERVICES=1)."
+        return
+    fi
+    echo "Cleaning up ROS smoke-test services..."
     docker compose -f "$COMPOSE_FILE" down --remove-orphans >/dev/null 2>&1 || true
 }
 
@@ -61,6 +66,7 @@ fi
 echo "Using ROS PC IP: $ROS_PC_IP"
 echo "Using adb: $ADB_BIN"
 docker compose -f "$COMPOSE_FILE" up -d --build rosbridge pub echo
+docker compose -f "$COMPOSE_FILE" up -d ack
 sleep 3
 
 "$ADB_BIN" logcat -c
@@ -89,14 +95,16 @@ if [[ -z "$summary" ]]; then
 fi
 
 echo "$summary"
-if [[ "$summary_payload" != READY\ * ]]; then
+if [[ "$summary_payload" != PASS\ * ]]; then
     exit 1
 fi
 
-if ! docker compose -f "$COMPOSE_FILE" logs --no-color echo | grep -q "$SMOKE_MESSAGE"; then
+if ! docker compose -f "$COMPOSE_FILE" logs --no-color echo | grep -q "data: $SMOKE_MESSAGE"; then
     echo "Smoke test did not observe Android publish on /test_from_android" >&2
     echo "--- echo logs ---" >&2
     docker compose -f "$COMPOSE_FILE" logs --no-color echo >&2 || true
+    echo "--- ack logs ---" >&2
+    docker compose -f "$COMPOSE_FILE" logs --no-color ack >&2 || true
     echo "--- rosbridge logs ---" >&2
     docker compose -f "$COMPOSE_FILE" logs --no-color rosbridge >&2 || true
     exit 1

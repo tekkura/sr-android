@@ -43,7 +43,7 @@ the PC's LAN IP on port `9090`.
 ```
 
 This wrapper will:
-- start the Docker rosbridge/pub/echo services
+- start the Docker rosbridge/pub/echo/ack services
 - install the Android app
 - launch the app with adb intent extras
 - wait for the automatic `SmokeTest PASS/FAIL ...` Logcat summary
@@ -126,12 +126,23 @@ I/SmokeTest: PASS connect=PASS subscribe=PASS publish=PASS
 
 **Terminal 3 (PC) — pass:**
 ```
-data: hello from android
+data: smoke-<timestamp>
 ```
 
-**Terminal 1 (PC) — failure:**
+**Ack helper logs — pass:**
+```
+acked: smoke-<timestamp>
+```
+
+**Terminal 1 (PC) — failure example:**
 ```
 [rosbridge_websocket]: publish: Cannot infer topic type for topic /test_from_android as it is not yet advertised
+```
+
+**Android logcat — publish failure example:**
+```
+E/SmokeTest: publish=FAIL reason=No ack received on /test_from_android_ack
+E/SmokeTest: FAIL connect=PASS subscribe=PASS publish=FAIL
 ```
 ---
 
@@ -141,4 +152,4 @@ data: hello from android
 |---|---|
 | Connect | WebSocket handshake succeeds, no error log |
 | Subscribe | At least one message received on `/test_from_ros` |
-| Publish | Message appears on `/test_from_android` topic|
+| Publish | Matching message is observed on `/test_from_android`, ack is received on `/test_from_android_ack`, and app reports `publish=PASS` |
