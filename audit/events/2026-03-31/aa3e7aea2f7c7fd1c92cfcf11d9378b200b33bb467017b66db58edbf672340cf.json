@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-31T03:53:40Z",
+  "event_ts": "2026-03-31T03:53:23Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23779621731",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 236,
+    "title": "Milestone ROS",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/236",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "comment": {
+    "id": 4159686457,
+    "html_url": "https://github.com/tekkura/sr-android/pull/236#issuecomment-4159686457",
+    "created_at": "2026-03-31T03:53:23Z",
+    "updated_at": "2026-03-31T03:53:23Z",
+    "body": "@Ma7moud3ly \r\n\r\n<img width=\"608\" height=\"150\" alt=\"image\" src=\"https://github.com/user-attachments/assets/e754df3b-2982-40da-9ae7-4e74639e9b41\" />\r\n\r\nWhat are you deleting? Please don't delete comments. I can't see what was deleted and so this makes this PR harder to follow and audit against. "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/236#issuecomment-4159686457",
+  "event_id": "aa3e7aea2f7c7fd1c92cfcf11d9378b200b33bb467017b66db58edbf672340cf"
+}
