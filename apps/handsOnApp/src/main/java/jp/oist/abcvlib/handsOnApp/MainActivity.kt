@@ -111,8 +111,7 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
         wheelSpeedExpAvgR: Double
     ) {
         countL = wheelCountL
-        // TODO(kngwyu) why negated?
-        countR = -wheelCountR
+        countR = wheelCountR
         debugInfo.text2 = String.format(
             Locale.getDefault(), "WheelCount: %d %d", countL, countR
         )

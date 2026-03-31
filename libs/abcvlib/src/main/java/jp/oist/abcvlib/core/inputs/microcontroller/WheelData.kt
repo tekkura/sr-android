@@ -45,7 +45,8 @@ class WheelData(
      * Listens for updates from the microcontroller-backed quadrature encoder stream.
      * Note these updates are not interrupts, so they do not necessarily represent changes in
      * value, simply a loop that regularly checks the status of the pin (high/low). This method is
-     * called from the publisher located in [AbcvlibLooper.loop].
+     * called from the microcontroller-backed wheel data publisher whenever new encoder counts are
+     * available.
      *
      * After receiving data this then calculates various metrics like encoderCounts, distance,
      * and speed of each wheel. As the quadrature encoder pin states is updated FAR more frequently
@@ -77,6 +78,9 @@ class WheelData(
             leftWheel.update(timestamp, countL)
             if (!paused) {
                 for (subscriber in subscribers) {
+                    // The right encoder counts in the opposite direction because the wheels are
+                    // physically mirrored. Negate right-wheel metrics here so subscriber-facing
+                    // APIs report positive values for forward motion on both sides.
                     subscriber.onWheelDataUpdate(
                         timestamp, leftWheel.latestEncoderCount,
                         -rightWheel.latestEncoderCount, leftWheel.latestDistance,
