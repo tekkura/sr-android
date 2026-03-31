@@ -56,7 +56,9 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
             val ip = binding.rosPcIp.text.toString().trim()
             if (ip.isNotBlank()) {
                 binding.connectionIndicator.show()
-                rosBridgeClient.connect(ip)
+                lifecycleScope.launch(Dispatchers.IO) {
+                    rosBridgeClient.connect(ip)
+                }
             } else {
                 binding.rosPcIp.error = getString(R.string.ros_ip_required)
                 binding.rosPcIp.requestFocus();
@@ -216,7 +218,9 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
                 startSubscribeStep()
             }
         } else {
-            rosBridgeClient.connect(ip)
+            lifecycleScope.launch(Dispatchers.IO) {
+                rosBridgeClient.connect(ip)
+            }
         }
     }
 
