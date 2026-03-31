@@ -33,7 +33,6 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
     private var smokeTestActive = false
     private var smokeSummaryLogged = false
     private var stepTimeoutJob: Job? = null
-    private var pendingPublishAck: String? = null
 
     companion object {
         private const val TAG = "MainActivity"
@@ -42,10 +41,8 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
         private const val EXTRA_AUTO_RUN_SMOKE_TEST = "AUTO_RUN_SMOKE_TEST"
         private const val EXTRA_SMOKE_TEST_MESSAGE = "SMOKE_TEST_MESSAGE"
         private const val SUBSCRIBE_TIMEOUT_MS = 5_000L
-        private const val PUBLISH_TIMEOUT_MS = 5_000L
         private const val SUBSCRIBE_TOPIC = "/test_from_ros"
         private const val PUBLISH_TOPIC = "/test_from_android"
-        private const val PUBLISH_ACK_TOPIC = "/test_from_android_ack"
         private const val DEFAULT_PUBLISH_MESSAGE = "hello from android"
     }
 
@@ -124,18 +121,6 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
                 logStepState("subscribe", subscribeState)
                 renderSmokeTestStatus()
                 startPublishStep()
-            } else if (
-                smokeTestActive &&
-                topic == PUBLISH_ACK_TOPIC &&
-                publishState == StepState.RUNNING &&
-                message == pendingPublishAck
-            ) {
-                stepTimeoutJob?.cancel()
-                pendingPublishAck = null
-                publishState = StepState.PASS
-                logStepState("publish", publishState)
-                renderSmokeTestStatus()
-                emitSmokeSummary()
             }
         }
     }
@@ -146,27 +131,29 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
             binding.layoutDisconnected.show()
             binding.textReceived.text = ""
             binding.rosMessage.setText("")
-        }
-        stepTimeoutJob?.cancel()
-        if (smokeTestActive && !smokeSummaryLogged) {
-            failRunningStep("Disconnected")
-        } else if (!smokeTestActive) {
-            resetSmokeTestState()
-            renderSmokeTestStatus()
+            stepTimeoutJob?.cancel()
+            if (smokeTestActive && !smokeSummaryLogged) {
+                failRunningStep("Disconnected")
+            } else if (!smokeTestActive) {
+                resetSmokeTestState()
+                renderSmokeTestStatus()
+            }
         }
     }
 
     override fun onError(error: String) {
         lifecycleScope.launch(Dispatchers.Main) {
             binding.connectionIndicator.hide()
-            Toast.makeText(this@MainActivity, error, Toast.LENGTH_SHORT).show()
-        }
-        stepTimeoutJob?.cancel()
-        if (smokeTestActive && !smokeSummaryLogged) {
-            failRunningStep(error)
-        } else {
-            resetSmokeTestState()
-            renderSmokeTestStatus()
+            if (!smokeSummaryLogged) {
+                Toast.makeText(this@MainActivity, error, Toast.LENGTH_SHORT).show()
+            }
+            stepTimeoutJob?.cancel()
+            if (smokeTestActive && !smokeSummaryLogged) {
+                failRunningStep(error)
+            } else {
+                resetSmokeTestState()
+                renderSmokeTestStatus()
+            }
         }
     }
 
@@ -207,7 +194,6 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
         binding.textReceived.text = ""
         smokeTestActive = true
         smokeSummaryLogged = false
-        pendingPublishAck = null
         stepTimeoutJob?.cancel()
         connectState = StepState.RUNNING
         subscribeState = StepState.NOT_STARTED
@@ -264,36 +250,19 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
         publishState = StepState.RUNNING
         renderSmokeTestStatus()
         val message = currentPublishMessage()
-        pendingPublishAck = message
         binding.rosMessage.setText(message)
         lifecycleScope.launch(Dispatchers.IO) {
-            val ackSubscribed = rosBridgeClient.subscribe(PUBLISH_ACK_TOPIC)
-            val advertised = ackSubscribed && rosBridgeClient.advertise(PUBLISH_TOPIC)
+            val advertised = rosBridgeClient.advertise(PUBLISH_TOPIC)
             if (advertised) {
                 delay(100)
             }
             val publishedOk = advertised && rosBridgeClient.publish(PUBLISH_TOPIC, message)
             withContext(Dispatchers.Main) {
                 if (!smokeTestActive) return@withContext
-                if (!publishedOk) {
-                    publishState = StepState.FAIL
-                    pendingPublishAck = null
-                    logStepState("publish", publishState)
-                    renderSmokeTestStatus()
-                    emitSmokeSummary()
-                    return@withContext
-                }
-                stepTimeoutJob?.cancel()
-                stepTimeoutJob = lifecycleScope.launch {
-                    delay(PUBLISH_TIMEOUT_MS)
-                    if (smokeTestActive && publishState == StepState.RUNNING) {
-                        publishState = StepState.FAIL
-                        pendingPublishAck = null
-                        logStepState("publish", publishState, "No ack received on $PUBLISH_ACK_TOPIC")
-                        renderSmokeTestStatus()
-                        emitSmokeSummary()
-                    }
-                }
+                publishState = if (publishedOk) StepState.PASS else StepState.FAIL
+                logStepState("publish", publishState)
+                renderSmokeTestStatus()
+                emitSmokeSummary()
             }
         }
     }
@@ -370,7 +339,6 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
     private fun resetSmokeTestState() {
         smokeTestActive = false
         smokeSummaryLogged = false
-        pendingPublishAck = null
         connectState = StepState.NOT_STARTED
         subscribeState = StepState.NOT_STARTED
         publishState = StepState.NOT_STARTED
