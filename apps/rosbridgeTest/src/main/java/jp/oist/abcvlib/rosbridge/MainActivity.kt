@@ -144,6 +144,10 @@ class MainActivity : AppCompatActivity(), RosBridgeClientListener {
     override fun onError(error: String) {
         lifecycleScope.launch(Dispatchers.Main) {
             binding.connectionIndicator.hide()
+            binding.layoutConnected.hide()
+            binding.layoutDisconnected.show()
+            binding.textReceived.text = ""
+            binding.rosMessage.setText("")
             if (!smokeSummaryLogged) {
                 Toast.makeText(this@MainActivity, error, Toast.LENGTH_SHORT).show()
             }
