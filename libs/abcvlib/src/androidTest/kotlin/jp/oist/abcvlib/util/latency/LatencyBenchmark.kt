@@ -2,6 +2,7 @@ package jp.oist.abcvlib.util.latency
 
 import android.content.Context
 import android.hardware.usb.UsbManager
+import android.os.Build
 import android.os.Environment
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -42,6 +43,14 @@ class LatencyBenchmark {
     fun setUp() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+
+        // Grant "All Files Access" to the test app specifically for this run
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val packageName = context.packageName
+            InstrumentationRegistry.getInstrumentation()
+                .uiAutomation
+                .executeShellCommand("appops set $packageName MANAGE_EXTERNAL_STORAGE allow")
+        }
 
         simulator = MockRP2040()
         val virtualPort = VirtualRobotPort(simulator)
@@ -198,8 +207,19 @@ class LatencyBenchmark {
             }
         }
 
-        Log.i("LatencyBenchmark", sb.toString())
-        println(sb.toString())
+        val output = sb.toString()
+        Log.i("LatencyBenchmark", "\n$output")
+
+        // Write to Public Download folder for easier access
+        try {
+            val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!downloadDir.exists()) downloadDir.mkdirs()
+            val file = File(downloadDir, "benchmark_results.md")
+            file.writeText(output)
+            Log.i("LatencyBenchmark", "Results saved to: ${file.absolutePath}")
+        } catch (e: Exception) {
+            Log.e("LatencyBenchmark", "Failed to write results to public storage", e)
+        }
 
         return BenchmarkSummary(successRate, meanRtt, p95Rtt)
     }

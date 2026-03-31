@@ -115,13 +115,15 @@ packetBuffer.consume(incomingBytes) { result ->
             // Handle the parsed RP2040IncomingCommand
         }
         is PacketBuffer.ParseResult.ReceivedErrorPacket -> {
-            // Handle malformed packet or framing error
+            // Handled malformed packet or framing error. 
+            // The parser will automatically try to resynchronize with the next START marker.
         }
         is PacketBuffer.ParseResult.Overflow -> {
-            // Internal buffer limit reached; parser will automatically reset
+            // Internal buffer limit reached. 
+            // The parser will clear its state and wait for a fresh START marker.
         }
         is PacketBuffer.ParseResult.NotEnoughData -> {
-            // Incomplete packet; waiting for more bytes
+            // Incomplete packet; the parser retains current state and waits for more bytes.
         }
     }
 }
@@ -166,7 +168,12 @@ These tests verify end-to-end communication using a mocked transport layer to si
 A specialized test to measure communication round-trip time and identify bottlenecks. For details on the methodology and metrics, see [docs/BENCHMARK.md](docs/BENCHMARK.md).
 
 ```bash
-./gradlew :abcvlib:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=jp.oist.abcvlib.util.LatencyBenchmark
+# Run the benchmark
+./gradlew :abcvlib:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=jp.oist.abcvlib.util.latency.LatencyBenchmark"
+
+# Export results to docs/BENCHMARK.md
+./util/pull_benchmark.bat  # (Windows)
+./util/pull_benchmark.sh   # (Linux/macOS)
 ```
 
 ## Pairing with a smartphone via wireless debugging
