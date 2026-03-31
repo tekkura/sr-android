@@ -44,3 +44,23 @@ services:
       bash -lc
       "source /opt/ros/$$ROS_DISTRO/setup.bash &&
       ros2 topic echo /test_from_android std_msgs/msg/String"
+
+  ack:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ROS_DISTRO: kilted
+      ROS_DOMAIN_ID: "0"
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+    network_mode: "service:rosbridge"
+    command: >
+      bash -lc
+      "source /opt/ros/$$ROS_DISTRO/setup.bash &&
+      ros2 topic echo /test_from_android std_msgs/msg/String --field data | \
+      while read -r line; do \
+        [ -n \"$$line\" ] || continue; \
+        echo \"acked: $$line\"; \
+        ros2 topic pub /test_from_android_ack std_msgs/msg/String \"data: '$$line'\" --once; \
+      done"
