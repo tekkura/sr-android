@@ -10,7 +10,8 @@
     "handsOnApp",
     "pidBalancer",
     "backAndForthPython",
-    "basicSubscriberPython"
+    "basicSubscriberPython",
+    "rosbridgeTest"
   ],
   "libs": [
     "abcvlib"

@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">RosBridge Test</string>
+    <string name="roc_ip">ROS PC IP</string>
+    <string name="roc_ip_placeholder">192.168.x.x</string>
+    <string name="roc_message_placeholder">Message..</string>
+    <string name="ros_ip_required">IP address is required</string>
+    <string name="ros_connect">Connect</string>
+    <string name="ros_disconnect">Disconnect</string>
+    <string name="ros_publish">Publish</string>
+    <string name="ros_status">Connected to: %s</string>
+    <string name="ros_subscribe_to">Subscribed to: %s</string>
+    <string name="ros_publish_to">Publish to: %s</string>
+    <string name="ros_test">Run Smoke Test</string>
+</resources>
