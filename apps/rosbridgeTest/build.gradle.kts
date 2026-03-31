@@ -8,8 +8,8 @@ android {
     buildFeatures {
         viewBinding = true
     }
+}
 
-    dependencies {
-        implementation(libs.okhttp)
-    }
+dependencies {
+    implementation(libs.okhttp)
 }
