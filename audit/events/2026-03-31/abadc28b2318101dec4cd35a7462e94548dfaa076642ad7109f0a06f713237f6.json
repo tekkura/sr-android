@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-31T05:12:46Z",
+  "event_ts": "2026-03-31T05:12:30Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23781603565",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 236,
+    "title": "Milestone ROS",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/236",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "comment": {
+    "id": 3013545878,
+    "html_url": "https://github.com/tekkura/sr-android/pull/236#discussion_r3013545878",
+    "created_at": "2026-03-31T05:12:29Z",
+    "updated_at": "2026-03-31T05:12:30Z",
+    "body": "#codex-reply\n\nAddressed. `docs/migrations/ROS.md` was expanded in the merged follow-up work to include `docker/rosbridge` and `scripts/ros-smoke/run.sh`, and the `#236` PR description now lists those paths explicitly in the scope declaration. Follow-up fix PR: https://github.com/tekkura/sr-android/pull/237"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/236#discussion_r3013545878",
+  "event_id": "abadc28b2318101dec4cd35a7462e94548dfaa076642ad7109f0a06f713237f6"
+}
