@@ -480,14 +480,43 @@ jobs:
             }
 
             if (newReviewComments.length > 0) {
-              await github.rest.pulls.createReview({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pullNumber,
-                event: 'REQUEST_CHANGES',
-                body: summary,
-                comments: newReviewComments,
-              });
+              try {
+                await github.rest.pulls.createReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pullNumber,
+                  event: 'REQUEST_CHANGES',
+                  body: summary,
+                  comments: newReviewComments,
+                });
+              } catch (err) {
+                const message = err?.message || '';
+                const isUnresolvedLine = err?.status === 422 && message.includes('Line could not be resolved');
+                if (!isUnresolvedLine) {
+                  throw err;
+                }
+
+                core.warning(`Inline review comment could not be resolved. Falling back to body-only review: ${message}`);
+
+                const fallbackFindings = newReviewComments.map((c) => `- \`${c.path}:${c.line}\` ${c.body}`);
+                const fallbackBody = [
+                  summary,
+                  '',
+                  'Inline comment positions could not be resolved for one or more findings, so they are listed below instead:',
+                  '',
+                  '**Unresolved inline findings**',
+                  ...fallbackFindings,
+                ].join('\n');
+
+                await github.rest.pulls.createReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pullNumber,
+                  event: 'REQUEST_CHANGES',
+                  body: fallbackBody,
+                  comments: [],
+                });
+              }
               return;
             }
 
