@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-31T10:29:24Z",
+  "event_ts": "2026-03-31T10:29:06Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "23792732909",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 225,
+    "title": "Instrumentation tests/phase2",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/225",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4161587256,
+    "html_url": "https://github.com/tekkura/sr-android/pull/225#issuecomment-4161587256",
+    "created_at": "2026-03-31T10:29:06Z",
+    "updated_at": "2026-03-31T10:29:06Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/225#issuecomment-4161587256",
+  "event_id": "dc6430c86300b46c4a0bf90bb75ed5f2d1b2f0d29dbc36a0fd3003e851f81813"
+}
