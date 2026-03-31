@@ -57,6 +57,7 @@ This repo uses milestone-scoped base branches and a migration guide per mileston
 ### Guidelines
 - Avoid repeated #codex-review runs unless there is a meaningful change, since duplicates create noise.
 - If Codex produces duplicates, resolve the most recent instance with a resolution note and link duplicates to the canonical thread.
+- Do not delete PR review comments or replies, including bot comments. If a rebase or rerun creates duplicates, resolve them with a short note and link to the canonical thread instead of deleting them.
 
 ## 4. Required Checks
 
@@ -96,3 +97,4 @@ A resolution note must be one of:
 ### Notes
 - "Outdated" is not the same as "resolved." Outdated only means GitHub can't anchor the comment cleanly.
 - We do not require documenting every historical/duplicate comment. We require the most recent instance of each independent issue in the PR to have a resolution note.
+- Deleting review comments is discouraged because it removes audit history. Use resolution notes and duplicate links to preserve the decision trail.
