@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-03-31T03:29:15Z",
+  "event_ts": "2026-03-31T03:28:56Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "23779047101",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 236,
+    "title": "Milestone ROS",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/236",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "comment": {
+    "id": 4159613254,
+    "html_url": "https://github.com/tekkura/sr-android/pull/236#issuecomment-4159613254",
+    "created_at": "2026-03-31T03:28:56Z",
+    "updated_at": "2026-03-31T03:28:56Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/236#issuecomment-4159613254",
+  "event_id": "5ca174da12dc39ae86c5014d251204b17425e21fa37f53557c78bde552e62dac"
+}
