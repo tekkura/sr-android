@@ -12,5 +12,8 @@
       "backAndForthPython",
       "basicSubscriberPython",
       "rosbridgeTest"
+  ],
+  "libs": [
+      "abcvlib"
   ]
 }
