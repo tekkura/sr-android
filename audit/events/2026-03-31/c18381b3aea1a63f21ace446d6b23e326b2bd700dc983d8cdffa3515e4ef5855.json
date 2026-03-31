@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-03-31T04:35:21Z",
+  "event_ts": "2026-03-31T04:35:03Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "Ma7moud3ly",
+  "run_id": "23780650325",
+  "run_attempt": "1",
+  "sender": {
+    "login": "Ma7moud3ly",
+    "html_url": "https://github.com/Ma7moud3ly"
+  },
+  "issue": {
+    "number": 237,
+    "title": "ROS smoke-test review fixup",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/237",
+    "milestone": {
+      "number": 7,
+      "title": "ROS"
+    }
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4159815730,
+    "html_url": "https://github.com/tekkura/sr-android/pull/237#issuecomment-4159815730",
+    "created_at": "2026-03-31T04:35:03Z",
+    "updated_at": "2026-03-31T04:35:03Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/237#issuecomment-4159815730",
+  "event_id": "c18381b3aea1a63f21ace446d6b23e326b2bd700dc983d8cdffa3515e4ef5855"
+}
