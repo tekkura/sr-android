@@ -23,8 +23,8 @@ import kotlin.math.abs
  * send()
  * onReceive()
  */
-class SerialCommManager @JvmOverloads constructor(
-    private val usbSerial: UsbSerial,
+open class SerialCommManager @JvmOverloads constructor(
+    protected val usbSerial: UsbSerial,
     batteryData: BatteryData? = null,
     wheelData: WheelData? = null
 ) {
@@ -32,11 +32,11 @@ class SerialCommManager @JvmOverloads constructor(
 
     private var command: RP2040OutgoingCommand? = null
     private var queuedMotorLevelsAtMs: Long = 0L
-    private val commandLock = Object()
+    protected val commandLock = Object()
     private val lifecycleLock = Any()
     private var runContext: RunContext? = null
 
-    private var startTimeAndroid: Long = 0
+    protected var startTimeAndroid: Long = 0
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
 
@@ -54,12 +54,12 @@ class SerialCommManager @JvmOverloads constructor(
     }
 
 
-    private class RunContext(
+    protected class RunContext(
         val stopRequested: AtomicBoolean = AtomicBoolean(false),
         var writerExecutor: ScheduledExecutorServiceWithException? = null
     )
 
-    private fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
+    protected open fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
         startTimeAndroid = System.nanoTime()
         while (!context.stopRequested.get()) {
             val nextCommand = try {
@@ -79,7 +79,7 @@ class SerialCommManager @JvmOverloads constructor(
             }
 
             if (nextCommand == null) {
-                break
+                continue
             }
 
             if (queuedMotorLevelsAtMs > 0L) {
@@ -194,7 +194,7 @@ class SerialCommManager @JvmOverloads constructor(
         }
     }
 
-    private fun sendCommand(command: RP2040OutgoingCommand): Int {
+    protected fun sendCommand(command: RP2040OutgoingCommand): Int {
         try {
             this.usbSerial.send(command, 10000)
         } catch (e: SerialTimeoutException) {
@@ -218,7 +218,7 @@ class SerialCommManager @JvmOverloads constructor(
      * @return 0 if successful, -1 if mResponse is not large enough to hold all response and the stop mark,
      * -2 if SerialTimeoutException on send
      */
-    private fun sendPacket(bytes: ByteArray): Int {
+    protected fun sendPacket(bytes: ByteArray): Int {
         require(bytes.size == RP2040OutgoingCommand.PACKET_SIZE) {
             "Input byte array must have a length of " + RP2040OutgoingCommand.PACKET_SIZE
         }
@@ -236,8 +236,9 @@ class SerialCommManager @JvmOverloads constructor(
         return 0
     }
 
-    private fun receivePacket() {
+    protected open fun receivePacket() {
         val receivedStatus = usbSerial.awaitPacketReceived(10000)
+
         if (receivedStatus == 1) {
             //Note this is actually calling the functions like parseLog, parseStatus, etc.
             parseFifoPacket()
@@ -310,38 +311,41 @@ class SerialCommManager @JvmOverloads constructor(
         }
     }
 
-    private fun parseStatus(command: StatusCommand) {
+    protected open fun parseStatus(command: StatusCommand) : Boolean {
         Logger.d("serial", "parseStatus")
-        if (rp2040State != null) {
-            if (rp2040State.motorsState.controlValues.left != command.motorsState.controlValues.left) {
-                //Logger.e("serial", "Left control value mismatch");
-            }
-            if (rp2040State.motorsState.controlValues.right != command.motorsState.controlValues.right) {
-                //Logger.e("serial", "Right control value mismatch");
-            }
-            rp2040State.motorsState.faults = command.motorsState.faults
-            Logger.v("serial", "left motor fault: " + rp2040State.motorsState.faults.left)
-            Logger.v("serial", "right motor fault: " + rp2040State.motorsState.faults.right)
+        if (rp2040State == null)
+            return false
 
-            rp2040State.motorsState.encoderCounts = command.motorsState.encoderCounts
-            Logger.v("serial", "Left encoder count: " + rp2040State.motorsState.encoderCounts.left)
-            Logger.v(
-                "serial",
-                "Right encoder count: " + rp2040State.motorsState.encoderCounts.right
-            )
-
-            rp2040State.batteryDetails = command.batteryDetails
-            Logger.v("serial", "Battery voltage: " + rp2040State.batteryDetails.voltageMv)
-            Logger.v("serial", "Battery voltage in V: " + rp2040State.batteryDetails.getVoltage())
-
-            rp2040State.chargeSideUSB = command.chargeSideUSB
-            Logger.v(
-                "serial",
-                "ncp3901_wireless_charger_attached: " + rp2040State.chargeSideUSB.isWirelessChargerAttached()
-            )
-            // Logger.v("serial", "usb_charger_voltage: " + rp2040State.chargeSideUSB.usb_charger_voltage);
-            rp2040State.updatePublishers()
+        if (rp2040State.motorsState.controlValues.left != command.motorsState.controlValues.left) {
+            //Logger.e("serial", "Left control value mismatch");
         }
+        if (rp2040State.motorsState.controlValues.right != command.motorsState.controlValues.right) {
+            //Logger.e("serial", "Right control value mismatch");
+        }
+        rp2040State.motorsState.faults = command.motorsState.faults
+        Logger.v("serial", "left motor fault: " + rp2040State.motorsState.faults.left)
+        Logger.v("serial", "right motor fault: " + rp2040State.motorsState.faults.right)
+
+        rp2040State.motorsState.encoderCounts = command.motorsState.encoderCounts
+        Logger.v("serial", "Left encoder count: " + rp2040State.motorsState.encoderCounts.left)
+        Logger.v(
+            "serial",
+            "Right encoder count: " + rp2040State.motorsState.encoderCounts.right
+        )
+
+        rp2040State.batteryDetails = command.batteryDetails
+        Logger.v("serial", "Battery voltage: " + rp2040State.batteryDetails.voltageMv)
+        Logger.v("serial", "Battery voltage in V: " + rp2040State.batteryDetails.getVoltage())
+
+        rp2040State.chargeSideUSB = command.chargeSideUSB
+        Logger.v(
+            "serial",
+            "ncp3901_wireless_charger_attached: " + rp2040State.chargeSideUSB.isWirelessChargerAttached()
+        )
+        // Logger.v("serial", "usb_charger_voltage: " + rp2040State.chargeSideUSB.usb_charger_voltage);
+        rp2040State.updatePublishers()
+
+        return true
     }
 
     private fun onNack(bytes: ByteArray) {

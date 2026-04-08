@@ -18,6 +18,7 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.SerialInputOutputManager
+import jp.oist.abcvlib.util.ByteArrayExtensions.toHexString
 import jp.oist.abcvlib.util.ErrorHandler.eLog
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
@@ -27,7 +28,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
-class UsbSerial @Throws(IOException::class) constructor(
+open class UsbSerial @Throws(IOException::class) constructor(
     private val context: Context,
     private val usbManager: UsbManager,
     private val serialReadyListener: SerialReadyListener,
@@ -207,7 +208,7 @@ class UsbSerial @Throws(IOException::class) constructor(
         send(command.toBytes(), timeout)
 
     @Throws(IOException::class)
-    internal fun send(packet: ByteArray, timeout: Int) {
+    internal open fun send(packet: ByteArray, timeout: Int) {
         _port.write(packet, timeout)
         Logger.i(Thread.currentThread().name, "send()")
     }
@@ -242,7 +243,7 @@ class UsbSerial @Throws(IOException::class) constructor(
      * @throws IOException if fifoQueue is full
      */
     @Throws(IOException::class)
-    private fun onCompletePacketReceived(command: RP2040IncomingCommand) {
+    protected open fun onCompletePacketReceived(command: RP2040IncomingCommand) {
         synchronized(fifoQueue) {
             if (fifoQueue.isAtFullCapacity) {
                 Logger.e("serial", "fifoQueue is full")
@@ -261,7 +262,7 @@ class UsbSerial @Throws(IOException::class) constructor(
         badPacketCount = 0 // Reset on successful packet
     }
 
-    private fun onBadPacket() {
+    protected open fun onBadPacket() {
         Logger.e("serial", "Bad packet received. Clearing buffer and sending next command.")
         // Ignore this packet as it is corrupted by some other data being sent between.
         badPacketCount++

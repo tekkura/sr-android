@@ -1,6 +1,9 @@
 package jp.oist.abcvlib.util.rp2040
 
+import android.util.Log
 import jp.oist.abcvlib.util.AndroidToRP2040Command
+import jp.oist.abcvlib.util.latency.BenchmarkClock
+import jp.oist.abcvlib.util.latency.toIteration
 import java.nio.ByteBuffer
 
 /**
@@ -29,7 +32,20 @@ internal class MockRP2040 {
      */
     fun processPacket(packet: ByteArray): ByteArray? {
         // Simple manual parsing of the header
-        if (packet.size < 4) return null
+        if (packet.size < 4) {
+            // Simulate firmware processing time.
+            // We still want to do this even in case of error
+            Thread.sleep(5)
+
+            return null
+        }
+
+        // T4: Simulator Receipt
+        BenchmarkClock.mark(toIteration(packet[2], packet[3]), 4)
+
+        // Simulate firmware processing time to prevent race conditions in tests.
+        // This ensures the Android side has time to enter its 'await' state.
+        Thread.sleep(5)
         
         val typeByte = packet[1]
         val type = AndroidToRP2040Command.getEnumByValue(typeByte) ?: return null
