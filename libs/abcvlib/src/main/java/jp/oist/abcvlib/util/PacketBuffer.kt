@@ -9,7 +9,6 @@ import java.util.Arrays
 
 class PacketBuffer(capacity: Int = (512 * 128) + 8) {
 
-    // Maybe make them private
     private var packetDataSize = RP2020_PACKET_SIZE_STATE
     private var packetType: AndroidToRP2040Command = AndroidToRP2040Command.NACK
 
@@ -19,172 +18,127 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
 
     private var state = PacketBufferState.FINDING_START
     private var startIdx = -1
+    private var readIndex = 0
 
-    // Implementation of consume that can handle both case in which several commands are sent at once and in which one command is split between several packages
     @Synchronized
     fun consume(
         bytes: ByteArray,
         onResult: (ParseResult) -> Unit
     ) {
         if (bytes.isEmpty()) {
-            Logger.v("verifyPacket", "Zero bytes array received. Waiting for more data")
             onResult(ParseResult.NotEnoughData)
-
             return
         }
 
         if (!put(bytes)) {
-            Logger.e("verifyPacket", "Buffer overflow risk: clearing buffer and resynchronizing.")
+            Logger.e("verifyPacket", "Buffer overflow risk: clearing buffer.")
             clear()
-
             onResult(ParseResult.Overflow)
             return
         }
 
-        _buffer.flip()
+        val dataEnd = _buffer.position()
 
-        while (_buffer.hasRemaining()) {
+        while (readIndex < dataEnd) {
             when(state) {
                 PacketBufferState.FINDING_START -> {
-                    if (findStartIndex() != null) {
-                        Logger.v("verifyPacket", "startIdx found at ${_buffer.position() - 1}")
+                    if (findStartIndex(dataEnd) != null) {
+                        state = PacketBufferState.READING_HEADER
                     } else {
-                        Logger.v("verifyPacket", "StartIdx not yet found. Waiting for more data")
+                        readIndex = dataEnd
                         onResult(ParseResult.NotEnoughData)
-
-                        break
+                        return
                     }
-
-                    state = PacketBufferState.READING_HEADER
                 }
 
                 PacketBufferState.READING_HEADER -> {
-                    // If position is 0, nothing received yet. If position is 1 only the start mark has been received.
-                    // position 2 is the packetType, and positions 3 and 4 are a short for packetSize
-                    if (_buffer.remaining() < RP2040ToAndroidPacket.Offsets.DATA - 1) {
-                        Logger.v("verifyPacket", "Incomplete header. Waiting for more data")
-                        _buffer.position(startIdx)
-                        resetState()
+                    if (dataEnd - startIdx < RP2040ToAndroidPacket.Offsets.DATA) {
                         onResult(ParseResult.NotEnoughData)
-
-                        break
+                        return
                     }
 
-                    val headerStartPosition = _buffer.position()
-                    val packetTypeByte = _buffer.get()
-                    val parsedPacketType = getEnumByValue(packetTypeByte)
+                    val typeByte = _buffer.get(startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE)
+                    val parsedPacketType = getEnumByValue(typeByte)
 
                     if (parsedPacketType == null ||
                         parsedPacketType == AndroidToRP2040Command.START ||
                         parsedPacketType == AndroidToRP2040Command.STOP
                     ) {
-                        Logger.e("verifyPacket", "Invalid or reserved packetType: $packetTypeByte")
+                        Logger.e("verifyPacket", "Invalid or reserved packetType: $typeByte")
                         onResult(ParseResult.ReceivedErrorPacket)
                         resync()
-
                         continue
                     }
 
                     packetType = parsedPacketType
-
-                    // get the packetDataSize. It is stored at index 3 and 4 as a short
-                    packetDataSize = _buffer.getShort().toInt() and 0xFFFF
+                    packetDataSize = _buffer.getShort(startIdx + RP2040ToAndroidPacket.Offsets.DATA_SIZE)
+                        .toInt() and 0xFFFF
 
                     if (packetDataSize > 2048) {
-                        Logger.e(
-                            "verifyPacket",
-                            "Unreasonable packet size: ${packetDataSize}. Resynchronizing."
-                        )
-
+                        Logger.e("verifyPacket", "Unreasonable packet size: ${packetDataSize}")
                         onResult(ParseResult.ReceivedErrorPacket)
                         resync()
-
                         continue
                     }
-
-                    Logger.v(
-                        "verifyPacket",
-                        "$packetType packetType of size $packetDataSize found at $headerStartPosition"
-                    )
 
                     state = PacketBufferState.AWAITING_DATA
                 }
 
                 PacketBufferState.AWAITING_DATA -> {
-                    if (_buffer.remaining() < (packetDataSize + 1)) {
-                        Logger.d(
-                            "verifyPacket", "Data received not yet enough to fill " +
-                                    packetType + " packetType. Waiting for more data"
-                        )
-
-                        Logger.d(
-                            "verifyPacket",
-                            _buffer.remaining().toString() +
-                                    " bytes recvd thus far. Require " +
-                                    packetDataSize + 1
-                        )
-
-                        _buffer.position(startIdx)
-                        resetState()
+                    val totalExpectedSize = RP2040ToAndroidPacket.Offsets.DATA + packetDataSize + 1
+                    if (dataEnd - startIdx < totalExpectedSize) {
                         onResult(ParseResult.NotEnoughData)
-
-                        break
+                        return
                     }
 
-                    state = PacketBufferState.CHECKING_STOP
-                }
-
-                PacketBufferState.CHECKING_STOP -> {
-                    val stopIdxPosition = _buffer.position() + packetDataSize
-                    if (_buffer.get(stopIdxPosition) != AndroidToRP2040Command.STOP.hexValue) {
+                    val stopPos = startIdx + totalExpectedSize - 1
+                    if (_buffer.get(stopPos) != AndroidToRP2040Command.STOP.hexValue) {
+                        Logger.e("verifyPacket", "Missing STOP marker at $stopPos")
                         onResult(ParseResult.ReceivedErrorPacket)
                         resync()
-
                         continue
                     }
 
-                    Logger.i("verifyPacket", "${packetType.name} command received")
-                    state = PacketBufferState.PROCESSING_COMMAND
-                }
-
-                PacketBufferState.PROCESSING_COMMAND -> {
                     val data = ByteArray(packetDataSize)
-                    _buffer.get(data) // Position moves past data
-
-                    _buffer.get() // Position moves past STOP byte
-
-                    val command = RP2040IncomingCommand.from(packetType, data)
-
-                    onResult(
-                        if (command != null)
-                            ParseResult.ReceivedPacket(command)
-                        else ParseResult.ReceivedErrorPacket
+                    System.arraycopy(
+                        _buffer.array(),
+                        _buffer.arrayOffset() + startIdx + RP2040ToAndroidPacket.Offsets.DATA,
+                        data,
+                        0,
+                        packetDataSize
                     )
 
+                    val command = RP2040IncomingCommand.from(packetType, data)
+                    onResult(
+                        command?.let {
+                            ParseResult.ReceivedPacket(it)
+                        } ?: ParseResult.ReceivedErrorPacket
+                    )
+
+                    readIndex = startIdx + totalExpectedSize
                     resetState()
                 }
             }
         }
 
-        _buffer.compact()
+        if (readIndex > _buffer.capacity() / 2) {
+            compact()
+        }
     }
 
-    private fun findStartIndex() : Int? = with(_buffer) {
-        while (hasRemaining()) {
-            val i = position()
-            if (get() == AndroidToRP2040Command.START.hexValue) {
-                Logger.v("verifyPacket", "StartIdx found at $i")
+    private fun findStartIndex(limit: Int) : Int? {
+        for (i in readIndex until limit) {
+            if (_buffer.get(i) == AndroidToRP2040Command.START.hexValue) {
                 startIdx = i
-
+                readIndex = i
                 return i
             }
         }
-
         return null
     }
 
     private fun resync() {
-        _buffer.position(startIdx + 1)
+        readIndex = startIdx + 1
         resetState()
     }
 
@@ -195,25 +149,33 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
         startIdx = -1
     }
 
+    private fun compact() {
+        if (readIndex == 0)
+            return
+
+        val dataEnd = _buffer.position()
+
+        _buffer.position(readIndex)
+        _buffer.limit(dataEnd)
+        _buffer.compact()
+
+        if (startIdx != -1)
+            startIdx -= readIndex
+
+        readIndex = 0
+    }
+
     fun clear() {
-        with(_buffer) {
-            // High performance for buffers created with ByteBuffer.allocate()
-            if (hasArray()) {
-                Arrays.fill(
-                    array(),
-                    arrayOffset(),
-                    arrayOffset() + capacity(),
-                    0.toByte()
-                )
-            }
-
-            clear()
-        }
-
+        _buffer.clear()
+        readIndex = 0
         resetState()
     }
 
     private fun put(bytes: ByteArray) : Boolean {
+        if (_buffer.remaining() < bytes.size) {
+            compact()
+        }
+
         if (_buffer.remaining() < bytes.size) {
             return false
         }
@@ -222,7 +184,7 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
         return true
     }
 
-    sealed class ParseResult() {
+    sealed class ParseResult {
         object NotEnoughData : ParseResult()
         object Overflow : ParseResult()
         object ReceivedErrorPacket : ParseResult()
@@ -234,9 +196,7 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
     private enum class PacketBufferState {
         FINDING_START,
         READING_HEADER,
-        AWAITING_DATA,
-        CHECKING_STOP,
-        PROCESSING_COMMAND;
+        AWAITING_DATA;
     }
 
     companion object {
