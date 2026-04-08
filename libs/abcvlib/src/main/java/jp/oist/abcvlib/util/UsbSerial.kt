@@ -156,12 +156,7 @@ open class UsbSerial @Throws(IOException::class) constructor(
         // SerialInputOutputManager thread may be delayed and miss data
 
         // print the byte[] as an array of hex values
-
-        val sb = StringBuilder()
-        for (b in data) {
-            sb.append(String.format("%02X ", b))
-        }
-        Logger.d(TAG, "onNewData Received: $sb")
+        Logger.d(TAG, "onNewData Received: ${data.toHexString()}")
 
         // Run the packet verification in a separate thread
         try {
@@ -249,12 +244,7 @@ open class UsbSerial @Throws(IOException::class) constructor(
                 Logger.e("serial", "fifoQueue is full")
                 throw RuntimeException("fifoQueue is full")
             } else {
-                val sb = StringBuilder()
-                for (b in command.toBytes()) {
-                    sb.append(String.format("%02X ", b))
-                }
-
-                Logger.d("verifyPacket", "Adding Packet: $sb to fifoQueue")
+                Logger.d("verifyPacket", "Adding Packet: ${command.toBytes().toHexString()} to fifoQueue")
                 fifoQueue.add(command)
             }
         }
