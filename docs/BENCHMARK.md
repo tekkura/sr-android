@@ -71,3 +71,18 @@ Success Rate: 100.00% (10000/10000)
 | M6: Wake-up Lag            | 0.871     | 0.073    | 5.523    | 1.450    |
 | M7: App Logic              | 2.052     | 0.164    | 10.285   | 3.127    |
 | Total RTT                  | 13.315    | 5.944    | 35.268   | 23.150   |
+
+#### PacketBuffer optimization
+
+Success Rate: 100.00% (10000/10000)
+
+| Metric                     | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) | 
+|:---------------------------|:----------|:---------|:---------|:---------|
+| M1: Outbound Queueing      | 1.461     | 0.029    | 13.238   | 10.902   |
+| M2: Handling/Serialization | 0.030     | 0.003    | 1.214    | 0.044    |
+| M3: Transport Out          | 1.580     | 0.161    | 7.473    | 2.447    |
+| M4: Robot + Transit In     | 5.630     | 5.131    | 16.571   | 5.985    |
+| M5: Buffer Processing      | 0.898     | 0.128    | 3.920    | 1.237    |
+| M6: Wake-up Lag            | 0.824     | 0.085    | 16.368   | 1.414    |
+| M7: App Logic              | 1.979     | 0.147    | 7.192    | 3.132    |
+| Total RTT                  | 12.402    | 5.811    | 37.138   | 22.229   |
