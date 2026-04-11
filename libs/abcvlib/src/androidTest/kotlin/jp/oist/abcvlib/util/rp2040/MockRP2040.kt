@@ -27,7 +27,7 @@ internal class MockRP2040 {
      */
     fun processPacket(packet: ByteArray): ByteArray? {
         // Simple manual parsing of the header
-        if (packet.size < 4) {
+        if (packet.size < 5) {
             // Simulate firmware processing time.
             // We still want to do this even in case of error
             Thread.sleep(5)
@@ -39,7 +39,7 @@ internal class MockRP2040 {
         // This ensures the Android side has time to enter its 'await' state.
         Thread.sleep(5)
         
-        val typeByte = packet[1]
+        val typeByte = packet[4]
         val type = AndroidToRP2040Command.getEnumByValue(typeByte) ?: return null
         
         val response = when (type) {
@@ -49,8 +49,8 @@ internal class MockRP2040 {
             AndroidToRP2040Command.SET_MOTOR_LEVELS -> {
                 // Update simulated motor state
                 if (packet.size == RP2040OutgoingCommand.PACKET_SIZE) {
-                    motorsState.controlValues.left = packet[2]
-                    motorsState.controlValues.right = packet[3]
+                    motorsState.controlValues.left = packet[7]
+                    motorsState.controlValues.right = packet[8]
                     
                     logEntries.add("Motors set: L=${motorsState.controlValues.left}, R=${motorsState.controlValues.right}")
                 }
