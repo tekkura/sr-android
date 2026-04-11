@@ -5,49 +5,30 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.absoluteValue
 
-sealed class RP2040OutgoingCommand {
+sealed class RP2040OutgoingCommand : RP2040Command() {
 
-    abstract val type: AndroidToRP2040Command
-
-    protected open fun populatePayload(payload: ByteBuffer) {}
-
-    /*
-    packet[0] = START marker
-    packet[1] = AndroidToRP2040Command
-    packet[2..9] = payload
-    packet[10] = STOP marker
-     */
-    fun toBytes(): ByteArray {
-        val buffer = ByteBuffer.allocate(PACKET_SIZE).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put(AndroidToRP2040Command.START.hexValue)
-            put(type.hexValue)
-            val payload = ByteBuffer.allocate(PAYLOAD_SIZE).apply {
-                order(ByteOrder.LITTLE_ENDIAN)
-                populatePayload(this)
-            }
-
-            put(payload.array())
-            put(AndroidToRP2040Command.STOP.hexValue)
-        }
-
-        return buffer.array()
+    override fun transformId(id: Int): Byte {
+        return ((id and 0x7F) or MASTER_BIT).toByte()
     }
 
     class Nack(val data: ByteArray) : RP2040OutgoingCommand() {
         override val type = AndroidToRP2040Command.NACK
+        override fun serializeData() = data
     }
 
     class Ack(val data: ByteArray) : RP2040OutgoingCommand() {
         override val type = AndroidToRP2040Command.ACK
+        override fun serializeData() = data
     }
 
     class GetLog : RP2040OutgoingCommand() {
         override val type = AndroidToRP2040Command.GET_LOG
+        override fun serializeData() = ByteArray(0)
     }
 
     class GetState : RP2040OutgoingCommand() {
         override val type = AndroidToRP2040Command.GET_STATE
+        override fun serializeData() = ByteArray(0)
     }
 
     class SetMotorLevels(
@@ -59,9 +40,12 @@ sealed class RP2040OutgoingCommand {
 
         override val type = AndroidToRP2040Command.SET_MOTOR_LEVELS
 
-        override fun populatePayload(payload: ByteBuffer) {
-            payload.put(getControlByte(left, leftBrake))
-            payload.put(getControlByte(right, rightBrake))
+        override fun serializeData(): ByteArray {
+            return ByteBuffer.allocate(PAYLOAD_SIZE).apply {
+                order(ByteOrder.BIG_ENDIAN)
+                put(getControlByte(left, leftBrake))
+                put(getControlByte(right, rightBrake))
+            }.array()
         }
 
         private fun getControlByte(input: Float, brake: Boolean): Byte {
@@ -108,17 +92,17 @@ sealed class RP2040OutgoingCommand {
 
     class ResetState : RP2040OutgoingCommand() {
         override val type = AndroidToRP2040Command.RESET_STATE
+        override fun serializeData() = ByteArray(0)
     }
 
     class GetVersion : RP2040OutgoingCommand() {
         override val type = AndroidToRP2040Command.GET_VERSION
+        override fun serializeData() = ByteArray(0)
     }
 
     companion object {
         // (2) 1 byte for each wheel
         const val PAYLOAD_SIZE: Int = 2
-
-        // Making room for command type, start and stop marks
-        const val PACKET_SIZE: Int = PAYLOAD_SIZE + 3
+        private const val MASTER_BIT = 0x80
     }
 }
