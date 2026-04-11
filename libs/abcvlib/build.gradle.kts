@@ -56,6 +56,8 @@ android {
         val networkConfig = loadNetworkConfig(rootDir)
         buildConfigField("String", "IP", "\"${networkConfig.ip}\"")
         buildConfigField("int", "PORT", "${networkConfig.port}")
+        buildConfigField("String", "GIT_COMMIT", "\"${gitHash()}\"")
+        buildConfigField("boolean", "GIT_DIRTY", "${isDirty()}")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

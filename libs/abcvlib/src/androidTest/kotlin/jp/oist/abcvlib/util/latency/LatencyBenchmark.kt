@@ -7,10 +7,10 @@ import android.os.Environment
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import jp.oist.abcvlib.core.BuildConfig
 import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
-import jp.oist.abcvlib.util.RealRobotSerialPort
 import jp.oist.abcvlib.util.latency.BenchmarkClock
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.SerialReadyListener
@@ -25,8 +25,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.time.Instant
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.absoluteValue
 
@@ -39,6 +41,8 @@ class LatencyBenchmark {
     private lateinit var publisherManager: PublisherManager
     private lateinit var wheelData: WheelData
     private lateinit var batteryData: BatteryData
+    private var useHardware = false
+    private val currentIteration = AtomicInteger(LatencyMeasuringSerialCommManager.NO_ITERATION)
 
     @Before
     fun setUp() {
@@ -46,7 +50,7 @@ class LatencyBenchmark {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
         val args = InstrumentationRegistry.getArguments()
-        val useHardware = args.getString("useHardware")?.toBoolean() ?: false
+        useHardware = args.getString("useHardware")?.toBoolean() ?: false
 
         // Grant "All Files Access" to the test app specifically for this run
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -56,8 +60,11 @@ class LatencyBenchmark {
                 .executeShellCommand("appops set $packageName MANAGE_EXTERNAL_STORAGE allow")
         }
 
+        val serialReadyLatch = CountDownLatch(1)
         val listener = object : SerialReadyListener {
-            override fun onSerialReady(usbSerial: UsbSerial) {}
+            override fun onSerialReady(usbSerial: UsbSerial) {
+                serialReadyLatch.countDown()
+            }
         }
 
         publisherManager = PublisherManager()
@@ -66,7 +73,8 @@ class LatencyBenchmark {
             usbSerial = LatencyMeasuringUsbSerial(
                 context = context,
                 usbManager = usbManager,
-                serialReadyListener = listener
+                serialReadyListener = listener,
+                currentIteration = currentIteration
             )
         } else {
             simulator = MockRP2040()
@@ -75,14 +83,22 @@ class LatencyBenchmark {
                 context = context,
                 usbManager = usbManager,
                 serialReadyListener = listener,
+                currentIteration = currentIteration,
                 port = virtualPort
             )
         }
 
+        val readyTimeoutSeconds = if (useHardware) 30L else 5L
+        Assert.assertTrue(
+            "Timed out waiting ${readyTimeoutSeconds}s for serial connection readiness. " +
+                    "If useHardware=true, confirm USB permission was granted and the RP2040 is attached.",
+            serialReadyLatch.await(readyTimeoutSeconds, TimeUnit.SECONDS)
+        )
+
         batteryData = BatteryData.Builder(context, publisherManager).build()
         wheelData = WheelData.Builder(context, publisherManager).build()
 
-        commManager = LatencyMeasuringSerialCommManager(usbSerial, batteryData, wheelData)
+        commManager = LatencyMeasuringSerialCommManager(usbSerial, currentIteration, batteryData, wheelData)
 
         publisherManager.initializePublishers()
         publisherManager.startPublishers()
@@ -98,12 +114,13 @@ class LatencyBenchmark {
 
     @Test
     fun runLatencyBenchmark() {
-        val warmUpIterations = 100
-        val measuredIterations = 10000
+        val args = InstrumentationRegistry.getArguments()
+        val warmUpIterations = intRunnerArg(args.getString(ARG_WARM_UP_ITERATIONS), DEFAULT_WARM_UP_ITERATIONS)
+        val measuredIterations = intRunnerArg(args.getString(ARG_MEASURED_ITERATIONS), DEFAULT_MEASURED_ITERATIONS)
         val totalIterations = warmUpIterations + measuredIterations
 
         BenchmarkClock.setEnabled(true)
-        commManager.start()
+        commManager.start(delay = BENCHMARK_IDLE_POLL_DELAY_MS)
 
         Log.i("LatencyBenchmark", "Starting benchmark: $warmUpIterations warm-up, $measuredIterations measured.")
 
@@ -122,13 +139,17 @@ class LatencyBenchmark {
                 BenchmarkClock.startIteration(i)
 
                 // T1: Start
-                val (left, right) = fromIteration(i)
-                commManager.setMotorLevels(left, right)
+                val speed = motorSpeedForIteration(i, totalIterations)
+                commManager.setMotorLevelsForBenchmark(i, speed, speed, false, false)
 
-                val success = iterationLatch.await(100, TimeUnit.MILLISECONDS)
-
-                if (!success) {
-                    Log.e("LatencyBenchmark", "Iteration $i timed out!")
+                val success = iterationLatch.await(BENCHMARK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                Assert.assertTrue(
+                    "Iteration $i timed out after ${BENCHMARK_TIMEOUT_MS}ms; " +
+                            "aborting benchmark to avoid attributing late responses to later iterations.",
+                    success
+                )
+                if ((i + 1) % PROGRESS_LOG_INTERVAL == 0 || i + 1 == totalIterations) {
+                    Log.i("LatencyBenchmark", "Completed ${i + 1}/$totalIterations benchmark iterations")
                 }
             }
         } finally {
@@ -152,6 +173,17 @@ class LatencyBenchmark {
 
     private data class BenchmarkSummary(val successRate: Double, val meanRtt: Double, val p95Rtt: Double)
 
+    private fun motorSpeedForIteration(iteration: Int, totalIterations: Int): Float {
+        if (totalIterations <= 1) return 0f
+
+        val progress = iteration.toFloat() / (totalIterations - 1).toFloat()
+        return when {
+            progress < ONE_THIRD -> progress / ONE_THIRD
+            progress < TWO_THIRDS -> 1f - 2f * ((progress - ONE_THIRD) / ONE_THIRD)
+            else -> -1f + ((progress - TWO_THIRDS) / ONE_THIRD)
+        }
+    }
+
     private fun reportAndVerifyResults(warmUp: Int, measured: Int): BenchmarkSummary {
         val results = BenchmarkClock.getResults()
         val successStates = BenchmarkClock.getSuccessStates()
@@ -160,8 +192,8 @@ class LatencyBenchmark {
         val metricNames = listOf(
             "M1: Outbound Queueing",
             "M2: Handling/Serialization",
-            "M3: Transport Out",
-            "M4: Robot + Transit In",
+            "M3: Android Write Blocking",
+            "M4: Response Wait After Write",
             "M5: Buffer Processing",
             "M6: Wake-up Lag",
             "M7: App Logic",
@@ -177,7 +209,6 @@ class LatencyBenchmark {
             if (!isSuccess) continue
 
             val ts = results[i] ?: continue
-            // Discard results where any timestamp is missing (0L)
             if (ts.any { it == 0L }) continue
 
             successfulMeasuredCount++
@@ -209,9 +240,11 @@ class LatencyBenchmark {
 
         val sb = StringBuilder()
         sb.append("### Benchmark Results ($measured iterations)\n\n")
+        sb.append(benchmarkMetadata(warmUp, measured))
+        sb.append("\n")
         sb.append(String.format("Success Rate: %.2f%% (%d/%d)\n\n", successRate, successfulMeasuredCount, measured))
-        sb.append("| Metric | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |\n")
-        sb.append("| :--- | :--- | :--- | :--- | :--- |\n")
+        sb.append("| Metric                             | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |\n")
+        sb.append("|:-----------------------------------|:----------|:---------|:---------|:---------|\n")
 
         metricNames.forEach { name ->
             val values = metrics[name]!!.sorted()
@@ -220,7 +253,16 @@ class LatencyBenchmark {
                 val min = values.first()
                 val max = values.last()
                 val p95 = values[(values.size * 0.95).toInt()]
-                sb.append(String.format("| %s | %.3f | %.3f | %.3f | %.3f |\n", name, mean, min, max, p95))
+                sb.append(
+                    String.format(
+                        "| %-34s | %-9.3f | %-8.3f | %-8.3f | %-8.3f |\n",
+                        name,
+                        mean,
+                        min,
+                        max,
+                        p95
+                    )
+                )
             }
         }
 
@@ -239,5 +281,64 @@ class LatencyBenchmark {
         }
 
         return BenchmarkSummary(successRate, meanRtt, p95Rtt)
+    }
+
+    private fun benchmarkMetadata(warmUp: Int, measured: Int): String {
+        val runnerType = if (isEmulator()) "emulator" else "physical device"
+        val gitState = if (BuildConfig.GIT_DIRTY) "dirty" else "clean"
+
+        return buildString {
+            append("- Generated at (UTC): ${Instant.now()}\n")
+            append("- Runner: ${Build.MANUFACTURER} ${Build.MODEL} ($runnerType)\n")
+            append("- Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
+            append("- Device: brand=${Build.BRAND}, device=${Build.DEVICE}, product=${Build.PRODUCT}\n")
+            append("- Hardware loop: ${hardwareLoopMetadata()}\n")
+            append("- Transport: ${transportMetadata()}\n")
+            append("- Firmware: ${firmwareMetadata()}\n")
+            append("- Protocol: Existing RP2040 serial request/response protocol\n")
+            append("- Git commit: ${BuildConfig.GIT_COMMIT} ($gitState)\n")
+            append("- Warm-up iterations: $warmUp\n")
+            append("- Measured iterations: $measured\n")
+        }
+    }
+
+    private fun hardwareLoopMetadata(): String =
+        if (useHardware) {
+            "Yes; physical USB serial transport to attached firmware"
+        } else {
+            "No; uses virtual transport and simulated firmware"
+        }
+
+    private fun transportMetadata(): String =
+        if (useHardware) "UsbSerial + RealRobotSerialPort" else "VirtualRobotPort"
+
+    private fun firmwareMetadata(): String =
+        if (useHardware) "Attached RP2040 firmware" else "MockRP2040 simulator with 5 ms processing delay"
+
+    private fun isEmulator(): Boolean =
+        Build.FINGERPRINT.startsWith("generic") ||
+                Build.FINGERPRINT.startsWith("unknown") ||
+                Build.MODEL.contains("google_sdk") ||
+                Build.MODEL.contains("Emulator") ||
+                Build.MODEL.contains("Android SDK built for x86") ||
+                Build.MANUFACTURER.contains("Genymotion") ||
+                (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
+                Build.PRODUCT == "google_sdk"
+
+    private fun intRunnerArg(value: String?, defaultValue: Int): Int {
+        val parsed = value?.toIntOrNull()
+        return if (parsed != null && parsed > 0) parsed else defaultValue
+    }
+
+    companion object {
+        private const val ARG_WARM_UP_ITERATIONS = "warmUpIterations"
+        private const val ARG_MEASURED_ITERATIONS = "measuredIterations"
+        private const val DEFAULT_WARM_UP_ITERATIONS = 100
+        private const val DEFAULT_MEASURED_ITERATIONS = 1_000
+        private const val BENCHMARK_TIMEOUT_MS = 1_000L
+        private const val BENCHMARK_IDLE_POLL_DELAY_MS = 1_000L
+        private const val PROGRESS_LOG_INTERVAL = 10
+        private const val ONE_THIRD = 1f / 3f
+        private const val TWO_THIRDS = 2f / 3f
     }
 }

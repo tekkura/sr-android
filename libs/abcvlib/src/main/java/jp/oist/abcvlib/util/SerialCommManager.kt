@@ -195,7 +195,7 @@ open class SerialCommManager @JvmOverloads constructor(
         }
     }
 
-    protected fun sendCommand(command: RP2040OutgoingCommand): Int {
+    protected open fun sendCommand(command: RP2040OutgoingCommand): Int {
         try {
             this.usbSerial.send(command, 10000)
         } catch (e: SerialTimeoutException) {
