@@ -5,34 +5,7 @@ import jp.oist.abcvlib.util.Logger
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-interface StatusCommand {
-    val motorsState: MotorsState
-    val batteryDetails: BatteryDetails
-    val chargeSideUSB: ChargeSideUSB
-}
-
-sealed class RP2040IncomingCommand {
-
-    protected abstract fun serializeData(): ByteArray
-    abstract val type: AndroidToRP2040Command
-
-    fun toBytes(): ByteArray {
-        val data = serializeData()
-        val header = createHeader(data)
-        return header + data + AndroidToRP2040Command.STOP.hexValue
-    }
-
-    private fun createHeader(data: ByteArray): ByteArray {
-        val buffer = ByteBuffer.allocate(4).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-        }
-
-        buffer.put(AndroidToRP2040Command.START.hexValue)
-        buffer.put(type.hexValue)
-        buffer.putShort(data.size.toShort())
-
-        return buffer.array()
-    }
+sealed class RP2040IncomingCommand : RP2040Command() {
 
     class Nack(val data: ByteArray) : RP2040IncomingCommand() {
         override val type = AndroidToRP2040Command.NACK
