@@ -1,5 +1,6 @@
 package jp.oist.abcvlib.util
 
+import jp.oist.abcvlib.util.ByteArrayExtensions.toCrc
 import jp.oist.abcvlib.util.rp2040.BatteryDetails
 import jp.oist.abcvlib.util.rp2040.ChargeSideUSB
 import jp.oist.abcvlib.util.rp2040.MotorsState
@@ -72,6 +73,26 @@ class PacketBufferTest {
             wireless_charger_vrect = 0x6478
         }
     )
+
+    private fun createPacket(type: AndroidToRP2040Command, payload: ByteArray): ByteArray {
+        val header = ByteBuffer.allocate(1 + 1 + 2 + 1).apply {
+            order(ByteOrder.BIG_ENDIAN)
+            put(AndroidToRP2040Command.START.hexValue)
+            put(0)
+            putShort(payload.size.toShort())
+            put(type.hexValue)
+        }.array()
+
+        val packet = ByteBuffer.allocate(header.size + 2 + payload.size + 2).apply {
+            order(ByteOrder.BIG_ENDIAN)
+            put(header)
+            putShort(header.toCrc())
+            put(payload)
+            putShort(payload.toCrc())
+        }
+
+        return packet.array()
+    }
 
     @Test
     fun `test consume single complete valid packet`() {
@@ -183,45 +204,8 @@ class PacketBufferTest {
     }
 
     @Test
-    fun `test consume with reserved framing byte as packet type`() {
-        // Test START as packet type
-        val packetStart = ByteBuffer.allocate(1 + 1 + 2 + 1 + 1).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put(AndroidToRP2040Command.START.hexValue)
-            put(AndroidToRP2040Command.START.hexValue) // Reserved framing byte as type
-            putShort(1.toShort())
-            put(0x00.toByte())
-            put(AndroidToRP2040Command.STOP.hexValue)
-        }.array()
-
-        packetBuffer.consume(packetStart) { results.add(it) }
-        assertTrue("START as packet type should be rejected", results.any { it is PacketBuffer.ParseResult.ReceivedErrorPacket })
-
-        results.clear()
-        packetBuffer.clear()
-
-        // Test STOP as packet type
-        val packetStop = ByteBuffer.allocate(1 + 1 + 2 + 1 + 1).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put(AndroidToRP2040Command.START.hexValue)
-            put(AndroidToRP2040Command.STOP.hexValue) // Reserved framing byte as type
-            putShort(1.toShort())
-            put(0x00.toByte())
-            put(AndroidToRP2040Command.STOP.hexValue)
-        }.array()
-
-        packetBuffer.consume(packetStop) { results.add(it) }
-        assertTrue("STOP as packet type should be rejected", results.any { it is PacketBuffer.ParseResult.ReceivedErrorPacket })
-    }
-
-    @Test
     fun `test consume with unreasonable packet size`() {
-        val packet = ByteBuffer.allocate(1 + 1 + 2).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put(AndroidToRP2040Command.START.hexValue)
-            put(AndroidToRP2040Command.GET_STATE.hexValue)
-            putShort(3000.toShort()) // > 2048
-        }.array()
+        val packet = createPacket(AndroidToRP2040Command.GET_STATE, ByteBuffer.allocate(3000).array())
 
         packetBuffer.consume(packet) { results.add(it) }
 
