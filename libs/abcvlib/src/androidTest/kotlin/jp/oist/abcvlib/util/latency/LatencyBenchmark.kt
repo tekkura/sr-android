@@ -210,8 +210,8 @@ class LatencyBenchmark {
         val sb = StringBuilder()
         sb.append("### Benchmark Results ($measured iterations)\n\n")
         sb.append(String.format("Success Rate: %.2f%% (%d/%d)\n\n", successRate, successfulMeasuredCount, measured))
-        sb.append("| Metric | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |\n")
-        sb.append("| :--- | :--- | :--- | :--- | :--- |\n")
+        sb.append("| Metric                     | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |\n")
+        sb.append("|:---------------------------|:----------|:---------|:---------|:---------|\n")
 
         metricNames.forEach { name ->
             val values = metrics[name]!!.sorted()
@@ -220,7 +220,16 @@ class LatencyBenchmark {
                 val min = values.first()
                 val max = values.last()
                 val p95 = values[(values.size * 0.95).toInt()]
-                sb.append(String.format("| %s | %.3f | %.3f | %.3f | %.3f |\n", name, mean, min, max, p95))
+                sb.append(
+                    String.format(
+                        "| %-26s | %-9.3f | %-8.3f | %-8.3f | %-8.3f |\n",
+                        name,
+                        mean,
+                        min,
+                        max,
+                        p95
+                    )
+                )
             }
         }
 
