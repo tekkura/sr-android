@@ -11,7 +11,6 @@ import jp.oist.abcvlib.core.BuildConfig
 import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
-import jp.oist.abcvlib.util.RealRobotSerialPort
 import jp.oist.abcvlib.util.latency.BenchmarkClock
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.SerialReadyListener
@@ -59,8 +58,11 @@ class LatencyBenchmark {
                 .executeShellCommand("appops set $packageName MANAGE_EXTERNAL_STORAGE allow")
         }
 
+        val serialReadyLatch = CountDownLatch(1)
         val listener = object : SerialReadyListener {
-            override fun onSerialReady(usbSerial: UsbSerial) {}
+            override fun onSerialReady(usbSerial: UsbSerial) {
+                serialReadyLatch.countDown()
+            }
         }
 
         publisherManager = PublisherManager()
@@ -81,6 +83,13 @@ class LatencyBenchmark {
                 port = virtualPort
             )
         }
+
+        val readyTimeoutSeconds = if (useHardware) 30L else 5L
+        Assert.assertTrue(
+            "Timed out waiting ${readyTimeoutSeconds}s for serial connection readiness. " +
+                    "If useHardware=true, confirm USB permission was granted and the RP2040 is attached.",
+            serialReadyLatch.await(readyTimeoutSeconds, TimeUnit.SECONDS)
+        )
 
         batteryData = BatteryData.Builder(context, publisherManager).build()
         wheelData = WheelData.Builder(context, publisherManager).build()
