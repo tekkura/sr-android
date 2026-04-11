@@ -1,5 +1,6 @@
 package jp.oist.abcvlib.util
 
+import jp.oist.abcvlib.util.ByteArrayExtensions.toCrc
 import jp.oist.abcvlib.util.rp2040.BatteryDetails
 import jp.oist.abcvlib.util.rp2040.ChargeSideUSB
 import jp.oist.abcvlib.util.rp2040.MotorsState
@@ -75,6 +76,29 @@ class PacketBufferTest {
         }
     )
 
+    private fun createPacket(type: Byte, payload: ByteArray): ByteArray {
+        val command = ByteBuffer.allocate(3 + payload.size).apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+            putShort((payload.size + 1).toShort())
+            put(type)
+            put(payload)
+        }.array()
+
+        val packet = ByteBuffer.allocate(1 + command.size + 2).apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+            put(AndroidToRP2040Command.START.hexValue)
+            put(command)
+            putShort(command.toCrc())
+        }
+
+        return packet.array()
+    }
+
+    private fun createPacket(
+        type: AndroidToRP2040Command,
+        payload: ByteArray
+    ) = createPacket(type.hexValue, payload)
+
     @Test
     fun `test consume single complete valid packet`() {
         val packet = getStateCommand.toBytes()
@@ -113,14 +137,7 @@ class PacketBufferTest {
 
     @Test
     fun `test consume malformed firmware version response reports compatibility failure`() {
-        val packet = ByteBuffer.allocate(1 + 1 + 2 + 2 + 1).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put(AndroidToRP2040Command.START.hexValue)
-            put(AndroidToRP2040Command.GET_VERSION.hexValue)
-            putShort(2.toShort())
-            put(byteArrayOf(1, 0))
-            put(AndroidToRP2040Command.STOP.hexValue)
-        }.array()
+        val packet = createPacket(AndroidToRP2040Command.GET_VERSION, byteArrayOf(1, 0))
 
         packetBuffer.consume(packet) { results.add(it) }
 
@@ -208,15 +225,7 @@ class PacketBufferTest {
 
     @Test
     fun `test consume with invalid packet type`() {
-        val size = 2
-        val packet = ByteBuffer.allocate(1 + 1 + 2 + size + 1).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put(AndroidToRP2040Command.START.hexValue)
-            put(0x99.toByte()) // Invalid type
-            putShort(size.toShort())
-            put(byteArrayOf(0x01, 0x02))
-            put(AndroidToRP2040Command.STOP.hexValue)
-        }.array()
+        val packet = createPacket(0x99.toByte(), byteArrayOf(0x01, 0x02))
 
         packetBuffer.consume(packet) { results.add(it) }
 
@@ -224,45 +233,26 @@ class PacketBufferTest {
     }
 
     @Test
-    fun `test consume with reserved framing byte as packet type`() {
-        // Test START as packet type
-        val packetStart = ByteBuffer.allocate(1 + 1 + 2 + 1 + 1).apply {
+    fun `test resyncs after invalid header before declared payload arrives`() {
+        val malformedHeader = ByteBuffer.allocate(1 + 2 + 1).apply {
             order(ByteOrder.LITTLE_ENDIAN)
             put(AndroidToRP2040Command.START.hexValue)
-            put(AndroidToRP2040Command.START.hexValue) // Reserved framing byte as type
-            putShort(1.toShort())
-            put(0x00.toByte())
-            put(AndroidToRP2040Command.STOP.hexValue)
+            putShort(2048.toShort())
+            put(0x99.toByte())
         }.array()
+        val validPacket = ackCommand.toBytes()
 
-        packetBuffer.consume(packetStart) { results.add(it) }
-        assertTrue("START as packet type should be rejected", results.any { it is PacketBuffer.ParseResult.ReceivedErrorPacket })
+        packetBuffer.consume(malformedHeader + validPacket) { results.add(it) }
 
-        results.clear()
-        packetBuffer.clear()
-
-        // Test STOP as packet type
-        val packetStop = ByteBuffer.allocate(1 + 1 + 2 + 1 + 1).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put(AndroidToRP2040Command.START.hexValue)
-            put(AndroidToRP2040Command.STOP.hexValue) // Reserved framing byte as type
-            putShort(1.toShort())
-            put(0x00.toByte())
-            put(AndroidToRP2040Command.STOP.hexValue)
-        }.array()
-
-        packetBuffer.consume(packetStop) { results.add(it) }
-        assertTrue("STOP as packet type should be rejected", results.any { it is PacketBuffer.ParseResult.ReceivedErrorPacket })
+        assertTrue(results.any { it is PacketBuffer.ParseResult.ReceivedErrorPacket })
+        val packets = results.filterIsInstance<PacketBuffer.ParseResult.ReceivedPacket>()
+        assertEquals(1, packets.size)
+        assertEquals(AndroidToRP2040Command.ACK, packets[0].command.type)
     }
 
     @Test
     fun `test consume with unreasonable packet size`() {
-        val packet = ByteBuffer.allocate(1 + 1 + 2).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-            put(AndroidToRP2040Command.START.hexValue)
-            put(AndroidToRP2040Command.GET_STATE.hexValue)
-            putShort(3000.toShort()) // > 2048
-        }.array()
+        val packet = createPacket(AndroidToRP2040Command.GET_STATE, ByteBuffer.allocate(3000).array())
 
         packetBuffer.consume(packet) { results.add(it) }
 
@@ -270,16 +260,16 @@ class PacketBufferTest {
     }
 
     @Test
-    fun `test consume with missing stop marker`() {
+    fun `test consume with invalid crc`() {
         val payload = byteArrayOf(0x01, 0x02)
-        val size = payload.size
-        val packet = ByteBuffer.allocate(1 + 1 + 2 + size + 1).apply {
+        val size = payload.size + 1 // Data length includes the command type.
+        val packet = ByteBuffer.allocate(1 + 2 + size + 2).apply {
             order(ByteOrder.LITTLE_ENDIAN)
             put(AndroidToRP2040Command.START.hexValue)
-            put(AndroidToRP2040Command.GET_STATE.hexValue)
             putShort(size.toShort())
+            put(AndroidToRP2040Command.GET_STATE.hexValue)
             put(payload)
-            put(0x00.toByte()) // Not STOP marker
+            putShort(0x00.toShort()) // Invalid CRC
         }.array()
 
         packetBuffer.consume(packet) { results.add(it) }
@@ -289,14 +279,14 @@ class PacketBufferTest {
 
     @Test
     fun `test resync after error`() {
-        // First packet has bad stop marker
-        val badPacket = ByteBuffer.allocate(1 + 1 + 2 + 1 + 1).apply {
+        // First packet has a bad CRC.
+        val badPacket = ByteBuffer.allocate(1 + 2 + 1 + 1 + 2).apply {
             order(ByteOrder.LITTLE_ENDIAN)
             put(AndroidToRP2040Command.START.hexValue)
+            putShort(2.toShort())
             put(AndroidToRP2040Command.GET_STATE.hexValue)
-            putShort(1.toShort())
             put(0xAA.toByte())
-            put(0x00.toByte()) // Bad STOP
+            putShort(0x00.toShort()) // Bad CRC
         }.array()
 
         val goodPacket = ackCommand.toBytes()
