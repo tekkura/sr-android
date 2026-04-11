@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
+import jp.oist.abcvlib.util.RealRobotSerialPort
 import jp.oist.abcvlib.util.latency.BenchmarkClock
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.SerialReadyListener
@@ -44,6 +45,9 @@ class LatencyBenchmark {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
+        val args = InstrumentationRegistry.getArguments()
+        val useHardware = args.getString("useHardware")?.toBoolean() ?: false
+
         // Grant "All Files Access" to the test app specifically for this run
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val packageName = context.packageName
@@ -52,15 +56,28 @@ class LatencyBenchmark {
                 .executeShellCommand("appops set $packageName MANAGE_EXTERNAL_STORAGE allow")
         }
 
-        simulator = MockRP2040()
-        val virtualPort = VirtualRobotPort(simulator)
-
         val listener = object : SerialReadyListener {
             override fun onSerialReady(usbSerial: UsbSerial) {}
         }
 
-        usbSerial = LatencyMeasuringUsbSerial(context, usbManager, listener, virtualPort)
         publisherManager = PublisherManager()
+
+        if (useHardware) {
+            usbSerial = LatencyMeasuringUsbSerial(
+                context = context,
+                usbManager = usbManager,
+                serialReadyListener = listener
+            )
+        } else {
+            simulator = MockRP2040()
+            val virtualPort = VirtualRobotPort(simulator)
+            usbSerial = LatencyMeasuringUsbSerial(
+                context = context,
+                usbManager = usbManager,
+                serialReadyListener = listener,
+                port = virtualPort
+            )
+        }
 
         batteryData = BatteryData.Builder(context, publisherManager).build()
         wheelData = WheelData.Builder(context, publisherManager).build()
