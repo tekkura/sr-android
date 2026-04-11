@@ -1,11 +1,6 @@
 package jp.oist.abcvlib.util.rp2040
 
-import android.util.Log
 import jp.oist.abcvlib.util.AndroidToRP2040Command
-import jp.oist.abcvlib.util.latency.BenchmarkClock
-import jp.oist.abcvlib.util.latency.toIteration
-import java.nio.ByteBuffer
-
 /**
  * A simulator for the RP2040 firmware behavior.
  * This class maintains a simulated state and responds to incoming commands.
@@ -39,9 +34,6 @@ internal class MockRP2040 {
 
             return null
         }
-
-        // T4: Simulator Receipt
-        BenchmarkClock.mark(toIteration(packet[2], packet[3]), 4)
 
         // Simulate firmware processing time to prevent race conditions in tests.
         // This ensures the Android side has time to enter its 'await' state.
