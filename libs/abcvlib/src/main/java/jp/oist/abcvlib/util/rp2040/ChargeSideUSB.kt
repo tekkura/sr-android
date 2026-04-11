@@ -28,7 +28,7 @@ class ChargeSideUSB {
 
     fun toBytes() : ByteArray {
         val buffer = ByteBuffer.allocate(9).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
+            order(ByteOrder.BIG_ENDIAN)
             putInt(max77976_chg_details)
             put(if (ncp3901_wireless_charger_attached) 1 else 0)
             putShort(usb_charger_voltage)

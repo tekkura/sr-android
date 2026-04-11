@@ -36,6 +36,7 @@ open class SerialCommManager @JvmOverloads constructor(
     protected var startTimeAndroid: Long = 0
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
+    private var commandId = 0
 
     private var versionTimeoutFuture: ScheduledFuture<*>? = null
     private val VERSION_TIMEOUT_MS = 2000L
@@ -225,7 +226,12 @@ open class SerialCommManager @JvmOverloads constructor(
 
     protected open fun sendCommand(command: RP2040OutgoingCommand): Int {
         try {
-            this.usbSerial.send(command, 10000)
+            this.usbSerial.send(
+                command.apply { commandId = this@SerialCommManager.commandId++ },
+                10000
+            )
+
+            commandId %= 0x7F
         } catch (e: SerialTimeoutException) {
             throw RuntimeException(
                 "SerialTimeoutException on send. The serial connection " +
