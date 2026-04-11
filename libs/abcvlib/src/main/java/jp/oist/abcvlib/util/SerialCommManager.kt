@@ -126,7 +126,7 @@ open class SerialCommManager @JvmOverloads constructor(
                 "SerialCommManager_Android2Pi"
             )
 
-            context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory)
+            context.writerExecutor = ScheduledExecutorServiceWithException(2, priorityFactory)
             runContext = context
 
             // Only check version support for real firmware
@@ -247,8 +247,8 @@ open class SerialCommManager @JvmOverloads constructor(
      * -2 if SerialTimeoutException on send
      */
     protected fun sendPacket(bytes: ByteArray): Int {
-        require(bytes.size == RP2040OutgoingCommand.PACKET_SIZE) {
-            "Input byte array must have a length of " + RP2040OutgoingCommand.PACKET_SIZE
+        require(bytes.size >= 1 + 2 + 1 + 2) {
+            "Input byte array must contain at least a header and CRC"
         }
         try {
             this.usbSerial.send(bytes, 10000)
