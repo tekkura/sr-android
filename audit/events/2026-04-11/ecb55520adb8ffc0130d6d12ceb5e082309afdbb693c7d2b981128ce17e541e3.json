@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-04-11T07:37:58Z",
+  "event_ts": "2026-04-11T07:37:39Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "topherbuckley",
+  "run_id": "24277811289",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 241,
+    "title": "Investigate RTT increase after switching benchmark to production motor command path",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/241",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/241",
+  "event_id": "ecb55520adb8ffc0130d6d12ceb5e082309afdbb693c7d2b981128ce17e541e3"
+}
