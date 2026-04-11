@@ -114,8 +114,9 @@ class LatencyBenchmark {
 
     @Test
     fun runLatencyBenchmark() {
-        val warmUpIterations = 100
-        val measuredIterations = 100
+        val args = InstrumentationRegistry.getArguments()
+        val warmUpIterations = intRunnerArg(args.getString(ARG_WARM_UP_ITERATIONS), DEFAULT_WARM_UP_ITERATIONS)
+        val measuredIterations = intRunnerArg(args.getString(ARG_MEASURED_ITERATIONS), DEFAULT_MEASURED_ITERATIONS)
         val totalIterations = warmUpIterations + measuredIterations
 
         BenchmarkClock.setEnabled(true)
@@ -141,11 +142,12 @@ class LatencyBenchmark {
                 val speed = motorSpeedForIteration(i, totalIterations)
                 commManager.setMotorLevelsForBenchmark(i, speed, speed, false, false)
 
-                val success = iterationLatch.await(100, TimeUnit.MILLISECONDS)
-
-                if (!success) {
-                    Log.e("LatencyBenchmark", "Iteration $i timed out!")
-                }
+                val success = iterationLatch.await(BENCHMARK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                Assert.assertTrue(
+                    "Iteration $i timed out after ${BENCHMARK_TIMEOUT_MS}ms; " +
+                            "aborting benchmark to avoid attributing late responses to later iterations.",
+                    success
+                )
                 if ((i + 1) % PROGRESS_LOG_INTERVAL == 0 || i + 1 == totalIterations) {
                     Log.i("LatencyBenchmark", "Completed ${i + 1}/$totalIterations benchmark iterations")
                 }
@@ -323,7 +325,17 @@ class LatencyBenchmark {
                 (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
                 Build.PRODUCT == "google_sdk"
 
+    private fun intRunnerArg(value: String?, defaultValue: Int): Int {
+        val parsed = value?.toIntOrNull()
+        return if (parsed != null && parsed > 0) parsed else defaultValue
+    }
+
     companion object {
+        private const val ARG_WARM_UP_ITERATIONS = "warmUpIterations"
+        private const val ARG_MEASURED_ITERATIONS = "measuredIterations"
+        private const val DEFAULT_WARM_UP_ITERATIONS = 100
+        private const val DEFAULT_MEASURED_ITERATIONS = 1_000
+        private const val BENCHMARK_TIMEOUT_MS = 1_000L
         private const val BENCHMARK_IDLE_POLL_DELAY_MS = 1_000L
         private const val PROGRESS_LOG_INTERVAL = 10
         private const val ONE_THIRD = 1f / 3f
