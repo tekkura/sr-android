@@ -28,6 +28,7 @@ import java.io.File
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.absoluteValue
 
@@ -41,6 +42,7 @@ class LatencyBenchmark {
     private lateinit var wheelData: WheelData
     private lateinit var batteryData: BatteryData
     private var useHardware = false
+    private val currentIteration = AtomicInteger(LatencyMeasuringSerialCommManager.NO_ITERATION)
 
     @Before
     fun setUp() {
@@ -71,7 +73,8 @@ class LatencyBenchmark {
             usbSerial = LatencyMeasuringUsbSerial(
                 context = context,
                 usbManager = usbManager,
-                serialReadyListener = listener
+                serialReadyListener = listener,
+                currentIteration = currentIteration
             )
         } else {
             simulator = MockRP2040()
@@ -80,6 +83,7 @@ class LatencyBenchmark {
                 context = context,
                 usbManager = usbManager,
                 serialReadyListener = listener,
+                currentIteration = currentIteration,
                 port = virtualPort
             )
         }
@@ -94,7 +98,7 @@ class LatencyBenchmark {
         batteryData = BatteryData.Builder(context, publisherManager).build()
         wheelData = WheelData.Builder(context, publisherManager).build()
 
-        commManager = LatencyMeasuringSerialCommManager(usbSerial, batteryData, wheelData)
+        commManager = LatencyMeasuringSerialCommManager(usbSerial, currentIteration, batteryData, wheelData)
 
         publisherManager.initializePublishers()
         publisherManager.startPublishers()
@@ -111,11 +115,11 @@ class LatencyBenchmark {
     @Test
     fun runLatencyBenchmark() {
         val warmUpIterations = 100
-        val measuredIterations = 10000
+        val measuredIterations = 100
         val totalIterations = warmUpIterations + measuredIterations
 
         BenchmarkClock.setEnabled(true)
-        commManager.start()
+        commManager.start(delay = BENCHMARK_IDLE_POLL_DELAY_MS)
 
         Log.i("LatencyBenchmark", "Starting benchmark: $warmUpIterations warm-up, $measuredIterations measured.")
 
@@ -134,13 +138,16 @@ class LatencyBenchmark {
                 BenchmarkClock.startIteration(i)
 
                 // T1: Start
-                val (left, right) = fromIteration(i)
-                commManager.setMotorLevels(left, right)
+                val speed = motorSpeedForIteration(i, totalIterations)
+                commManager.setMotorLevelsForBenchmark(i, speed, speed, false, false)
 
                 val success = iterationLatch.await(100, TimeUnit.MILLISECONDS)
 
                 if (!success) {
                     Log.e("LatencyBenchmark", "Iteration $i timed out!")
+                }
+                if ((i + 1) % PROGRESS_LOG_INTERVAL == 0 || i + 1 == totalIterations) {
+                    Log.i("LatencyBenchmark", "Completed ${i + 1}/$totalIterations benchmark iterations")
                 }
             }
         } finally {
@@ -164,6 +171,17 @@ class LatencyBenchmark {
 
     private data class BenchmarkSummary(val successRate: Double, val meanRtt: Double, val p95Rtt: Double)
 
+    private fun motorSpeedForIteration(iteration: Int, totalIterations: Int): Float {
+        if (totalIterations <= 1) return 0f
+
+        val progress = iteration.toFloat() / (totalIterations - 1).toFloat()
+        return when {
+            progress < ONE_THIRD -> progress / ONE_THIRD
+            progress < TWO_THIRDS -> 1f - 2f * ((progress - ONE_THIRD) / ONE_THIRD)
+            else -> -1f + ((progress - TWO_THIRDS) / ONE_THIRD)
+        }
+    }
+
     private fun reportAndVerifyResults(warmUp: Int, measured: Int): BenchmarkSummary {
         val results = BenchmarkClock.getResults()
         val successStates = BenchmarkClock.getSuccessStates()
@@ -172,8 +190,8 @@ class LatencyBenchmark {
         val metricNames = listOf(
             "M1: Outbound Queueing",
             "M2: Handling/Serialization",
-            "M3: Transport Out",
-            "M4: Robot + Transit In",
+            "M3: Android Write Blocking",
+            "M4: Response Wait After Write",
             "M5: Buffer Processing",
             "M6: Wake-up Lag",
             "M7: App Logic",
@@ -189,7 +207,6 @@ class LatencyBenchmark {
             if (!isSuccess) continue
 
             val ts = results[i] ?: continue
-            // Discard results where any timestamp is missing (0L)
             if (ts.any { it == 0L }) continue
 
             successfulMeasuredCount++
@@ -224,8 +241,8 @@ class LatencyBenchmark {
         sb.append(benchmarkMetadata(warmUp, measured))
         sb.append("\n")
         sb.append(String.format("Success Rate: %.2f%% (%d/%d)\n\n", successRate, successfulMeasuredCount, measured))
-        sb.append("| Metric                     | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |\n")
-        sb.append("|:---------------------------|:----------|:---------|:---------|:---------|\n")
+        sb.append("| Metric                             | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |\n")
+        sb.append("|:-----------------------------------|:----------|:---------|:---------|:---------|\n")
 
         metricNames.forEach { name ->
             val values = metrics[name]!!.sorted()
@@ -236,7 +253,7 @@ class LatencyBenchmark {
                 val p95 = values[(values.size * 0.95).toInt()]
                 sb.append(
                     String.format(
-                        "| %-26s | %-9.3f | %-8.3f | %-8.3f | %-8.3f |\n",
+                        "| %-34s | %-9.3f | %-8.3f | %-8.3f | %-8.3f |\n",
                         name,
                         mean,
                         min,
@@ -305,4 +322,11 @@ class LatencyBenchmark {
                 Build.MANUFACTURER.contains("Genymotion") ||
                 (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
                 Build.PRODUCT == "google_sdk"
+
+    companion object {
+        private const val BENCHMARK_IDLE_POLL_DELAY_MS = 1_000L
+        private const val PROGRESS_LOG_INTERVAL = 10
+        private const val ONE_THIRD = 1f / 3f
+        private const val TWO_THIRDS = 2f / 3f
+    }
 }

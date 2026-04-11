@@ -36,7 +36,6 @@ object BenchmarkClock {
 
         val index = junction - 1
 
-        // remove once figure out what to do with t7
         // Ensure that junctions are marked in order for a single command-response cycle.
         // This prevents a late T7 from a previous iteration from being recorded in a new one,
         // and ensures we only track the first valid sequence.
@@ -56,4 +55,5 @@ object BenchmarkClock {
         iterations.clear()
         successStates.clear()
     }
+
 }
