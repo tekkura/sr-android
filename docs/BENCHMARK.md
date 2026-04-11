@@ -39,6 +39,7 @@ The following metrics are derived from the timestamps above to measure specific 
 - **Environment**: Dedicated Instrumentation Test (`LatencyBenchmark.kt`).
 - **Mock Latency**: `VirtualRobotPort` connects to `MockRP2040`. `MockRP2040` includes a 5ms `Thread.sleep()` to simulate firmware processing time.
 - **Reporting**: Results are logged in Markdown format and appended to this document under the [Results](#results) section.
+- **Run Metadata**: New result blocks include the Android runner, emulator/physical-device classification, virtual transport, simulated firmware, protocol, commit hash, and iteration counts. Older result blocks did not capture per-run runner metadata.
 
 ## 4. Results
 
