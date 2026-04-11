@@ -7,6 +7,7 @@ import android.os.Environment
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import jp.oist.abcvlib.core.BuildConfig
 import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
@@ -25,6 +26,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.time.Instant
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -39,6 +41,7 @@ class LatencyBenchmark {
     private lateinit var publisherManager: PublisherManager
     private lateinit var wheelData: WheelData
     private lateinit var batteryData: BatteryData
+    private var useHardware = false
 
     @Before
     fun setUp() {
@@ -46,7 +49,7 @@ class LatencyBenchmark {
         val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
         val args = InstrumentationRegistry.getArguments()
-        val useHardware = args.getString("useHardware")?.toBoolean() ?: false
+        useHardware = args.getString("useHardware")?.toBoolean() ?: false
 
         // Grant "All Files Access" to the test app specifically for this run
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -209,6 +212,8 @@ class LatencyBenchmark {
 
         val sb = StringBuilder()
         sb.append("### Benchmark Results ($measured iterations)\n\n")
+        sb.append(benchmarkMetadata(warmUp, measured))
+        sb.append("\n")
         sb.append(String.format("Success Rate: %.2f%% (%d/%d)\n\n", successRate, successfulMeasuredCount, measured))
         sb.append("| Metric                     | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |\n")
         sb.append("|:---------------------------|:----------|:---------|:---------|:---------|\n")
@@ -249,4 +254,46 @@ class LatencyBenchmark {
 
         return BenchmarkSummary(successRate, meanRtt, p95Rtt)
     }
+
+    private fun benchmarkMetadata(warmUp: Int, measured: Int): String {
+        val runnerType = if (isEmulator()) "emulator" else "physical device"
+        val gitState = if (BuildConfig.GIT_DIRTY) "dirty" else "clean"
+
+        return buildString {
+            append("- Generated at (UTC): ${Instant.now()}\n")
+            append("- Runner: ${Build.MANUFACTURER} ${Build.MODEL} ($runnerType)\n")
+            append("- Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
+            append("- Device: brand=${Build.BRAND}, device=${Build.DEVICE}, product=${Build.PRODUCT}\n")
+            append("- Hardware loop: ${hardwareLoopMetadata()}\n")
+            append("- Transport: ${transportMetadata()}\n")
+            append("- Firmware: ${firmwareMetadata()}\n")
+            append("- Protocol: Existing RP2040 serial request/response protocol\n")
+            append("- Git commit: ${BuildConfig.GIT_COMMIT} ($gitState)\n")
+            append("- Warm-up iterations: $warmUp\n")
+            append("- Measured iterations: $measured\n")
+        }
+    }
+
+    private fun hardwareLoopMetadata(): String =
+        if (useHardware) {
+            "Yes; physical USB serial transport to attached firmware"
+        } else {
+            "No; uses virtual transport and simulated firmware"
+        }
+
+    private fun transportMetadata(): String =
+        if (useHardware) "UsbSerial + RealRobotSerialPort" else "VirtualRobotPort"
+
+    private fun firmwareMetadata(): String =
+        if (useHardware) "Attached RP2040 firmware" else "MockRP2040 simulator with 5 ms processing delay"
+
+    private fun isEmulator(): Boolean =
+        Build.FINGERPRINT.startsWith("generic") ||
+                Build.FINGERPRINT.startsWith("unknown") ||
+                Build.MODEL.contains("google_sdk") ||
+                Build.MODEL.contains("Emulator") ||
+                Build.MODEL.contains("Android SDK built for x86") ||
+                Build.MANUFACTURER.contains("Genymotion") ||
+                (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")) ||
+                Build.PRODUCT == "google_sdk"
 }
