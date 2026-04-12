@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Comprehensive Demo</string>
+    <string name="behavior_override_label">Behavior</string>
+    <string name="behavior_override_normal">Normal state machine</string>
+    <string name="current_behavior_format">Current: %1$s</string>
+    <string name="current_behavior_unknown">Current: unknown</string>
+</resources>

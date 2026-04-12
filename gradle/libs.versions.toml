@@ -22,6 +22,9 @@ constraintlayout = "2.2.1"
 material = "1.13.0"
 lifecycle = "2.10.0"
 navigation = "2.9.6"
+androidxTest = "1.6.1"
+androidxTestExtJunit = "1.2.1"
+uiautomator = "2.3.0"
 
 # CameraX
 cameraX = "1.5.2"
@@ -54,6 +57,10 @@ androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmode
 # Navigation
 androidx-navigation-fragment = { module = "androidx.navigation:navigation-fragment", version.ref = "navigation" }
 androidx-navigation-ui = { module = "androidx.navigation:navigation-ui", version.ref = "navigation" }
+androidx-test-core = { module = "androidx.test:core-ktx", version.ref = "androidxTest" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit-ktx", version.ref = "androidxTestExtJunit" }
+androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
 # CameraX
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
