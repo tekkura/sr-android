@@ -52,8 +52,9 @@ internal class ComprehensiveDemoController : DemoController {
             currentBehavior == Behavior.SHOW_QR_CODE
 
     private var behaviorStartTimeMs = 0L
-    private var searchDirection = 1f
-    private var lastSearchDirectionChangeMs = 0L
+    private var searchPhase = SearchPhase.TURN_IN_PLACE
+    private var searchPhaseEndsAtMs = 0L
+    private var searchCommand = WheelCommand(0f, 0f)
     private var balanceIntegralError = 0.0
     private var lastBalanceUpdateMs = 0L
 
@@ -185,11 +186,63 @@ internal class ComprehensiveDemoController : DemoController {
     }
 
     private fun searchAround(now: Long): WheelCommand {
-        if (now - lastSearchDirectionChangeMs > SEARCH_DIRECTION_CHANGE_MS) {
-            searchDirection = if (Random.nextBoolean()) 1f else -1f
-            lastSearchDirectionChangeMs = now
+        if (now >= searchPhaseEndsAtMs) {
+            chooseNextSearchPhase(now)
         }
-        return WheelCommand(0.3f * searchDirection, -0.3f * searchDirection)
+        return searchCommand
+    }
+
+    private fun chooseNextSearchPhase(now: Long) {
+        val phaseRoll = Random.nextInt(100)
+        val turnDirection = if (Random.nextBoolean()) 1f else -1f
+        when {
+            phaseRoll < SEARCH_FORWARD_ARC_PERCENT -> {
+                searchPhase = SearchPhase.FORWARD_ARC
+                val turnBias = Random.nextInt(
+                    SEARCH_FORWARD_TURN_MIN_PERCENT,
+                    SEARCH_FORWARD_TURN_MAX_PERCENT + 1
+                ) / 100f * turnDirection
+                searchCommand = WheelCommand(
+                    SEARCH_FORWARD_SPEED - turnBias,
+                    SEARCH_FORWARD_SPEED + turnBias
+                )
+                searchPhaseEndsAtMs = now + Random.nextInt(
+                    SEARCH_FORWARD_ARC_MIN_MS,
+                    SEARCH_FORWARD_ARC_MAX_MS + 1
+                )
+            }
+
+            phaseRoll < SEARCH_FORWARD_ARC_PERCENT + SEARCH_TURN_PERCENT -> {
+                searchPhase = SearchPhase.TURN_IN_PLACE
+                searchCommand = WheelCommand(
+                    SEARCH_TURN_SPEED * turnDirection,
+                    -SEARCH_TURN_SPEED * turnDirection
+                )
+                searchPhaseEndsAtMs = now + Random.nextInt(
+                    SEARCH_TURN_MIN_MS,
+                    SEARCH_TURN_MAX_MS + 1
+                )
+            }
+
+            else -> {
+                searchPhase = SearchPhase.REVERSE_ARC
+                searchCommand = WheelCommand(
+                    -SEARCH_REVERSE_SPEED - (SEARCH_REVERSE_TURN_BIAS * turnDirection),
+                    -SEARCH_REVERSE_SPEED + (SEARCH_REVERSE_TURN_BIAS * turnDirection)
+                )
+                searchPhaseEndsAtMs = now + Random.nextInt(
+                    SEARCH_REVERSE_MIN_MS,
+                    SEARCH_REVERSE_MAX_MS + 1
+                )
+            }
+        }
+        Logger.v(
+            "ComprehensiveDemo",
+            "searchAround phase=$searchPhase " +
+                "durationMs=${searchPhaseEndsAtMs - now} " +
+                "left=${"%.3f".format(searchCommand.left)} " +
+                "right=${"%.3f".format(searchCommand.right)}"
+        )
     }
 
     private fun goCharging(state: ControllerState, now: Long): WheelCommand {
@@ -298,7 +351,20 @@ internal class ComprehensiveDemoController : DemoController {
 
     companion object {
         internal const val BATTERY_LOW_THRESHOLD = 3.65
-        private const val SEARCH_DIRECTION_CHANGE_MS = 3_500L
+        private const val SEARCH_FORWARD_ARC_PERCENT = 65
+        private const val SEARCH_TURN_PERCENT = 25
+        private const val SEARCH_FORWARD_ARC_MIN_MS = 800
+        private const val SEARCH_FORWARD_ARC_MAX_MS = 2_200
+        private const val SEARCH_TURN_MIN_MS = 250
+        private const val SEARCH_TURN_MAX_MS = 900
+        private const val SEARCH_REVERSE_MIN_MS = 300
+        private const val SEARCH_REVERSE_MAX_MS = 700
+        private const val SEARCH_FORWARD_SPEED = 0.32f
+        private const val SEARCH_FORWARD_TURN_MIN_PERCENT = 4
+        private const val SEARCH_FORWARD_TURN_MAX_PERCENT = 16
+        private const val SEARCH_TURN_SPEED = 0.30f
+        private const val SEARCH_REVERSE_SPEED = 0.24f
+        private const val SEARCH_REVERSE_TURN_BIAS = 0.10f
         private const val BALANCE_SET_POINT_DEG = 0.0
         private const val BALANCE_P_TILT = -0.11
         private const val BALANCE_I_TILT = 0.0
@@ -313,5 +379,11 @@ internal class ComprehensiveDemoController : DemoController {
         // The drive mixing in approachCommand expects positive turn input to steer left, so this
         // sign aligns screen-space error with the robot's turning convention.
         private const val SCREEN_X_TO_TURN_SIGN = -1f
+    }
+
+    private enum class SearchPhase {
+        FORWARD_ARC,
+        TURN_IN_PLACE,
+        REVERSE_ARC
     }
 }
