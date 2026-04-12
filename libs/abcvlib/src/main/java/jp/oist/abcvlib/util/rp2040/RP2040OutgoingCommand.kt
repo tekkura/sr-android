@@ -110,6 +110,10 @@ sealed class RP2040OutgoingCommand {
         override val type = AndroidToRP2040Command.RESET_STATE
     }
 
+    class GetVersion : RP2040OutgoingCommand() {
+        override val type = AndroidToRP2040Command.GET_VERSION
+    }
+
     companion object {
         // (2) 1 byte for each wheel
         const val PAYLOAD_SIZE: Int = 2

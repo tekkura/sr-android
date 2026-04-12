@@ -95,6 +95,22 @@ sealed class RP2040IncomingCommand {
                 chargeSideUSB.toBytes()
     }
 
+    class GetVersion(
+        val major: Int,
+        val minor: Int,
+        val patch: Int
+    ) : RP2040IncomingCommand() {
+        override val type = AndroidToRP2040Command.GET_VERSION
+
+        override fun serializeData(): ByteArray = ByteBuffer.allocate(3)
+            .apply {
+                put(major.toByte())
+                put(minor.toByte())
+                put(patch.toByte())
+            }
+            .array()
+    }
+
     companion object {
         private const val TAG = "RP2040Command"
 
@@ -151,6 +167,14 @@ sealed class RP2040IncomingCommand {
                         motorsState = MotorsState.from(buffer) ?: return null,
                         batteryDetails = BatteryDetails.from(buffer) ?: return null,
                         chargeSideUSB = ChargeSideUSB.from(buffer) ?: return null
+                    )
+                }
+
+                AndroidToRP2040Command.GET_VERSION -> {
+                    return GetVersion(
+                        major = data[0].toInt(),
+                        minor = data[1].toInt(),
+                        patch = data[2].toInt()
                     )
                 }
 
