@@ -54,13 +54,13 @@ class MicrophoneSubscriber(dynamic_proxy(MicrophoneDataSubscriber)):
 
 
 class ObjectDetectorSubscriber(dynamic_proxy(ObjectDetectorDataSubscriber)):
-    def onObjectsDetected(self, bitmap, image, results, inference_time, height, width):
+    def onObjectsDetected(self, bitmap, mp_image, results, inference_time,
+                          frame_captured_at_ns, detect_started_at_ns,
+                          detect_completed_at_ns, height, width):
         try:
-            category = results.get(0).getCategories().get(0)
-            try:label = category.getLabel() # tensorflow
-            except:
-                try:label = category.getCategoryName() # mediapipe
-                except:label = "unknown"
+            detection = results.get(0)
+            category = detection.categories().get(0)
+            label = category.categoryName()
             context.guiUpdater.setObjectDetectorString(label)
         except:
             context.guiUpdater.setObjectDetectorString("no objects detected")
