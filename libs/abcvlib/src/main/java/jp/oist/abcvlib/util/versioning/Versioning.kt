@@ -1,7 +1,7 @@
 package jp.oist.abcvlib.util.versioning
 
-private const val MINIMUM_SUPPORTED_VERSION = "1.0.0"
-private const val MAXIMUM_SUPPORTED_VERSION = "1.0.100"
+private const val MINIMUM_SUPPORTED_VERSION = "1.1.0"
+private const val MAXIMUM_SUPPORTED_VERSION = "1.1.100"
 private val BLACKLIST = emptyList<String>()
 
 fun checkVersionSupport(
