@@ -54,6 +54,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     private lateinit var previewView: PreviewView
     private lateinit var qrCode: QRCode
     private val controller: DemoController = ComprehensiveDemoControllerProvider.create()
+    private val robotSinger = RobotSinger()
 
     private var batteryVoltage = 0.0
     private var chargerVoltage = 0.0
@@ -71,6 +72,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     private var latestAngularVelocityDeg = 0.0
     private var latestWheelSpeedDeg = 0.0
     private var qrVisibleApplied = false
+    private var sexualDisplayAudioApplied = false
     private var wasOnCharger = false
     private var recentlyUndockedUntilMs = 0L
     private val localQrId = generateQrId()
@@ -155,6 +157,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         updateRecentlyUndocked(now)
         val state = getState(now)
         setQrVisible(controller.qrVisible)
+        setSexualDisplayAudio(activityResumed && controller.currentBehavior == Behavior.SEXUAL_DISPLAY)
         val command = controller.wheelCommand(state, now)
         if (
             controller.currentBehavior == Behavior.APPROACH_ANOTHER_ROBOT &&
@@ -416,6 +419,26 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         }
     }
 
+    private fun setSexualDisplayAudio(enabled: Boolean) {
+        if (enabled == sexualDisplayAudioApplied) {
+            return
+        }
+        sexualDisplayAudioApplied = enabled
+        if (enabled) {
+            Logger.i(
+                "ComprehensiveDemo",
+                "setSexualDisplayAudio false->true behavior=${controller.currentBehavior}"
+            )
+            robotSinger.start()
+        } else {
+            Logger.i(
+                "ComprehensiveDemo",
+                "setSexualDisplayAudio true->false behavior=${controller.currentBehavior}"
+            )
+            robotSinger.stop()
+        }
+    }
+
     private fun updateHardwareReady() {
         if (hardwareReady || !outputsReadyCompleted || !activityResumed) {
             return
@@ -432,12 +455,21 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
 
     override fun onPause() {
         activityResumed = false
+        if (sexualDisplayAudioApplied) {
+            sexualDisplayAudioApplied = false
+            robotSinger.stop()
+        }
         if (qrVisibleApplied) {
             qrVisibleApplied = false
             binding.qrFragmentView.visibility = View.GONE
             qrCode.close()
         }
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        robotSinger.stop()
+        super.onDestroy()
     }
 
     companion object {
