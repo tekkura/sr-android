@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-04-12T21:15:46Z",
+  "event_ts": "2026-04-12T21:15:30Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "24316592493",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 244,
+    "title": "Added firmware version check handshake",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/244",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": {
+    "number": 13,
+    "title": "InstrumentationTests",
+    "state": "open",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/13",
+    "description": "Milestone spec moved to: [docs/milestones/InstrumentationTests.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/InstrumentationTests.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/244",
+  "event_id": "c1c2f820982c0927a73360ddeaf281c58d3b5a087e8f8ca6d4f4c20ac2409494"
+}
