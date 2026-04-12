@@ -58,14 +58,10 @@ internal class ComprehensiveDemoController : DemoController {
     private var balanceIntegralError = 0.0
     private var lastBalanceUpdateMs = 0L
 
-    override fun update(state: ControllerState, now: Long) {
-        update(state, now, forcedBehavior = null)
-    }
-
-    internal fun update(
+    override fun update(
         state: ControllerState,
         now: Long,
-        forcedBehavior: Behavior? = null
+        forcedBehavior: Behavior?
     ) {
         selectBehavior(state, now, forcedBehavior)
     }
@@ -93,8 +89,9 @@ internal class ComprehensiveDemoController : DemoController {
         forcedBehavior: Behavior?
     ) {
         val previousBehavior = currentBehavior
+        val applicableForcedBehavior = forcedBehavior?.takeIf { it.hasRequiredTarget(state) }
         val nextBehavior = when {
-            forcedBehavior != null -> forcedBehavior
+            applicableForcedBehavior != null -> applicableForcedBehavior
             currentBehavior == Behavior.GET_UP_AND_BALANCE && state.recentlyUndocked ->
                 currentBehavior
 
@@ -115,6 +112,7 @@ internal class ComprehensiveDemoController : DemoController {
                 "selectBehavior previous=$previousBehavior next=$nextBehavior " +
                 "changed=${nextBehavior != previousBehavior} " +
                 "forced=${forcedBehavior?.name ?: "none"} " +
+                "forcedApplicable=${applicableForcedBehavior != null} " +
                 "onCharger=${state.onCharger} " +
                 "recentlyUndocked=${state.recentlyUndocked} " +
                 "batteryVoltage=${"%.3f".format(state.batteryVoltage)} " +
@@ -129,6 +127,16 @@ internal class ComprehensiveDemoController : DemoController {
         behaviorStartTimeMs = now
         if (nextBehavior == Behavior.GET_UP_AND_BALANCE) {
             resetBalanceController()
+        }
+    }
+
+    private fun Behavior.hasRequiredTarget(state: ControllerState): Boolean {
+        return when (this) {
+            Behavior.GO_CHARGING -> state.puckDetection != null
+            Behavior.APPROACH_ANOTHER_ROBOT,
+            Behavior.SHOW_QR_CODE,
+            Behavior.ACCEPT_QR_CODE -> state.robotDetection != null
+            else -> true
         }
     }
 

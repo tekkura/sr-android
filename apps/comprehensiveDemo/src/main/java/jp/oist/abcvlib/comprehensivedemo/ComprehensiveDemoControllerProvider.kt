@@ -3,7 +3,7 @@ package jp.oist.abcvlib.comprehensivedemo
 internal interface DemoController {
     val currentBehavior: Behavior
     val qrVisible: Boolean
-    fun update(state: ControllerState, now: Long)
+    fun update(state: ControllerState, now: Long, forcedBehavior: Behavior? = null)
     fun wheelCommand(state: ControllerState, now: Long): WheelCommand
 }
 

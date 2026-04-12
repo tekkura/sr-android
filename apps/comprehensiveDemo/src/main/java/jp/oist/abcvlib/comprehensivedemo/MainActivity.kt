@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.lifecycleScope
 import com.google.mediapipe.framework.image.MPImage
@@ -55,6 +57,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     private lateinit var qrCode: QRCode
     private val controller: DemoController = ComprehensiveDemoControllerProvider.create()
     private val robotSinger = RobotSinger()
+    private lateinit var behaviorOverrideOptions: List<BehaviorOverrideOption>
 
     private var batteryVoltage = 0.0
     private var chargerVoltage = 0.0
@@ -79,6 +82,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     private var currentQrColor = generateInitialQrColor()
     private var lastProcessedRemoteQrPayload: String? = null
     private var lastQrBlendAtMs = 0L
+    private var forcedBehavior: Behavior? = null
     @Volatile
     private var outputsReadyCompleted = false
     @Volatile
@@ -96,6 +100,8 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         boundingBoxView = binding.boundingBoxView
         qrCode = QRCode(supportFragmentManager, R.id.qrFragmentView)
         binding.qrFragmentView.visibility = View.GONE
+        setupBehaviorOverrideSelector()
+        updateCurrentBehaviorStatus()
         Logger.i(
             "ComprehensiveDemo",
             "Initial QR payload ${currentQrPayload()} id=$localQrId color=${currentQrColorHex()}"
@@ -356,7 +362,59 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     private fun updateBehavior() {
         val now = System.currentTimeMillis()
         updateRecentlyUndocked(now)
-        controller.update(getState(now), now)
+        controller.update(getState(now), now, forcedBehavior)
+        updateCurrentBehaviorStatus()
+    }
+
+    private fun updateCurrentBehaviorStatus() {
+        runOnUiThread {
+            binding.currentBehaviorText.text = getString(
+                R.string.current_behavior_format,
+                controller.currentBehavior.name
+            )
+        }
+    }
+
+    private fun setupBehaviorOverrideSelector() {
+        behaviorOverrideOptions = listOf(
+            BehaviorOverrideOption(
+                getString(R.string.behavior_override_normal),
+                behavior = null
+            )
+        ) + Behavior.entries.map { behavior ->
+            BehaviorOverrideOption(behavior.name, behavior)
+        }
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            behaviorOverrideOptions
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.behaviorOverrideSpinner.adapter = adapter
+        binding.behaviorOverrideSpinner.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    val selectedBehavior = behaviorOverrideOptions[position].behavior
+                    if (selectedBehavior == forcedBehavior) {
+                        return
+                    }
+                    forcedBehavior = selectedBehavior
+                    Logger.i(
+                        "ComprehensiveDemo",
+                        "Behavior override selected ${selectedBehavior?.name ?: "normal"}"
+                    )
+                    updateBehavior()
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) {
+                    forcedBehavior = null
+                }
+            }
     }
 
     private fun getState(now: Long): ControllerState {
@@ -584,4 +642,11 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         val id: String,
         val color: Int
     )
+}
+
+private data class BehaviorOverrideOption(
+    val label: String,
+    val behavior: Behavior?
+) {
+    override fun toString(): String = label
 }

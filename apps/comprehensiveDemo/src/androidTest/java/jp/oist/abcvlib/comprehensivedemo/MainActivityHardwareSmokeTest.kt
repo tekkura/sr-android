@@ -104,7 +104,7 @@ class MainActivityHardwareSmokeTest {
         override val qrVisible: Boolean
             get() = delegate.qrVisible
 
-        override fun update(state: ControllerState, now: Long) {
+        override fun update(state: ControllerState, now: Long, forcedBehavior: Behavior?) {
             if (state.hardwareReady && readyAtMs == null) {
                 readyAtMs = now
                 hardwareReadySeen.set(true)
