@@ -36,6 +36,7 @@ open class UsbSerial @Throws(IOException::class) constructor(
 ) : SerialInputOutputManager.Listener {
 
     private lateinit var _port: RobotSerialPort
+    val isPortReal get() = _port is RealRobotSerialPort
 
     private val timeout: Int = 1000 //1s
     private var badPacketCount = 0
