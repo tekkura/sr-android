@@ -5,6 +5,7 @@ enum class AndroidToRP2040Command(val hexValue: Byte) {
     SET_MOTOR_LEVELS(0x01.toByte()),
     RESET_STATE(0x02.toByte()),
     GET_STATE(0x03.toByte()),
+    GET_VERSION(0x06.toByte()),
     NACK(0xFC.toByte()),
     ACK(0xFD.toByte()),
     START(0xFE.toByte()),
