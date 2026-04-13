@@ -109,7 +109,7 @@ sealed class RP2040IncomingCommand : RP2040Command() {
 
                 AndroidToRP2040Command.GET_STATE -> {
                     val buffer = ByteBuffer.wrap(data).apply {
-                        order(ByteOrder.BIG_ENDIAN)
+                        order(ByteOrder.LITTLE_ENDIAN)
                     }
 
                     return GetState(
@@ -121,7 +121,7 @@ sealed class RP2040IncomingCommand : RP2040Command() {
 
                 AndroidToRP2040Command.SET_MOTOR_LEVELS -> {
                     val buffer = ByteBuffer.wrap(data).apply {
-                        order(ByteOrder.BIG_ENDIAN)
+                        order(ByteOrder.LITTLE_ENDIAN)
                     }
 
                     return SetMotorLevels(
@@ -133,7 +133,7 @@ sealed class RP2040IncomingCommand : RP2040Command() {
 
                 AndroidToRP2040Command.RESET_STATE -> {
                     val buffer = ByteBuffer.wrap(data).apply {
-                        order(ByteOrder.BIG_ENDIAN)
+                        order(ByteOrder.LITTLE_ENDIAN)
                     }
 
                     return ResetState(

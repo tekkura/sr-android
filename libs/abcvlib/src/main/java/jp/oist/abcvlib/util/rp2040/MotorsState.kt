@@ -26,7 +26,7 @@ class MotorsState {
 
     fun toBytes() : ByteArray {
         val buffer = ByteBuffer.allocate(12).apply {
-            order(ByteOrder.BIG_ENDIAN)
+            order(ByteOrder.LITTLE_ENDIAN)
             put(controlValues.left)
             put(controlValues.right)
             put(faults.left)
