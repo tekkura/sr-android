@@ -1,6 +1,4 @@
 .idea/
-src/androidTest
-src/test
 build/intermediates
 build/generated
 build/tmp

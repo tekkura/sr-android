@@ -69,7 +69,13 @@ docker compose -f "$COMPOSE_FILE" up -d --build rosbridge pub echo
 sleep 3
 
 "$ADB_BIN" logcat -c
-"$ROOT_DIR/gradlew" :rosbridgeTest:installDebug
+"$ROOT_DIR/gradlew" :rosbridgeTest:assembleDebug
+ROSBRIDGE_APK="$ROOT_DIR/apps/rosbridgeTest/build/outputs/apk/debug/rosbridgeTest-debug.apk"
+if [[ ! -f "$ROSBRIDGE_APK" ]]; then
+    echo "Unable to find built APK: $ROSBRIDGE_APK" >&2
+    exit 1
+fi
+"$ADB_BIN" install -r -d "$ROSBRIDGE_APK"
 "$ADB_BIN" shell am force-stop "$PACKAGE_NAME" || true
 "$ADB_BIN" shell am start -n "$PACKAGE_NAME/$ACTIVITY_NAME" \
     --es ROS_PC_IP "$ROS_PC_IP" \

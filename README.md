@@ -88,6 +88,47 @@ From here you can start building the project. There is also a terminal applicati
 All state variables are published by the robot and can be subscribed to either directly within your MainActivity class (See apps/basicSubscriber) or via a TimeStepDataBuffer (See apps/basicAssembler) for examples of each. The following diagram shows the architecture of this system.
 ![Subscriber/Publisher Architecture](./media/publisher-subscriber.png)
 
+## Communication Protocol
+
+The communication between the Android phone and the robot firmware utilizes a custom packet-based protocol over USB-Serial.
+
+### Packet Structure
+Packets are framed with start and stop markers to ensure integrity during streaming:
+- **START Marker**: `0xFE`
+- **Command Type**: 1 byte identifying the command.
+- **Payload Size**: 2 bytes (Little Endian) specifying the data length.
+- **Payload**: Variable length data.
+- **STOP Marker**: `0xFF`
+
+### PacketBuffer API
+The `PacketBuffer` class is the primary abstraction for parsing incoming serial data. It manages an internal state machine to handle partial packets and multiple packets received in a single transmission.
+
+#### Usage
+```kotlin
+val packetBuffer = PacketBuffer()
+
+// In the serial read callback:
+packetBuffer.consume(incomingBytes) { result ->
+    when (result) {
+        is PacketBuffer.ParseResult.ReceivedPacket -> {
+            val command = result.command
+            // Handle the parsed RP2040IncomingCommand
+        }
+        is PacketBuffer.ParseResult.ReceivedErrorPacket -> {
+            // Handled malformed packet or framing error. 
+            // The parser will automatically try to resynchronize with the next START marker.
+        }
+        is PacketBuffer.ParseResult.Overflow -> {
+            // Internal buffer limit reached. 
+            // The parser will clear its state and wait for a fresh START marker.
+        }
+        is PacketBuffer.ParseResult.NotEnoughData -> {
+            // Incomplete packet; the parser retains current state and waits for more bytes.
+        }
+    }
+}
+```
+
 ## Overview of API
 Three demo applications exemplify the basic use of the API:
 1. backAndForth
@@ -104,6 +145,36 @@ Three demo applications exemplify the basic use of the API:
     i. Synchronized get/set methods
     ii. Circular buffer for writing data, with read data separately
   c. Adds a high-level RL framework (StateSpace, ActionSpace, etc.)
+
+## Testing
+
+The framework includes a comprehensive test suite to ensure reliability and performance.
+
+### 1. Unit Tests
+These tests verify individual components (e.g., packet parsing, command serialization) and run on your local machine.
+
+```bash
+./gradlew :abcvlib:testDebugUnitTest
+```
+
+### 2. Instrumentation Tests
+These tests verify end-to-end communication using a mocked transport layer to simulate robot hardware. They require a connected Android device or emulator.
+
+```bash
+./gradlew :abcvlib:connectedDebugAndroidTest
+```
+
+### 3. Latency Benchmark
+A specialized test to measure communication round-trip time and identify bottlenecks. For details on the methodology and metrics, see [docs/BENCHMARK.md](docs/BENCHMARK.md).
+
+```bash
+# Run the benchmark
+./gradlew :abcvlib:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=jp.oist.abcvlib.util.latency.LatencyBenchmark"
+
+# Export results to docs/BENCHMARK.md
+./util/pull_benchmark.bat  # (Windows)
+./util/pull_benchmark.sh   # (Linux/macOS)
+```
 
 ## Pairing with a smartphone via wireless debugging
 1. Ensure your smartphone is connected to the same network as your computer

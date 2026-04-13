@@ -5,35 +5,33 @@ import com.hoho.android.usbserial.driver.SerialTimeoutException
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.util.HexBinConverters.bytesToHex
+import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
+import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
+import jp.oist.abcvlib.util.rp2040.RP2040State
+import jp.oist.abcvlib.util.rp2040.StatusCommand
 import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.abs
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Class to manage request-response patter between Android phone and USB Serial connection
  * over a separate thread.
- * send()
- * onReceive()
  */
-class SerialCommManager @JvmOverloads constructor(
-    private val usbSerial: UsbSerial,
+open class SerialCommManager @JvmOverloads constructor(
+    protected val usbSerial: UsbSerial,
     batteryData: BatteryData? = null,
     wheelData: WheelData? = null
 ) {
-    private val androidToRP2040Packet = AndroidToRP2040Packet()
     private val rp2040State: RP2040State?
 
-    private var command: ByteArray? = null
+    private var command: RP2040OutgoingCommand? = null
     private var queuedMotorLevelsAtMs: Long = 0L
-    private val commandLock = Object()
+    protected val commandLock = Object()
     private val lifecycleLock = Any()
     private var runContext: RunContext? = null
 
-    private var startTimeAndroid: Long = 0
+    protected var startTimeAndroid: Long = 0
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
 
@@ -51,23 +49,27 @@ class SerialCommManager @JvmOverloads constructor(
     }
 
 
-    private class RunContext(
+    protected class RunContext(
         val stopRequested: AtomicBoolean = AtomicBoolean(false),
-        var writerExecutor: ScheduledExecutorServiceWithException? = null
+        var writerExecutor: ScheduledExecutorServiceWithException? = null,
+        var delay: AtomicLong = AtomicLong(10)
     )
 
-    private fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
+    protected open fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
         startTimeAndroid = System.nanoTime()
         while (!context.stopRequested.get()) {
-            val nextCommand: ByteArray? = try {
+            val nextCommand = try {
                 synchronized(commandLock) {
                     // this results in getState commands every 10ms unless another command
                     // (e.g. setMotorLevels) is set, which case wait will return immediately
-                    commandLock.wait(10)
+                    if (command == null)
+                        commandLock.wait(context.delay.get())
+
                     if (context.stopRequested.get()) {
                         return@synchronized null
                     }
-                    val localCommand = command ?: generateGetStateCmd()
+
+                    val localCommand = command ?: RP2040OutgoingCommand.GetState()
                     command = null
                     localCommand
                 }
@@ -76,14 +78,14 @@ class SerialCommManager @JvmOverloads constructor(
             }
 
             if (nextCommand == null) {
-                break
+                continue
             }
 
             if (queuedMotorLevelsAtMs > 0L) {
                 ControlLatencyTrace.queueToSendMs = SystemClock.uptimeMillis() - queuedMotorLevelsAtMs
                 queuedMotorLevelsAtMs = 0L
             }
-            sendPacket(nextCommand)
+            sendCommand(nextCommand)
             cnt++
             if (cnt == 100) {
                 durationAndroid = (System.nanoTime() - startTimeAndroid) / 100
@@ -109,16 +111,18 @@ class SerialCommManager @JvmOverloads constructor(
                 return
             }
 
-            val context = RunContext()
+            val context = RunContext().apply {
+                this.delay.set(delay)
+            }
+
             val priorityFactory = ProcessPriorityThreadFactory(
                 Thread.MAX_PRIORITY,
                 "SerialCommManager_Android2Pi"
             )
             context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory).also {
-                it.scheduleWithFixedDelay(
+                it.schedule(
                     buildAndroid2PiWriter(context),
                     initialDelay,
-                    delay,
                     TimeUnit.MILLISECONDS
                 )
             }
@@ -142,64 +146,47 @@ class SerialCommManager @JvmOverloads constructor(
     //TODO paseFifoPacket() should call the various SerialResponseListener methods.
     internal fun parseFifoPacket() {
         var result = 0
-        val fifoQueuePair: FifoQueuePair?
+        val command: RP2040IncomingCommand?
         var packet: ByteArray?
         // Run the command on a thread handler to allow the queue to keep being added to
         synchronized(usbSerial.fifoQueue) {
-            fifoQueuePair = usbSerial.fifoQueue.poll()
+            command = usbSerial.fifoQueue.poll()
         }
         // Check if there is a packet in the queue (fifoQueue
-        if (fifoQueuePair != null) {
-            packet = fifoQueuePair.byteArray
-
+        if (command != null) {
             // Log packet as an array of hex bytes
-            Logger.i(Thread.currentThread().name, "Received packet: ${bytesToHex(packet)}")
+            Logger.i(Thread.currentThread().name, "Received packet: ${bytesToHex(command.toBytes())}")
 
             // The first byte after the start mark is the command
-            val command = fifoQueuePair.androidToRP2040Command
-            Logger.i(Thread.currentThread().name, "Received $command from pi")
-            if (command == null) {
-                Logger.e("Pi2AndroidReader", "Command not found")
-                return
-            }
+            Logger.i(Thread.currentThread().name, "Received ${command.type} from pi")
+
             when (command) {
-                AndroidToRP2040Command.GET_LOG -> {
-                    parseLog(packet)
+                is RP2040IncomingCommand.GetLog -> {
+                    parseLog(command)
                     result = 1
                 }
 
-                AndroidToRP2040Command.SET_MOTOR_LEVELS,
-                AndroidToRP2040Command.GET_STATE,
-                AndroidToRP2040Command.RESET_STATE -> {
-                    parseStatus(packet)
+                // Covers SetMotorState, ResetState and GetState commands
+                is StatusCommand -> {
+                    parseStatus(command)
                     result = 1
                 }
 
-                AndroidToRP2040Command.NACK -> {
-                    onNack(packet)
+                is RP2040IncomingCommand.Nack -> {
+                    onNack(command.data)
                     Logger.w("Pi2AndroidReader", "Nack issued from device")
                     result = -1
                 }
 
-                AndroidToRP2040Command.ACK -> {
-                    onAck(packet)
+                is RP2040IncomingCommand.Ack -> {
+                    onAck(command.data)
                     result = 1
                     Logger.d("Pi2AndroidReader", "parseAck")
                 }
 
-                AndroidToRP2040Command.START -> {
-                    Logger.e("Pi2AndroidReader", "parseStart. Start should never be a command")
-                    result = -1
-                }
-
-                AndroidToRP2040Command.STOP -> {
-                    Logger.e("Pi2AndroidReader", "parseStop. Stop should never be a command")
-                    result = -1
-                }
-
                 else -> {
-                    Logger.e("Pi2AndroidReader", "parsePacket. Command not found")
                     result = -1
+                    Logger.e("Pi2AndroidReader", "Unknown command received")
                 }
             }
         } else {
@@ -208,6 +195,20 @@ class SerialCommManager @JvmOverloads constructor(
         }
     }
 
+    protected open fun sendCommand(command: RP2040OutgoingCommand): Int {
+        try {
+            this.usbSerial.send(command, 10000)
+        } catch (e: SerialTimeoutException) {
+            throw RuntimeException(
+                "SerialTimeoutException on send. The serial connection " +
+                        "with the rp2040 is not working as expected and timed out"
+            )
+        } catch (e: IOException) {
+            throw RuntimeException(e)
+        }
+        receivePacket()
+        return 0
+    }
 
     /**
      * Do not use this method unless you are very familiar with the protocol on both the rp2040 and
@@ -218,9 +219,9 @@ class SerialCommManager @JvmOverloads constructor(
      * @return 0 if successful, -1 if mResponse is not large enough to hold all response and the stop mark,
      * -2 if SerialTimeoutException on send
      */
-    private fun sendPacket(bytes: ByteArray): Int {
-        require(bytes.size == AndroidToRP2040Packet.packetSize) {
-            "Input byte array must have a length of " + AndroidToRP2040Packet.packetSize
+    protected fun sendPacket(bytes: ByteArray): Int {
+        require(bytes.size == RP2040OutgoingCommand.PACKET_SIZE) {
+            "Input byte array must have a length of " + RP2040OutgoingCommand.PACKET_SIZE
         }
         try {
             this.usbSerial.send(bytes, 10000)
@@ -236,100 +237,16 @@ class SerialCommManager @JvmOverloads constructor(
         return 0
     }
 
-    private fun receivePacket() {
+    protected open fun receivePacket() {
         val receivedStatus = usbSerial.awaitPacketReceived(10000)
+
         if (receivedStatus == 1) {
             //Note this is actually calling the functions like parseLog, parseStatus, etc.
             parseFifoPacket()
         }
     }
 
-    private fun generateSetMotorLevels(
-        androidToRP2040Packet: AndroidToRP2040Packet,
-        left: Float,
-        right: Float,
-        leftBrake: Boolean,
-        rightBrake: Boolean
-    ): ByteArray {
 
-        androidToRP2040Packet.clear()
-        androidToRP2040Packet.setCommand(AndroidToRP2040Command.SET_MOTOR_LEVELS)
-
-        val LOWER_LIMIT = 0.49f
-
-        // Normalize [-1,1] to [-5.06,5.06] as this is the range accepted by the chip
-        // Note - signs are to invert the direction of the motors as the motors are mounted in a
-        // polar opposite direction.
-        val leftNrm = -left * 5.06f
-        val rightNrm = -right * 5.06f
-
-        val DRV8830_IN1_BIT: Byte = 0
-        val DRV8830_IN2_BIT: Byte = 1
-
-        val voltages = floatArrayOf(leftNrm, rightNrm)
-        val abs_voltages = FloatArray(2)
-        val control_values = ByteArray(2)
-        val brakes = booleanArrayOf(leftBrake, rightBrake)
-
-        for (i in voltages.indices) {
-            val voltage = voltages[i] // Get the current voltage
-            control_values[i] = 0 // Reset the control value
-            // Exclude or truncate voltages between -0.48V and 0.48V to 0V
-            // Changing to 0.49 as the scaling function would result in 0x05h for 0.48V and
-            // cause the rp2040 to perform unexpectedly as it is a reserved register value
-            if (voltage >= -LOWER_LIMIT && voltage <= LOWER_LIMIT) {
-                voltages[i] = 0.0f // Update the value in the array
-            } else {
-                // Clamp the voltage within the valid range
-                // Need to clamp here rather than at byte representation to prevent overflow
-                if (voltages[i] < -5.06) {
-                    voltages[i] = -5.06f // Update the value in the array
-                } else if (voltages[i] > 5.06) {
-                    voltages[i] = 5.06f // Update the value in the array
-                }
-
-                abs_voltages[i] = abs(voltages[i])
-                // Convert voltage to control value (-0x3F to 0x3F)
-                control_values[i] = (((64 * abs_voltages[i]) / (4 * 1.285)) - 1).toInt().toByte()
-                // voltage is defined by bits 2-7. Shift the control value to the correct position
-                control_values[i] = (control_values[i].toInt() shl 2).toByte()
-            }
-
-
-            // Set the IN1 and IN2 bits based on the sign of the voltage
-            var cv = control_values[i].toInt()
-            if (brakes[i]) {
-                cv = cv or (1 shl DRV8830_IN1_BIT.toInt())
-                cv = cv or (1 shl DRV8830_IN2_BIT.toInt())
-            } else {
-                if (voltage < 0) {
-                    cv = cv or (1 shl DRV8830_IN1_BIT.toInt())
-                    cv = cv and (1 shl DRV8830_IN2_BIT.toInt()).inv()
-                } else if (voltage > 0) {
-                    cv = cv or (1 shl DRV8830_IN2_BIT.toInt())
-                    cv = cv and (1 shl DRV8830_IN1_BIT.toInt()).inv()
-                } else {
-                    // Standby/Coast: Both IN1 and IN2 set to 0
-                    cv = 0
-                }
-            }
-            control_values[i] = cv.toByte()
-            androidToRP2040Packet.payload.put(control_values[i])
-        }
-        return androidToRP2040Packet.packetToBytes()
-    }
-
-    private fun generateGetLogCmd(): ByteArray {
-        androidToRP2040Packet.clear()
-        androidToRP2040Packet.setCommand(AndroidToRP2040Command.GET_LOG)
-        return androidToRP2040Packet.packetToBytes()
-    }
-
-    private fun generateGetStateCmd(): ByteArray {
-        androidToRP2040Packet.clear()
-        androidToRP2040Packet.setCommand(AndroidToRP2040Command.GET_STATE)
-        return androidToRP2040Packet.packetToBytes()
-    }
 
     //-------------------------------------------------------------------///
     // ---- API function calls for requesting something from the mcu ----///
@@ -355,9 +272,14 @@ class SerialCommManager @JvmOverloads constructor(
             if (activeContext.stopRequested.get()) {
                 return
             }
-            command =
-                generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
             queuedMotorLevelsAtMs = SystemClock.uptimeMillis()
+            command = RP2040OutgoingCommand.SetMotorLevels(
+                left = left,
+                right = right,
+                leftBrake = leftBrake,
+                rightBrake = rightBrake
+            )
+
             commandLock.notify()
         }
     }
@@ -374,7 +296,7 @@ class SerialCommManager @JvmOverloads constructor(
             if (activeContext.stopRequested.get()) {
                 return
             }
-            command = generateGetLogCmd()
+            command = RP2040OutgoingCommand.GetLog()
             commandLock.notify()
         }
     }
@@ -383,56 +305,48 @@ class SerialCommManager @JvmOverloads constructor(
     // ---- Handlers for when data is returned from the mcu ----///
     // ---- Override these defaults with your own handlers -----///
     //----------------------------------------------------------///
-    private fun parseLog(bytes: ByteArray) {
+    private fun parseLog(command: RP2040IncomingCommand.GetLog) {
         Logger.d("serial", "parseLogs")
-        val string = String(bytes, StandardCharsets.US_ASCII)
-        val lines = string.lines()
-        for (line in lines) {
-            Logger.i("rp2040Log", line)
+        command.logEntries.forEach {
+            Logger.i("rp2040Log", it)
         }
     }
 
-    private fun parseStatus(bytes: ByteArray) {
+    protected open fun parseStatus(command: StatusCommand) : Boolean {
         Logger.d("serial", "parseStatus")
-        if (rp2040State != null) {
-            val byteBuffer = ByteBuffer.wrap(bytes)
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
-            if (rp2040State.motorsState.controlValues.left != byteBuffer.get()) {
-                //Logger.e("serial", "Left control value mismatch");
-            }
-            if (rp2040State.motorsState.controlValues.right != byteBuffer.get()) {
-                //Logger.e("serial", "Right control value mismatch");
-            }
-            rp2040State.motorsState.faults.left = byteBuffer.get()
-            rp2040State.motorsState.faults.right = byteBuffer.get()
-            Logger.v("serial", "left motor fault: " + rp2040State.motorsState.faults.left)
-            Logger.v("serial", "right motor fault: " + rp2040State.motorsState.faults.right)
-            rp2040State.motorsState.encoderCounts.left = byteBuffer.getInt()
-            rp2040State.motorsState.encoderCounts.right = byteBuffer.getInt()
-            Logger.v("serial", "Left encoder count: " + rp2040State.motorsState.encoderCounts.left)
-            Logger.v(
-                "serial",
-                "Right encoder count: " + rp2040State.motorsState.encoderCounts.right
-            )
-            rp2040State.batteryDetails.voltageMv = byteBuffer.getShort()
-            rp2040State.batteryDetails.safetyStatus = byteBuffer.get()
-            rp2040State.batteryDetails.temperature = byteBuffer.getShort()
-            rp2040State.batteryDetails.stateOfHealth = byteBuffer.get()
-            rp2040State.batteryDetails.flags = byteBuffer.getShort()
-            Logger.v("serial", "Battery voltage: " + rp2040State.batteryDetails.voltageMv)
-            Logger.v("serial", "Battery voltage in V: " + rp2040State.batteryDetails.getVoltage())
-            rp2040State.chargeSideUSB.max77976_chg_details = byteBuffer.getInt()
-            rp2040State.chargeSideUSB.ncp3901_wireless_charger_attached =
-                byteBuffer.get().toInt() == 1
-            Logger.v(
-                "serial",
-                "ncp3901_wireless_charger_attached: " + rp2040State.chargeSideUSB.isWirelessChargerAttached()
-            )
-            rp2040State.chargeSideUSB.usb_charger_voltage = byteBuffer.getShort()
-            rp2040State.chargeSideUSB.wireless_charger_vrect = byteBuffer.getShort()
-            // Logger.v("serial", "usb_charger_voltage: " + rp2040State.chargeSideUSB.usb_charger_voltage);
-            rp2040State.updatePublishers()
+        if (rp2040State == null)
+            return false
+
+        if (rp2040State.motorsState.controlValues.left != command.motorsState.controlValues.left) {
+            //Logger.e("serial", "Left control value mismatch");
         }
+        if (rp2040State.motorsState.controlValues.right != command.motorsState.controlValues.right) {
+            //Logger.e("serial", "Right control value mismatch");
+        }
+        rp2040State.motorsState.faults = command.motorsState.faults
+        Logger.v("serial", "left motor fault: " + rp2040State.motorsState.faults.left)
+        Logger.v("serial", "right motor fault: " + rp2040State.motorsState.faults.right)
+
+        rp2040State.motorsState.encoderCounts = command.motorsState.encoderCounts
+        Logger.v("serial", "Left encoder count: " + rp2040State.motorsState.encoderCounts.left)
+        Logger.v(
+            "serial",
+            "Right encoder count: " + rp2040State.motorsState.encoderCounts.right
+        )
+
+        rp2040State.batteryDetails = command.batteryDetails
+        Logger.v("serial", "Battery voltage: " + rp2040State.batteryDetails.voltageMv)
+        Logger.v("serial", "Battery voltage in V: " + rp2040State.batteryDetails.getVoltage())
+
+        rp2040State.chargeSideUSB = command.chargeSideUSB
+        Logger.v(
+            "serial",
+            "ncp3901_wireless_charger_attached: " + rp2040State.chargeSideUSB.isWirelessChargerAttached()
+        )
+        // Logger.v("serial", "usb_charger_voltage: " + rp2040State.chargeSideUSB.usb_charger_voltage);
+        rp2040State.updatePublishers()
+
+        return true
     }
 
     private fun onNack(bytes: ByteArray) {
