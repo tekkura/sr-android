@@ -107,7 +107,7 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                     }.array().toCrc()
 
                     if (_buffer.getShort(endPos) != crc) {
-                        Logger.e("verifyPacket", "Data CRC mismatch: ${_buffer.getShort(endPos)} != ${data.toCrc()}")
+                        Logger.e("verifyPacket", "Data CRC mismatch: ${_buffer.getShort(endPos)} != $crc")
                         onResult(ParseResult.ReceivedErrorPacket)
                         resync()
                         continue
