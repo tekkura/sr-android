@@ -25,7 +25,7 @@ class BatteryDetails {
 
     fun toBytes() : ByteArray {
         val buffer = ByteBuffer.allocate(8).apply {
-            order(ByteOrder.BIG_ENDIAN)
+            order(ByteOrder.LITTLE_ENDIAN)
             putShort(voltageMv)
             put(safetyStatus)
             putShort(temperature)

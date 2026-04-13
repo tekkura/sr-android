@@ -110,7 +110,7 @@ class RP2040IncomingCommandTest {
         val payload = extractPayload(bytes)
         
         // Verify individual bytes in the serialized array
-        val buffer = ByteBuffer.wrap(payload).order(ByteOrder.BIG_ENDIAN)
+        val buffer = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN)
         assertEquals(motors.controlValues.left, buffer.get())
         assertEquals(motors.controlValues.right, buffer.get())
         assertEquals(motors.faults.left, buffer.get())
