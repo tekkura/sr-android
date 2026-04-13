@@ -19,7 +19,7 @@ object ByteArrayExtensions {
     fun ByteArray.toCrc(): Short {
         var crc = CRC_INITIAL
         forEach {
-            val intRepresentation = it.toInt() or 0xFF
+            val intRepresentation = it.toInt() and 0xFF
             crc = crc xor (intRepresentation shl 8)
 
             repeat(8) {
@@ -27,7 +27,7 @@ object ByteArrayExtensions {
                     (crc shl 1) xor CRC_POLYNOMIAL
                 } else {
                     crc shl 1
-                }
+                } and 0xFFFF
             }
         }
 
