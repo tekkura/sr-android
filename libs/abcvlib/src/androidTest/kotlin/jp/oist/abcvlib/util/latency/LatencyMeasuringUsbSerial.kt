@@ -40,12 +40,11 @@ internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor
     }
 
     override fun onCompletePacketReceived(command: RP2040IncomingCommand) {
-        if (command !is RP2040IncomingCommand.SetMotorLevels)
-            return
-
         super.onCompletePacketReceived(command)
 
-        // T6: Packet Queue Entry
-        BenchmarkClock.mark(currentIteration.get(), 6)
+        if (command is RP2040IncomingCommand.SetMotorLevels) {
+            // T6: Packet Queue Entry
+            BenchmarkClock.mark(currentIteration.get(), 6)
+        }
     }
 }
