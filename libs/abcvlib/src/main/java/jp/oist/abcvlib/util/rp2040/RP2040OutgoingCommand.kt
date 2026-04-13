@@ -93,6 +93,7 @@ sealed class RP2040OutgoingCommand : RP2040Command() {
 
     class GetVersion : RP2040OutgoingCommand() {
         override val type = AndroidToRP2040Command.GET_VERSION
+        override fun serializeData() = ByteArray(0)
     }
 
     companion object {
