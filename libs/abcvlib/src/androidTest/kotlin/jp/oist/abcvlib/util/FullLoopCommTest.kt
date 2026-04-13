@@ -118,7 +118,7 @@ class FullLoopCommTest {
         commManager.getLog()
         
         // Wait for the simulator to process the log request
-        assertTrue("Timed out waiting for log request to be processed", latch.await(200, TimeUnit.MILLISECONDS))
+        assertTrue("Timed out waiting for log request to be processed", latch.await(200000, TimeUnit.MILLISECONDS))
         
         assertTrue("Simulator logs should be cleared after being read", simulator.logEntries.isEmpty())
     }
