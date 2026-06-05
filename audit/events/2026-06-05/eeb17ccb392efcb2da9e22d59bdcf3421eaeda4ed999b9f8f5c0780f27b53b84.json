@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-05T13:48:20Z",
+  "event_ts": "2026-06-05T13:48:01Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "GeorgeChernyshov",
+  "run_id": "27018693640",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 245,
+    "title": "[Issue]: List all necessary tests for CI",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/245",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/245",
+  "event_id": "eeb17ccb392efcb2da9e22d59bdcf3421eaeda4ed999b9f8f5c0780f27b53b84"
+}
