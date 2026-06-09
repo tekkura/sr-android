@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-06-09T17:18:20Z",
+  "event_ts": "2026-06-09T17:17:37Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "edited",
+  "actor": "GeorgeChernyshov",
+  "run_id": "27223343899",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 247,
+    "title": "[Issue]: Handle differences in packet structure in LatencyBenchmark test",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/247",
+    "milestone": {
+      "number": 15,
+      "title": "FirmwareBenchmarking"
+    }
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": {
+    "body": {
+      "from": ""
+    }
+  },
+  "severity": "HIGH",
+  "target_url": "https://github.com/tekkura/sr-android/issues/247",
+  "event_id": "8ab7d458b9ea7e84ae300312234853f6e169293ddcc5e49785340a977ef4bba9"
+}
