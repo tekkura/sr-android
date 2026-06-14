@@ -7,6 +7,9 @@ import android.view.WindowManager
 import android.widget.Button
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import jp.oist.abcvlib.core.outputs.Outputs
 import jp.oist.abcvlib.util.Logger
@@ -51,9 +54,29 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         isCreated = true
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         usbInitialize()
         super.onCreate(savedInstanceState)
+
+        val contentView = findViewById<android.view.View>(android.R.id.content)
+        contentView?.let { view ->
+            val initialPaddingLeft = view.paddingLeft
+            val initialPaddingTop = view.paddingTop
+            val initialPaddingRight = view.paddingRight
+            val initialPaddingBottom = view.paddingBottom
+
+            ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+                v.setPadding(
+                    initialPaddingLeft + systemBars.left,
+                    initialPaddingTop + systemBars.top,
+                    initialPaddingRight + systemBars.right,
+                    initialPaddingBottom + systemBars.bottom
+                )
+                insets
+            }
+        }
     }
 
     private fun usbInitialize() {
