@@ -16,13 +16,19 @@ import jp.oist.abcvlib.core.inputs.microcontroller.WheelDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.ObjectDetectorData
 import jp.oist.abcvlib.core.inputs.phone.ObjectDetectorDataSubscriber
 import jp.oist.abcvlib.handsOnApp.databinding.ActivityMainBinding
+import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.SerialReadyListener
 import jp.oist.abcvlib.util.UsbSerial
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -38,7 +44,14 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
     private var countL = 0
     private var countR = 0
     private var nLoopCalled = 0
-    private var imageLabel = "Nothing"
+    private val latestImageLabel = AtomicReference("Nothing")
+    private val displayFrames = Channel<DisplayFrame>(Channel.CONFLATED)
+
+    private data class DisplayFrame(
+        val bitmap: Bitmap,
+        val description: String,
+        val frameCapturedAtNs: Long
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -52,8 +65,48 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
             }
         }
 
+        lifecycleScope.launch(Dispatchers.Default) {
+            for (frame in displayFrames) {
+                try {
+                    val matrix = Matrix().apply { postRotate(270f) }
+                    val rotatedBitmap = Bitmap.createBitmap(
+                        frame.bitmap,
+                        0,
+                        0,
+                        frame.bitmap.width,
+                        frame.bitmap.height,
+                        matrix,
+                        true
+                    )
+
+                    val scaledBitmap = rotatedBitmap.scale(
+                        rotatedBitmap.width * 4,
+                        rotatedBitmap.height * 4
+                    )
+
+                    withContext(Dispatchers.Main) {
+                        debugInfo.image = scaledBitmap
+                        debugInfo.text3 = frame.description
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Logger.e(
+                        "HandsOnApp",
+                        "Failed to prepare detected frame ${frame.frameCapturedAtNs}",
+                        e
+                    )
+                }
+            }
+        }
+
         super.onCreate(savedInstanceState)
 
+    }
+
+    override fun onDestroy() {
+        displayFrames.close()
+        super.onDestroy()
     }
 
     override fun onSerialReady(usbSerial: UsbSerial) {
@@ -83,7 +136,7 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
         // Example code for controlling robots
         // Set wheel output
         // Stop when detected something
-        if (imageLabel != "Nothing") {
+        if (latestImageLabel.get() != "Nothing") {
             outputs.setWheelOutput(0.0f, 0.0f, false, false)
         } else if (100 < nLoopCalled && nLoopCalled < 120) {
             outputs.setWheelOutput(0.0f, 1.0f, false, false)
@@ -138,31 +191,25 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
         height: Int,
         width: Int
     ) {
-        try {
-            val matrix = Matrix()
-            matrix.postRotate(270f)
-            val rotatedBitmap = Bitmap.createBitmap(
-                bitmap,
-                0, 0,
-                bitmap.width,
-                bitmap.height,
-                matrix, true
-            )
-            val scaledBitmap = rotatedBitmap.scale(
-                rotatedBitmap.width * 4, rotatedBitmap.height * 4
-            )
-            debugInfo.image = scaledBitmap
-            val category = results[0].categories()[0]
-            imageLabel = category.categoryName()
-            debugInfo.text3 = String.format(
+        val category = results.firstOrNull()?.categories()?.firstOrNull()
+        val label = category?.categoryName() ?: "Nothing"
+        latestImageLabel.set(label)
+
+        val description = if (category == null) {
+            "No object detected"
+        } else {
+            String.format(
                 Locale.getDefault(),
                 "Label: %s (score: %.2f)",
-                imageLabel,
+                label,
                 category.score()
             )
-        } catch (e: IndexOutOfBoundsException) {
-            imageLabel = "Nothing"
-            debugInfo.text3 = "No object detected"
         }
+
+        displayFrames.trySend(DisplayFrame(
+            bitmap = bitmap,
+            description = description,
+            frameCapturedAtNs = frameCapturedAtNs
+        ))
     }
 }
