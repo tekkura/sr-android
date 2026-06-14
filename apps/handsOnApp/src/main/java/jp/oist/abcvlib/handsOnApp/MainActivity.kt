@@ -19,10 +19,14 @@ import jp.oist.abcvlib.handsOnApp.databinding.ActivityMainBinding
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.SerialReadyListener
 import jp.oist.abcvlib.util.UsbSerial
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -39,6 +43,7 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
     private var countR = 0
     private var nLoopCalled = 0
     private var imageLabel = "Nothing"
+    private val isProcessing = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -138,31 +143,41 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
         height: Int,
         width: Int
     ) {
-        try {
-            val matrix = Matrix()
-            matrix.postRotate(270f)
-            val rotatedBitmap = Bitmap.createBitmap(
-                bitmap,
-                0, 0,
-                bitmap.width,
-                bitmap.height,
-                matrix, true
-            )
-            val scaledBitmap = rotatedBitmap.scale(
-                rotatedBitmap.width * 4, rotatedBitmap.height * 4
-            )
-            debugInfo.image = scaledBitmap
-            val category = results[0].categories()[0]
-            imageLabel = category.categoryName()
-            debugInfo.text3 = String.format(
-                Locale.getDefault(),
-                "Label: %s (score: %.2f)",
-                imageLabel,
-                category.score()
-            )
-        } catch (e: IndexOutOfBoundsException) {
-            imageLabel = "Nothing"
-            debugInfo.text3 = "No object detected"
+        if (!isProcessing.compareAndSet(false, true)) return
+        lifecycleScope.launch(Dispatchers.Default) {
+            try {
+                val matrix = Matrix()
+                matrix.postRotate(270f)
+                val rotatedBitmap = Bitmap.createBitmap(
+                    bitmap,
+                    0, 0,
+                    bitmap.width,
+                    bitmap.height,
+                    matrix, true
+                )
+                val scaledBitmap = rotatedBitmap.scale(
+                    rotatedBitmap.width * 4, rotatedBitmap.height * 4
+                )
+
+                withContext(Dispatchers.Main) {
+                    debugInfo.image = scaledBitmap
+                    val category = results[0].categories()[0]
+                    imageLabel = category.categoryName()
+                    debugInfo.text3 = String.format(
+                        Locale.getDefault(),
+                        "Label: %s (score: %.2f)",
+                        imageLabel,
+                        category.score()
+                    )
+                }
+            } catch (e: IndexOutOfBoundsException) {
+                withContext(Dispatchers.Main) {
+                    imageLabel = "Nothing"
+                    debugInfo.text3 = "No object detected"
+                }
+            } finally {
+                isProcessing.set(false)
+            }
         }
     }
 }
