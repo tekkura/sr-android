@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-06-15T15:52:05Z",
+  "event_ts": "2026-06-15T15:51:39Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "GeorgeChernyshov",
+  "run_id": "27558575330",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 17,
+    "title": "Update NDK",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/17",
+    "milestone": {
+      "number": 3,
+      "title": "NonPriority"
+    }
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/17",
+  "event_id": "62bfa3d8055daf6615e76ae4a49112a95ce66630f95d29dfe3779626dcb1022d"
+}
