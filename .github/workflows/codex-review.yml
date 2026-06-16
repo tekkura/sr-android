@@ -86,25 +86,20 @@ jobs:
             const prAuthorAssociation = pr.author_association || '';
             const headRef = pr.head?.ref || '';
             const baseRef = pr.base?.ref || '';
-            const isMilestoneBranch = (ref) => ref.startsWith('milestone/') || ref.startsWith('milestones/');
-            const milestoneBranchGatePassed = isMilestoneBranch(headRef) || isMilestoneBranch(baseRef);
             const commandGatePassed = !isIssueComment || (isPullRequestComment && commentCommandMatches);
-            const shouldRunDownstream = commandGatePassed && milestoneBranchGatePassed;
+            const shouldRunDownstream = commandGatePassed;
             let gateReason = 'ok';
 
             if (isIssueComment && !isPullRequestComment) {
               gateReason = 'not_pr_comment';
             } else if (isIssueComment && !commentCommandMatches) {
               gateReason = 'bad_command';
-            } else if (!milestoneBranchGatePassed) {
-              gateReason = 'non_milestone_branch';
             }
 
             core.info(`Gate check: expected event trigger command for issue_comment "${expectedCommand}", received "${receivedCommentBody}"`);
             core.info(`Gate check: expected issue_comment on PR=true, received ${String(isPullRequestComment)}`);
             core.info(`Gate check: expected comment author association in [${expectedAssociations.join(', ')}], received "${receivedCommentAuthorAssociation}"`);
             core.info(`Gate check: expected PR author association in [${expectedAssociations.join(', ')}], received "${prAuthorAssociation}"`);
-            core.info(`Gate check: expected head/base ref under milestone/*, received head_ref="${headRef}", base_ref="${baseRef}", milestoneBranchGatePassed=${String(milestoneBranchGatePassed)}`);
             core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
 
             core.setOutput('pull_number', String(pr.number));
