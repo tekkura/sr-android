@@ -184,14 +184,16 @@ jobs:
         run: |
           num="${{ needs.resolve-pr-context.outputs.milestone_number }}"
           if [ -z "$num" ]; then
-            echo "PR has no milestone set."
-            exit 1
+            echo "PR has no milestone set. Continuing without a migration guide."
+            echo "GUIDE_PATH=" >> "$GITHUB_ENV"
+            exit 0
           fi
 
           title="${{ needs.resolve-pr-context.outputs.milestone_title }}"
           if [ -z "$title" ]; then
-            echo "PR has no milestone title set."
-            exit 1
+            echo "PR has no milestone title set. Continuing without a migration guide."
+            echo "GUIDE_PATH=" >> "$GITHUB_ENV"
+            exit 0
           fi
 
           # Sanitize title for filename matching
@@ -200,7 +202,7 @@ jobs:
           matches=$(ls $glob 2>/dev/null || true)
           count=$(echo "$matches" | sed '/^$/d' | wc -l | tr -d ' ')
           if [ "$count" -ne 1 ]; then
-            echo "Expected exactly one migration guide for milestone title: $title"
+            echo "Expected exactly one migration guide for milestone title: $title. Continuing without a migration guide."
             echo "Sanitized title: $safe"
             echo "Attempted match: $glob"
             echo "Match count: $count"
@@ -208,7 +210,8 @@ jobs:
               echo "Matches:"
               echo "$matches"
             fi
-            exit 1
+            echo "GUIDE_PATH=" >> "$GITHUB_ENV"
+            exit 0
           fi
 
           echo "GUIDE_PATH=$matches" >> "$GITHUB_ENV"
@@ -221,9 +224,14 @@ jobs:
           echo "AGENTS instructions (from HEAD):" >> /tmp/codex_prompt.md
           cat AGENTS.md >> /tmp/codex_prompt.md
           echo "" >> /tmp/codex_prompt.md
-          echo "Migration guide (from HEAD): $GUIDE_PATH" >> /tmp/codex_prompt.md
-          cat "$GUIDE_PATH" >> /tmp/codex_prompt.md
-          echo "" >> /tmp/codex_prompt.md
+          if [ -n "$GUIDE_PATH" ]; then
+            echo "Migration guide (from HEAD): $GUIDE_PATH" >> /tmp/codex_prompt.md
+            cat "$GUIDE_PATH" >> /tmp/codex_prompt.md
+            echo "" >> /tmp/codex_prompt.md
+          else
+            echo "Migration guide: none provided for this PR. Review against AGENTS.md, the PR description, and the diff." >> /tmp/codex_prompt.md
+            echo "" >> /tmp/codex_prompt.md
+          fi
           echo "PR description (from GitHub):" >> /tmp/codex_prompt.md
           cat <<'EOF' >> /tmp/codex_prompt.md
           ${{ needs.resolve-pr-context.outputs.pr_body }}
