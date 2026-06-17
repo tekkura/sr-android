@@ -18,39 +18,30 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.SerialInputOutputManager
-import jp.oist.abcvlib.util.AndroidToRP2040Command.Companion.getEnumByValue
+import jp.oist.abcvlib.util.ByteArrayExtensions.toHexString
 import jp.oist.abcvlib.util.ErrorHandler.eLog
+import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
+import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
-class UsbSerial @Throws(IOException::class) constructor(
+open class UsbSerial @Throws(IOException::class) constructor(
     private val context: Context,
     private val usbManager: UsbManager,
-    private val serialReadyListener: SerialReadyListener
+    private val serialReadyListener: SerialReadyListener,
+    port: RobotSerialPort? = null
 ) : SerialInputOutputManager.Listener {
-    private lateinit var port: UsbSerialPort
 
-    // Initialize as the smallest of the two packet sizes
-    private var packetDataSize = RP2020_PACKET_SIZE_STATE
-    private var packetType: AndroidToRP2040Command = AndroidToRP2040Command.NACK
+    private lateinit var _port: RobotSerialPort
+
     private val timeout: Int = 1000 //1s
-    private val totalBytesRead: Int = 0 // Track total bytes read
-    private val pwm = floatArrayOf(1.0f, 0.5f, 0.0f, -0.5f, -1.0f)
-    private val cnt = 0
     private var badPacketCount = 0
 
-    internal val fifoQueue: CircularFifoQueue<FifoQueuePair> = CircularFifoQueue<FifoQueuePair>(256)
-    private val packetBuffer = ByteBuffer.allocate((512 * 128) + 8) // Adjust size as needed
-
-    private class StartStopIndex(var startIdx: Int, var stopIdx: Int)
-
-    //Ensure a proper start and stop mark present before adding anything to the fifoQueue
-    private var startStopIdx: StartStopIndex
+    internal val fifoQueue: CircularFifoQueue<RP2040IncomingCommand> = CircularFifoQueue<RP2040IncomingCommand>(256)
+    private val packetBuffer = PacketBuffer()
 
     companion object {
         private const val TAG = "UsbSerial"
@@ -58,41 +49,43 @@ class UsbSerial @Throws(IOException::class) constructor(
         private val lock = ReentrantLock()
         private val packetReceived: Condition = lock.newCondition()
 
-        // 1024 + 3 for start, command, and stop markers sent as putchar. (i.e. they won't be optimized anyway).
-        private const val RP2020_PACKET_SIZE_LOG = 1027
-        private const val RP2020_PACKET_SIZE_STATE = 64
         private const val ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION"
         private const val BAD_PACKET_THRESHOLD = 5
-
     }
 
     init {
-        // Find all available drivers from attached devices.
-        val deviceList = usbManager.deviceList
-        startStopIdx = StartStopIndex(-1, -1)
-        packetBuffer.order(ByteOrder.LITTLE_ENDIAN)
+        if (port != null) {
+            // If a port is provided (e.g. for testing), we assume it's already "found"
+            // and we notify the listener immediately to ensure it's ready for the test.
+            _port = port
+            _port.startReading(this)
+            serialReadyListener.onSerialReady(this)
+        } else {
+            // Find all available drivers from attached devices.
+            val deviceList = usbManager.deviceList
 
-        if (deviceList.isEmpty()) {
-            throw IOException("No USB devices found")
-        }
-
-        for (d in deviceList.values) {
-            if (d.manufacturerName == "Seeed" && d.productName == "Seeeduino XIAO") {
-                Logger.i(Thread.currentThread().name, "Found a XIAO. Connecting...")
-                connect(d)
-            } else if (d.manufacturerName.equals("Raspberry Pi") && d.productName.equals("Pico Test Device")) {
-                Logger.i(Thread.currentThread().name, "Found a Pico Test Device. Connecting...")
-                connect(d)
-            } else if (d.manufacturerName == "Raspberry Pi" && d.productName == "Pico") {
-                Logger.i(Thread.currentThread().name, "Found a Pi. Connecting...")
-                connect(d)
+            if (deviceList.isEmpty()) {
+                throw IOException("No USB devices found")
             }
+
+            for (d in deviceList.values) {
+                if (d.manufacturerName == "Seeed" && d.productName == "Seeeduino XIAO") {
+                    Logger.i(Thread.currentThread().name, "Found a XIAO. Connecting...")
+                    connect(d)
+                } else if (d.manufacturerName.equals("Raspberry Pi") && d.productName.equals("Pico Test Device")) {
+                    Logger.i(Thread.currentThread().name, "Found a Pico Test Device. Connecting...")
+                    connect(d)
+                } else if (d.manufacturerName == "Raspberry Pi" && d.productName == "Pico") {
+                    Logger.i(Thread.currentThread().name, "Found a Pi. Connecting...")
+                    connect(d)
+                }
+            }
+            val filter = IntentFilter(ACTION_USB_PERMISSION).apply {
+                addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            }
+            val usbReceiver: BroadcastReceiver = MyBroadcastReceiver()
+            ContextCompat.registerReceiver(context, usbReceiver, filter, RECEIVER_NOT_EXPORTED)
         }
-        val filter = IntentFilter(ACTION_USB_PERMISSION).apply {
-            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
-        }
-        val usbReceiver: BroadcastReceiver = MyBroadcastReceiver()
-        ContextCompat.registerReceiver(context, usbReceiver, filter, RECEIVER_NOT_EXPORTED)
     }
 
     @Throws(IOException::class)
@@ -122,18 +115,20 @@ class UsbSerial @Throws(IOException::class) constructor(
     private fun openPort(connection: UsbDeviceConnection) {
         Logger.i(Thread.currentThread().name, "Opening port")
         val driver = getDriver()
-        val port = driver.ports[0] // Most devices have just one port (port 0)
+        val usbSerialPort = driver.ports[0] // Most devices have just one port (port 0)
         try {
-            port.open(connection)
-            port.setParameters(115200, 8, 1, UsbSerialPort.PARITY_NONE)
-            port.dtr = true
-            this.port = port
-            val usbIoManager = SerialInputOutputManager(port, this)
+            val realPort = RealRobotSerialPort(usbSerialPort)
+            realPort.open(connection)
+            realPort.setParameters(115200, 8, 1, UsbSerialPort.PARITY_NONE)
+            realPort.setDtr(true)
+            
+            this._port = realPort
+            
             // Adding this as there doesn't appear to be any call back in the usbIoManager that
             // will call onSerialReady after initialization. As it stands, there were things occurring
             // in onSerialReady that were being executed before the usbIoManager was initialized.
             Thread.sleep(100)
-            usbIoManager.start()
+            realPort.startReading(this)
             serialReadyListener.onSerialReady(this)
         } catch (e: IOException) {
             e.printStackTrace()
@@ -161,23 +156,41 @@ class UsbSerial @Throws(IOException::class) constructor(
         // SerialInputOutputManager thread may be delayed and miss data
 
         // print the byte[] as an array of hex values
-
-        val sb = StringBuilder()
-        for (b in data) {
-            sb.append(String.format("%02X ", b))
-        }
-        Logger.d(TAG, "onNewData Received: $sb")
+        Logger.d(TAG, "onNewData Received: ${data.toHexString()}")
 
         // Run the packet verification in a separate thread
         try {
             lock.lock()
-            if (verifyPacket(data)) {
-                Logger.d(TAG, "Packet verified")
-                Logger.d(TAG, "packetReceived.signal()")
-                packetReceived.signal()
-            } else {
-                Logger.d(TAG, "Incomplete Packet. Waiting for more data")
-            }
+            packetBuffer.consume(
+                bytes = data,
+                onResult = { result ->
+                    when (result) {
+                        is PacketBuffer.ParseResult.NotEnoughData -> {
+                            Logger.d(TAG, "Incomplete Packet. Waiting for more data")
+                        }
+
+                        is PacketBuffer.ParseResult.Overflow -> {
+                            onBadPacket()
+                            Logger.d(TAG, "Buffer overflow.")
+                        }
+
+                        is PacketBuffer.ParseResult.ReceivedErrorPacket -> {
+                            onBadPacket()
+                            Logger.d(TAG, "Error packet received")
+                            Logger.d(TAG, "packetReceived.signal()")
+                            packetReceived.signal()
+                        }
+
+                        is PacketBuffer.ParseResult.ReceivedPacket -> {
+                            onCompletePacketReceived(result.command)
+
+                            Logger.d(TAG, "Packet verified")
+                            Logger.d(TAG, "packetReceived.signal()")
+                            packetReceived.signal()
+                        }
+                    }
+                }
+            )
         } catch (e: IOException) {
             throw RuntimeException(e)
         } finally {
@@ -186,8 +199,12 @@ class UsbSerial @Throws(IOException::class) constructor(
     }
 
     @Throws(IOException::class)
-    internal fun send(packet: ByteArray, timeout: Int) {
-        port.write(packet, timeout)
+    internal fun send(command: RP2040OutgoingCommand, timeout: Int) =
+        send(command.toBytes(), timeout)
+
+    @Throws(IOException::class)
+    internal open fun send(packet: ByteArray, timeout: Int) {
+        _port.write(packet, timeout)
         Logger.i(Thread.currentThread().name, "send()")
     }
 
@@ -217,183 +234,27 @@ class UsbSerial @Throws(IOException::class) constructor(
         return returnVal
     }
 
-    @Throws(IOException::class)
-    private fun startStopIndexSearch(data: ByteBuffer): StartStopIndex {
-        val startStopIdx = StartStopIndex(-1, -1)
-        var i = 0
-        data.flip()
-        while (i < data.limit()) {
-            // get value at position and increment position by 1 (so don't call it multiple times)
-            val value = data.get()
-
-            // Always overwrite the value of stopIdx as you want the last instance
-            if (value == AndroidToRP2040Command.STOP.hexValue) {
-                startStopIdx.stopIdx = i
-                Logger.v("serial", "stopIdx found at $i")
-            } else if (value == AndroidToRP2040Command.START.hexValue && startStopIdx.startIdx < 0) {
-                startStopIdx.startIdx = i
-                Logger.v("serial", "startIdx found at $i")
-            }
-            i++
-        }
-        // flip will set limit to position and position to 0
-        // need to set limit back to capacity after reading
-        data.limit(data.capacity())
-
-        return startStopIdx
-    }
-
     /**
-     * synchronized as newData might be called again while this method is running
-     * @param bytes to be verified to contain a valid packet. If so, the packet is added to the fifoQueue
-     * @return 0 if successfully found a complete packet or found an erroneous packet,
-     * -1 if not enough data to determine
      * @throws IOException if fifoQueue is full
      */
-    @Synchronized
     @Throws(IOException::class)
-    internal fun verifyPacket(bytes: ByteArray): Boolean {
-        if (packetBuffer.remaining() < bytes.size) {
-            Logger.e("verifyPacket", "Buffer overflow risk: clearing buffer and resynchronizing.")
-            packetBuffer.clear()
-            onBadPacket()
-            return false
-        }
-        packetBuffer.put(bytes)
-
-        // If startIdx not yet found, find it
-        if (startStopIdx.startIdx < 0) {
-            startStopIdx = startStopIndexSearch(packetBuffer)
-        }
-
-        // If startIdx still not found, return false
-        if (startStopIdx.startIdx < 0) {
-            Logger.v("serial", "StartIdx not yet found. Waiting for more data")
-            return false
-        } else {
-            Logger.v("serial", "StartIdx found at " + startStopIdx.startIdx)
-            // if packetType not yet found, find it
-            if (packetType == AndroidToRP2040Command.NACK) {
-                // If position is 0, nothing received yet. If position is 1 only the start mark has been received.
-                // position 2 is the packetType, and positions 3 and 4 are a short for packetSize
-                if (packetBuffer.position() >= RP2040ToAndroidPacket.Offsets.DATA) {
-                    try {
-                        packetType = getEnumByValue(
-                            packetBuffer.get(startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE)
-                        )!!
-                    } catch (e: IndexOutOfBoundsException) {
-                        Logger.e("serial", "IndexOutOfBoundsException: " + e.message)
-                        Logger.e("serial", "Unknown packetType: $packetType")
-                        // Ignore this packet as it is corrupted by some other data being sent between.
-                        packetBuffer.clear()
-                        return true
-                    }
-                    // get the packetDataSize. It is stored at index 3 and 4 as a short
-                    packetDataSize = packetBuffer.getShort(
-                        startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.DATA_SIZE
-                    ).toInt() and 0xFFFF
-                    if (packetDataSize > 2048) { // sanity check for max packet size
-                        Logger.e(
-                            "verifyPacket",
-                            "Unreasonable packet size: $packetDataSize. Resynchronizing."
-                        )
-                        onBadPacket()
-                        return true
-                    }
-                    Logger.v(
-                        "serial",
-                        packetType.toString() + " packetType of size " + packetDataSize + " found at "
-                                + (startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE)
-                    )
-                } else {
-                    Logger.v("serial", "Nothing other than startIdx found. Waiting for more data")
-                    return false
-                }
-            }
-
-            // Check if you have enough data for a full packet before processing anything
-            // +1 for moving 1 past packetBuffer.position() to endIdx byte
-            startStopIdx.stopIdx =
-                startStopIdx.startIdx + packetDataSize + (RP2040ToAndroidPacket.Offsets.DATA)
-            // +1 for packetBuffer.position() needing to be 1 after endIdx byte to indicate that you have the stopIdx byte
-            if (packetBuffer.position() < (startStopIdx.stopIdx + 1)) {
-                Logger.d(
-                    "verifyPacket", "Data received not yet enough to fill " +
-                            packetType + " packetType. Waiting for more data"
-                )
-                Logger.d(
-                    "verifyPacket",
-                    packetBuffer.position()
-                        .toString() + " bytes recvd thus far. Require " + startStopIdx.stopIdx
-                )
-                return false
-            } else {
-                if (packetBuffer.get(startStopIdx.stopIdx) != AndroidToRP2040Command.STOP.hexValue) {
-                    onBadPacket()
-                    return true
-                } else {
-                    when (packetType) {
-                        AndroidToRP2040Command.GET_LOG -> {
-                            Logger.i("verifyPacket", "GET_LOG command received")
-                        }
-
-                        AndroidToRP2040Command.SET_MOTOR_LEVELS -> {
-                            Logger.i("verifyPacket", "SET_MOTOR_LEVELS command received")
-                        }
-
-                        AndroidToRP2040Command.GET_STATE -> {
-                            Logger.i("verifyPacket", "GET_STATE command received")
-                        }
-
-                        else -> {
-                            Logger.e("verifyPacket", "Unknown packetType: $packetType")
-                            onBadPacket()
-                            return true
-                        }
-                    }
-                    onCompletePacketReceived()
-                    return true
-                }
-            }
-        }
-    }
-
-    private fun onCompletePacketReceived() {
-        packetBuffer.position(startStopIdx.startIdx + RP2040ToAndroidPacket.Offsets.DATA)
-        packetBuffer.limit(startStopIdx.stopIdx)
-        val partialArray = ByteArray(packetBuffer.remaining())
-        packetBuffer.get(partialArray)
-        packetBuffer.clear()
+    protected open fun onCompletePacketReceived(command: RP2040IncomingCommand) {
         synchronized(fifoQueue) {
             if (fifoQueue.isAtFullCapacity) {
                 Logger.e("serial", "fifoQueue is full")
                 throw RuntimeException("fifoQueue is full")
             } else {
-                // Log partialArray as array of hex values
-                val sb = StringBuilder()
-                for (b in partialArray) {
-                    sb.append(String.format("%02X ", b))
-                }
-                Logger.d("verifyPacket", "Adding Packet: $sb to fifoQueue")
-                val fifoQueuePair = FifoQueuePair(packetType, partialArray)
-                fifoQueue.add(fifoQueuePair) // Add the partialArray to the queue
+                Logger.d("verifyPacket", "Adding Packet: ${command.toBytes().toHexString()} to fifoQueue")
+                fifoQueue.add(command)
             }
         }
-        // reset to default value;
-        packetType = AndroidToRP2040Command.NACK
+
         badPacketCount = 0 // Reset on successful packet
     }
 
-    private fun onBadPacket() {
+    protected open fun onBadPacket() {
         Logger.e("serial", "Bad packet received. Clearing buffer and sending next command.")
         // Ignore this packet as it is corrupted by some other data being sent between.
-        packetBuffer.clear()
-        while (packetBuffer.hasRemaining()) {
-            packetBuffer.put(0.toByte())
-        }
-        resyncToNextStartMarker()
-        // reset to default value;
-        packetType = AndroidToRP2040Command.NACK
         badPacketCount++
         if (badPacketCount >= BAD_PACKET_THRESHOLD) {
             Logger.e(
@@ -404,23 +265,6 @@ class UsbSerial @Throws(IOException::class) constructor(
             // recoverSerialConnection();
             // For now, just reset the counter
             badPacketCount = 0
-        }
-    }
-
-    private fun resyncToNextStartMarker() {
-        packetBuffer.flip()
-        var startIdx = -1
-        for (i in 0..<packetBuffer.limit()) {
-            if (packetBuffer.get(i) == AndroidToRP2040Command.START.hexValue) {
-                startIdx = i
-                break
-            }
-        }
-        if (startIdx >= 0) {
-            packetBuffer.position(startIdx)
-            packetBuffer.compact()
-        } else {
-            packetBuffer.clear()
         }
     }
 
@@ -452,6 +296,4 @@ class UsbSerial @Throws(IOException::class) constructor(
             }
         }
     }
-
-
 }
