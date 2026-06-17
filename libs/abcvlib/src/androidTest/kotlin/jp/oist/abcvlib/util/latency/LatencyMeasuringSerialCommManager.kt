@@ -36,8 +36,8 @@ class LatencyMeasuringSerialCommManager @JvmOverloads constructor(
     override fun receivePacket() {
         val receivedStatus = usbSerial.awaitPacketReceived(10000)
 
-        // T7: Manager Wake-up
-        BenchmarkClock.mark(currentIteration.get(), 7)
+        // T8: Manager Wake-up
+        BenchmarkClock.mark(currentIteration.get(), 8)
 
         if (receivedStatus == 1) {
             //Note this is actually calling the functions like parseLog, parseStatus, etc.
@@ -62,9 +62,9 @@ class LatencyMeasuringSerialCommManager @JvmOverloads constructor(
         val result = super.parseStatus(command)
 
         if (result && command is RP2040IncomingCommand.SetMotorLevels) {
-            // T8: State Applied
+            // T9: State Applied
             val iteration = currentIteration.get()
-            BenchmarkClock.mark(iteration, 8)
+            BenchmarkClock.mark(iteration, 9)
             BenchmarkClock.recordSuccess(iteration)
             currentIteration.compareAndSet(iteration, NO_ITERATION)
             onResultProcessed?.invoke()

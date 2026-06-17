@@ -19,7 +19,7 @@ object BenchmarkClock {
 
     fun startIteration(iteration: Int) {
         if (!enabled) return
-        iterations[iteration] = LongArray(8) // T1 to T8
+        iterations[iteration] = LongArray(9) // T1 to T9
         successStates[iteration] = false
     }
 
@@ -32,12 +32,12 @@ object BenchmarkClock {
     fun mark(iteration: Int, junction: Int) {
         if (!enabled || iteration == -1) return
         val timestamps = iterations[iteration] ?: return
-        if (junction !in 1..8) return
+        if (junction !in 1..9) return
 
         val index = junction - 1
 
         // Ensure that junctions are marked in order for a single command-response cycle.
-        // This prevents a late T7 from a previous iteration from being recorded in a new one,
+        // This prevents a late T8 from a previous iteration from being recorded in a new one,
         // and ensures we only track the first valid sequence.
         if (junction > 1 && timestamps[index - 1] == 0L) return
 

@@ -23,8 +23,8 @@ internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor
 ) {
 
     override fun onNewData(data: ByteArray) {
-        // T5: Response Receipt at Phone
-        BenchmarkClock.mark(currentIteration.get(), 5)
+        // T6: Response Receipt at Phone
+        BenchmarkClock.mark(currentIteration.get(), 6)
 
         super.onNewData(data)
     }
@@ -44,7 +44,7 @@ internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor
 
         if (command is RP2040IncomingCommand.SetMotorLevels) {
             // T6: Packet Queue Entry
-            BenchmarkClock.mark(currentIteration.get(), 6)
+            BenchmarkClock.mark(currentIteration.get(), 7)
         }
     }
 }

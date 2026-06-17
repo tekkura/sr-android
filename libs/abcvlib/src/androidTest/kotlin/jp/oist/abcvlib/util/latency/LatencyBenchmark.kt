@@ -79,6 +79,7 @@ class LatencyBenchmark {
             )
         } else {
             simulator = MockRP2040()
+            simulator.benchmarkIterationProvider = { currentIteration.get() }
             val virtualPort = VirtualRobotPort(simulator)
             usbSerial = LatencyMeasuringUsbSerial(
                 context = context,
@@ -193,11 +194,12 @@ class LatencyBenchmark {
         val metricNames = listOf(
             "M1: Outbound Queueing",
             "M2: Handling/Serialization",
-            "M3: Android Write Blocking",
-            "M4: Response Wait After Write",
-            "M5: Buffer Processing",
-            "M6: Wake-up Lag",
-            "M7: App Logic",
+            "M3: Transport Out",
+            "M4: Firmware Processing",
+            "M5: Response Transit in",
+            "M6: Buffer Processing",
+            "M7: Wake-up Lag",
+            "M8: App Logic",
             "Total RTT"
         )
 
@@ -222,7 +224,8 @@ class LatencyBenchmark {
             val m5 = (ts[5] - ts[4]) / 1_000_000.0
             val m6 = (ts[6] - ts[5]) / 1_000_000.0
             val m7 = (ts[7] - ts[6]) / 1_000_000.0
-            val total = (ts[7] - ts[0]) / 1_000_000.0
+            val m8 = (ts[8] - ts[7]) / 1_000_000.0
+            val total = (ts[8] - ts[0]) / 1_000_000.0
 
             metrics[metricNames[0]]!!.add(m1)
             metrics[metricNames[1]]!!.add(m2)
@@ -231,6 +234,7 @@ class LatencyBenchmark {
             metrics[metricNames[4]]!!.add(m5)
             metrics[metricNames[5]]!!.add(m6)
             metrics[metricNames[6]]!!.add(m7)
+            metrics[metricNames[7]]!!.add(m8)
             metrics["Total RTT"]!!.add(total)
         }
 
