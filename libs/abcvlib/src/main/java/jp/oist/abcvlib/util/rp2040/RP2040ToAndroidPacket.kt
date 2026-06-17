@@ -1,4 +1,4 @@
-package jp.oist.abcvlib.util
+package jp.oist.abcvlib.util.rp2040
 
 class RP2040ToAndroidPacket {
     object Offsets {
