@@ -1,6 +1,7 @@
 package jp.oist.abcvlib.util.rp2040
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command
+import jp.oist.abcvlib.util.ByteArrayExtensions.toCrc
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -9,18 +10,24 @@ import java.nio.ByteOrder
 
 class RP2040OutgoingCommandTest {
 
-    private fun verifyPacketStructure(bytes: ByteArray, expectedType: AndroidToRP2040Command, expectedPayload: ByteArray) {
-        assertEquals(5, bytes.size)
+    private fun verifyPacketStructure(
+        bytes: ByteArray,
+        expectedType: AndroidToRP2040Command,
+        expectedPayload: ByteArray
+    ) {
         val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
         
         assertEquals("Start marker mismatch", AndroidToRP2040Command.START.hexValue, buffer.get())
+        val size = buffer.short
+        assertEquals("Size mismatch", (expectedPayload.size + 1).toShort(), size)
         assertEquals("Command type mismatch", expectedType.hexValue, buffer.get())
         
-        val actualPayload = ByteArray(2)
+        val actualPayload = ByteArray(size - 1)
         buffer.get(actualPayload)
         assertArrayEquals("Payload mismatch", expectedPayload, actualPayload)
-        
-        assertEquals("Stop marker mismatch", AndroidToRP2040Command.STOP.hexValue, buffer.get())
+
+        val dataCrc = bytes.sliceArray(1 until bytes.size - 2).toCrc()
+        assertEquals("Data CRC mismatch", dataCrc, buffer.short)
     }
 
     @Test
@@ -28,21 +35,21 @@ class RP2040OutgoingCommandTest {
         val command = RP2040OutgoingCommand.GetState()
         val bytes = command.toBytes()
         // No payload populated, so it should be zeros
-        verifyPacketStructure(bytes, AndroidToRP2040Command.GET_STATE, byteArrayOf(0, 0))
+        verifyPacketStructure(bytes, AndroidToRP2040Command.GET_STATE, byteArrayOf())
     }
 
     @Test
     fun `test GetLog packet structure`() {
         val command = RP2040OutgoingCommand.GetLog()
         val bytes = command.toBytes()
-        verifyPacketStructure(bytes, AndroidToRP2040Command.GET_LOG, byteArrayOf(0, 0))
+        verifyPacketStructure(bytes, AndroidToRP2040Command.GET_LOG, byteArrayOf())
     }
 
     @Test
     fun `test ResetState packet structure`() {
         val command = RP2040OutgoingCommand.ResetState()
         val bytes = command.toBytes()
-        verifyPacketStructure(bytes, AndroidToRP2040Command.RESET_STATE, byteArrayOf(0, 0))
+        verifyPacketStructure(bytes, AndroidToRP2040Command.RESET_STATE, byteArrayOf())
     }
 
     @Test

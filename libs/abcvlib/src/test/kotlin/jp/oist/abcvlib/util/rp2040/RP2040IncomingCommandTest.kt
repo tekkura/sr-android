@@ -1,6 +1,7 @@
 package jp.oist.abcvlib.util.rp2040
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command
+import jp.oist.abcvlib.util.ByteArrayExtensions.toCrc
 import org.junit.Assert.*
 import org.junit.Test
 import java.nio.ByteBuffer
@@ -33,8 +34,8 @@ class RP2040IncomingCommandTest {
     }
 
     private fun extractPayload(bytes: ByteArray): ByteArray {
-        // Header is 4 bytes (START, TYPE, SIZE_L, SIZE_H), STOP is 1 byte
-        return bytes.sliceArray(4 until bytes.size - 1)
+        // Header is 4 bytes (START, SIZE_L, SIZE_H, TYPE), end CRC is 2 bytes
+        return bytes.sliceArray(4 until bytes.size - 2)
     }
 
     private fun verifyMotorsState(expected: MotorsState, actual: MotorsState) {
@@ -173,11 +174,12 @@ class RP2040IncomingCommandTest {
         
         val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
         assertEquals(AndroidToRP2040Command.START.hexValue, buffer.get())
+        assertEquals((data.size + 1).toShort(), buffer.short)
         assertEquals(AndroidToRP2040Command.ACK.hexValue, buffer.get())
-        assertEquals(data.size.toShort(), buffer.short)
         assertEquals(0xDE.toByte(), buffer.get())
         assertEquals(0xAD.toByte(), buffer.get())
-        assertEquals(AndroidToRP2040Command.STOP.hexValue, buffer.get())
+        val dataCrc = bytes.sliceArray(1 until bytes.size - 2).toCrc()
+        assertEquals(dataCrc, buffer.short)
     }
 
     @Test

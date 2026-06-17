@@ -9,7 +9,9 @@ import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040State
 import jp.oist.abcvlib.util.rp2040.StatusCommand
+import jp.oist.abcvlib.util.versioning.checkVersionSupport
 import java.io.IOException
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -35,6 +37,9 @@ open class SerialCommManager @JvmOverloads constructor(
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
 
+    private var versionTimeoutFuture: ScheduledFuture<*>? = null
+    private val VERSION_TIMEOUT_MS = 2000L
+
     // Constructor to initialize SerialCommManager
     init {
         if (batteryData == null || wheelData == null) {
@@ -52,7 +57,8 @@ open class SerialCommManager @JvmOverloads constructor(
     protected class RunContext(
         val stopRequested: AtomicBoolean = AtomicBoolean(false),
         var writerExecutor: ScheduledExecutorServiceWithException? = null,
-        var delay: AtomicLong = AtomicLong(10)
+        var delay: AtomicLong = AtomicLong(10),
+        var initialDelay: AtomicLong = AtomicLong(0)
     )
 
     protected open fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
@@ -113,24 +119,28 @@ open class SerialCommManager @JvmOverloads constructor(
 
             val context = RunContext().apply {
                 this.delay.set(delay)
+                this.initialDelay.set(initialDelay)
             }
 
             val priorityFactory = ProcessPriorityThreadFactory(
                 Thread.MAX_PRIORITY,
                 "SerialCommManager_Android2Pi"
             )
-            context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory).also {
-                it.schedule(
-                    buildAndroid2PiWriter(context),
-                    initialDelay,
-                    TimeUnit.MILLISECONDS
-                )
-            }
+
+            context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory)
             runContext = context
+
+            // Only check version support for real firmware
+            if (usbSerial.isPortReal)
+                requestFirmwareVersion()
+            else startPolling()
         }
     }
 
     fun stop() {
+        versionTimeoutFuture?.cancel(false)
+        versionTimeoutFuture = null
+
         var contextToStop: RunContext? = null
         synchronized(lifecycleLock) {
             contextToStop = runContext
@@ -182,6 +192,24 @@ open class SerialCommManager @JvmOverloads constructor(
                     onAck(command.data)
                     result = 1
                     Logger.d("Pi2AndroidReader", "parseAck")
+                }
+
+                is RP2040IncomingCommand.GetVersion -> {
+                    versionTimeoutFuture?.cancel(false)
+                    versionTimeoutFuture = null
+
+                    if (checkVersionSupport(
+                        command.major,
+                        command.minor,
+                        command.patch
+                    )) {
+                        startPolling()
+                    } else {
+                        throw IllegalStateException("Unsupported firmware version")
+                    }
+
+                    result = 1
+                    Logger.d("Pi2AndroidReader", "parseGetVersion")
                 }
 
                 else -> {
@@ -355,5 +383,29 @@ open class SerialCommManager @JvmOverloads constructor(
 
     private fun onAck(bytes: ByteArray) {
         Logger.d("serial", "parseAck")
+    }
+
+    private fun startPolling() {
+        with(runContext ?: throw IllegalStateException("SerialCommManager not started")) {
+            writerExecutor?.schedule(
+                buildAndroid2PiWriter(this),
+                initialDelay.get(),
+                TimeUnit.MILLISECONDS
+            )
+        }
+    }
+
+    private fun requestFirmwareVersion() {
+        with(runContext ?: throw IllegalStateException("SerialCommManager not started")) {
+            versionTimeoutFuture = writerExecutor?.schedule({
+                Logger.e("serial", "Firmware version request timed out after $VERSION_TIMEOUT_MS ms")
+                stop()
+            }, VERSION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+
+
+            writerExecutor?.execute {
+                sendCommand(RP2040OutgoingCommand.GetVersion())
+            }
+        }
     }
 }
