@@ -1,5 +1,6 @@
 package jp.oist.abcvlib.util.rp2040
 
+import jp.oist.abcvlib.util.latency.BenchmarkClock
 import jp.oist.abcvlib.util.AndroidToRP2040Command
 /**
  * A simulator for the RP2040 firmware behavior.
@@ -22,6 +23,11 @@ internal class MockRP2040 {
     var onCommandProcessed: ((AndroidToRP2040Command) -> Unit)? = null
 
     /**
+     * Optional hook used by latency benchmarks to tag the firmware processing boundary.
+     */
+    var benchmarkIterationProvider: (() -> Int)? = null
+
+    /**
      * Processes an incoming raw packet and returns a response packet.
      * Mimics the firmware's request-response cycle.
      */
@@ -38,6 +44,9 @@ internal class MockRP2040 {
         // Simulate firmware processing time to prevent race conditions in tests.
         // This ensures the Android side has time to enter its 'await' state.
         Thread.sleep(5)
+
+        // T5: Firmware Processing Complete
+        BenchmarkClock.mark(benchmarkIterationProvider?.invoke() ?: -1, 5)
         
         val typeByte = packet[1]
         val type = AndroidToRP2040Command.getEnumByValue(typeByte) ?: return null

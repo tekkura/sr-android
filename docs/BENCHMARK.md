@@ -19,11 +19,12 @@ To precisely isolate delays, the following high-resolution timestamps (`System.n
 | **T1** | Command Creation Start    | `SerialCommManager.setMotorLevels()`                 |
 | **T2** | Writer Loop Wake-up       | `SerialCommManager.android2PiWriter` (after `wait`)  |
 | **T3** | Transport Dispatch        | `UsbSerial.send(ByteArray)` (start)                  |
-| **T4** | Simulator Receipt         | `MockRP2040.processPacket()` (start)                 |
-| **T5** | Response Receipt at Phone | `UsbSerial.onNewData()` (start)                      |
-| **T6** | Packet Queue Entry        | `UsbSerial.onCompletePacketReceived()` (end)         |
-| **T7** | Manager Wake-up           | `SerialCommManager.receivePacket()` (after await)    |
-| **T8** | State Applied             | `SerialCommManager.parseStatus()` (after publishers) |
+| **T4** | Firmware Received Command | `Firmware getBlock` (detecting a command)            |
+| **T5** | Firmware Processing Done  | `Firmware handle_packet` (after processing)          |
+| **T6** | Response Receipt at Phone | `UsbSerial.onNewData()` (start)                      |
+| **T7** | Packet Queue Entry        | `UsbSerial.onCompletePacketReceived()` (end)         |
+| **T8** | Manager Wake-up           | `SerialCommManager.receivePacket()` (after await)    |
+| **T9** | State Applied             | `SerialCommManager.parseStatus()` (after publishers) |
 
 ## 2. Calculated Metrics
 
@@ -33,12 +34,13 @@ The following metrics are derived from the timestamps above to measure specific 
 |:-------------------------------|:------------|:------------------------------------------------------------------------------|
 | **M1: Outbound Queueing**      | $T2 - T1$   | Delay between command creation and the background thread picking it up.       |
 | **M2: Handling/Serialization** | $T3 - T2$   | Time from thread wake-up until bytes are sent (includes `command.toBytes()`). |
-| **M3: Transport Out**          | $T4 - T3$   | Latency from the phone to the robot (includes `VirtualRobotPort` dispatch).    |
-| **M4: Robot + Transit In**     | $T5 - T4$   | Simulator processing time (5ms sleep) + Response transit back to phone.        |
-| **M5: Buffer Processing**      | $T6 - T5$   | Time spent inside `PacketBuffer` parsing the response.                        |
-| **M6: Wake-up Lag**            | $T7 - T6$   | Delay between the packet being queued and the manager thread waking up.       |
-| **M7: App logic**              | $T8 - T7$   | Time taken to update internal state models and notify UI publishers.          |
-| **Total RTT**                  | $T8 - T1$   | The full round-trip latency as experienced by the application.                |
+| **M3: Transport Out**          | $T4 - T3$   | Latency from the phone to the robot (includes `VirtualRobotPort` dispatch).   |
+| **M4: Firmware Processing**    | $T5 - T4$   | Time spent inside firmware after the firmware receives the packet.            |
+| **M5: Response Transit In**    | $T6 - T5$   | Time from firmware completion until the phone receives the response bytes.    |
+| **M6: Buffer Processing**      | $T7 - T6$   | Time spent inside `PacketBuffer` parsing the response.                        |
+| **M7: Wake-up Lag**            | $T8 - T7$   | Delay between the packet being queued and the manager thread waking up.       |
+| **M8: App logic**              | $T9 - T8$   | Time taken to update internal state models and notify UI publishers.          |
+| **Total RTT**                  | $T9 - T1$   | The full round-trip latency as experienced by the application.                |
 
 ## 3. Methodology
 
