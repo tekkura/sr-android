@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-06-17T05:04:03Z",
+  "event_ts": "2026-06-17T05:03:39Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "27667013140",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 251,
+    "title": "Removed milestone check from codex-review.yml",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/251",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4726227434,
+    "html_url": "https://github.com/tekkura/sr-android/pull/251#issuecomment-4726227434",
+    "created_at": "2026-06-17T05:03:39Z",
+    "updated_at": "2026-06-17T05:03:39Z",
+    "body": "Thanks for calling out the maintenance-task case.\n\nThe previous workflow state had two separate milestone assumptions:\n\n- `resolve-pr-context` only allowed downstream Codex review jobs when the PR head or base branch used `milestone/` or `milestones/`.\n- Even after removing that branch gate, `codex-review` still required a PR milestone and a matching `docs/migrations/<MilestoneTitle>.md` guide, so non-milestone maintenance PRs could move from being skipped to failing later with `PR has no milestone set.`\n\nI added a follow-up patch in `1c6bbab9` to address both sides: Codex review now runs without requiring milestone branches, and migration guides are treated as optional. When a guide exists, it is still included as the primary checklist; when it does not, the review proceeds against `AGENTS.md`, the PR description, and the diff.\n\nPlease review and let me know if this matches your expectations."
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/251#issuecomment-4726227434",
+  "event_id": "a625942dfbee13377e055620c00d11792808df0e2d0ae4135129a12067e82633"
+}
