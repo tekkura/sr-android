@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-06-17T05:17:56Z",
+  "event_ts": "2026-06-17T05:17:39Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "27667513412",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 225,
+    "title": "Instrumentation tests/phase2",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/pull/225",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4726315416,
+    "html_url": "https://github.com/tekkura/sr-android/pull/225#issuecomment-4726315416",
+    "created_at": "2026-06-17T05:17:39Z",
+    "updated_at": "2026-06-17T05:17:39Z",
+    "body": "lgtm, thanks @GeorgeChernyshov for pushing through on this for so long!"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/225#issuecomment-4726315416",
+  "event_id": "51ba647b1b098c94659ac7c11c873d99546414d3f57b1d42acac335c8d6ed291"
+}
