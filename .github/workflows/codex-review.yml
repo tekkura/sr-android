@@ -86,21 +86,28 @@ jobs:
             const prAuthorAssociation = pr.author_association || '';
             const headRef = pr.head?.ref || '';
             const baseRef = pr.base?.ref || '';
+            const commentAuthorTrusted = expectedAssociations.includes(receivedCommentAuthorAssociation);
+            const prAuthorTrusted = expectedAssociations.includes(prAuthorAssociation);
             const commandGatePassed = !isIssueComment || (isPullRequestComment && commentCommandMatches);
-            const shouldRunDownstream = commandGatePassed;
+            const trustGatePassed = isIssueComment ? commentAuthorTrusted : prAuthorTrusted;
+            const shouldRunDownstream = commandGatePassed && trustGatePassed;
             let gateReason = 'ok';
 
             if (isIssueComment && !isPullRequestComment) {
               gateReason = 'not_pr_comment';
             } else if (isIssueComment && !commentCommandMatches) {
               gateReason = 'bad_command';
+            } else if (isIssueComment && !commentAuthorTrusted) {
+              gateReason = 'untrusted_comment_author';
+            } else if (!isIssueComment && !prAuthorTrusted) {
+              gateReason = 'untrusted_pr_author';
             }
 
             core.info(`Gate check: expected event trigger command for issue_comment "${expectedCommand}", received "${receivedCommentBody}"`);
             core.info(`Gate check: expected issue_comment on PR=true, received ${String(isPullRequestComment)}`);
             core.info(`Gate check: expected comment author association in [${expectedAssociations.join(', ')}], received "${receivedCommentAuthorAssociation}"`);
             core.info(`Gate check: expected PR author association in [${expectedAssociations.join(', ')}], received "${prAuthorAssociation}"`);
-            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
+            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, trustGatePassed=${String(trustGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
 
             core.setOutput('pull_number', String(pr.number));
             core.setOutput('head_ref', headRef);
@@ -191,9 +198,8 @@ jobs:
 
           title="${{ needs.resolve-pr-context.outputs.milestone_title }}"
           if [ -z "$title" ]; then
-            echo "PR has no milestone title set. Continuing without a migration guide."
-            echo "GUIDE_PATH=" >> "$GITHUB_ENV"
-            exit 0
+            echo "PR has a milestone number but no milestone title."
+            exit 1
           fi
 
           # Sanitize title for filename matching
@@ -202,7 +208,7 @@ jobs:
           matches=$(ls $glob 2>/dev/null || true)
           count=$(echo "$matches" | sed '/^$/d' | wc -l | tr -d ' ')
           if [ "$count" -ne 1 ]; then
-            echo "Expected exactly one migration guide for milestone title: $title. Continuing without a migration guide."
+            echo "Expected exactly one migration guide for milestone title: $title"
             echo "Sanitized title: $safe"
             echo "Attempted match: $glob"
             echo "Match count: $count"
@@ -210,8 +216,7 @@ jobs:
               echo "Matches:"
               echo "$matches"
             fi
-            echo "GUIDE_PATH=" >> "$GITHUB_ENV"
-            exit 0
+            exit 1
           fi
 
           echo "GUIDE_PATH=$matches" >> "$GITHUB_ENV"
