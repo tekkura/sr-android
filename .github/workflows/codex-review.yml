@@ -86,26 +86,28 @@ jobs:
             const prAuthorAssociation = pr.author_association || '';
             const headRef = pr.head?.ref || '';
             const baseRef = pr.base?.ref || '';
-            const isMilestoneBranch = (ref) => ref.startsWith('milestone/') || ref.startsWith('milestones/');
-            const milestoneBranchGatePassed = isMilestoneBranch(headRef) || isMilestoneBranch(baseRef);
+            const commentAuthorTrusted = expectedAssociations.includes(receivedCommentAuthorAssociation);
+            const prAuthorTrusted = expectedAssociations.includes(prAuthorAssociation);
             const commandGatePassed = !isIssueComment || (isPullRequestComment && commentCommandMatches);
-            const shouldRunDownstream = commandGatePassed && milestoneBranchGatePassed;
+            const trustGatePassed = isIssueComment ? commentAuthorTrusted : prAuthorTrusted;
+            const shouldRunDownstream = commandGatePassed && trustGatePassed;
             let gateReason = 'ok';
 
             if (isIssueComment && !isPullRequestComment) {
               gateReason = 'not_pr_comment';
             } else if (isIssueComment && !commentCommandMatches) {
               gateReason = 'bad_command';
-            } else if (!milestoneBranchGatePassed) {
-              gateReason = 'non_milestone_branch';
+            } else if (isIssueComment && !commentAuthorTrusted) {
+              gateReason = 'untrusted_comment_author';
+            } else if (!isIssueComment && !prAuthorTrusted) {
+              gateReason = 'untrusted_pr_author';
             }
 
             core.info(`Gate check: expected event trigger command for issue_comment "${expectedCommand}", received "${receivedCommentBody}"`);
             core.info(`Gate check: expected issue_comment on PR=true, received ${String(isPullRequestComment)}`);
             core.info(`Gate check: expected comment author association in [${expectedAssociations.join(', ')}], received "${receivedCommentAuthorAssociation}"`);
             core.info(`Gate check: expected PR author association in [${expectedAssociations.join(', ')}], received "${prAuthorAssociation}"`);
-            core.info(`Gate check: expected head/base ref under milestone/*, received head_ref="${headRef}", base_ref="${baseRef}", milestoneBranchGatePassed=${String(milestoneBranchGatePassed)}`);
-            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
+            core.info(`Gate evaluation: commandGatePassed=${String(commandGatePassed)}, trustGatePassed=${String(trustGatePassed)}, shouldRunDownstream=${String(shouldRunDownstream)}, gateReason="${gateReason}"`);
 
             core.setOutput('pull_number', String(pr.number));
             core.setOutput('head_ref', headRef);
@@ -189,13 +191,14 @@ jobs:
         run: |
           num="${{ needs.resolve-pr-context.outputs.milestone_number }}"
           if [ -z "$num" ]; then
-            echo "PR has no milestone set."
-            exit 1
+            echo "PR has no milestone set. Continuing without a migration guide."
+            echo "GUIDE_PATH=" >> "$GITHUB_ENV"
+            exit 0
           fi
 
           title="${{ needs.resolve-pr-context.outputs.milestone_title }}"
           if [ -z "$title" ]; then
-            echo "PR has no milestone title set."
+            echo "PR has a milestone number but no milestone title."
             exit 1
           fi
 
@@ -226,9 +229,14 @@ jobs:
           echo "AGENTS instructions (from HEAD):" >> /tmp/codex_prompt.md
           cat AGENTS.md >> /tmp/codex_prompt.md
           echo "" >> /tmp/codex_prompt.md
-          echo "Migration guide (from HEAD): $GUIDE_PATH" >> /tmp/codex_prompt.md
-          cat "$GUIDE_PATH" >> /tmp/codex_prompt.md
-          echo "" >> /tmp/codex_prompt.md
+          if [ -n "$GUIDE_PATH" ]; then
+            echo "Migration guide (from HEAD): $GUIDE_PATH" >> /tmp/codex_prompt.md
+            cat "$GUIDE_PATH" >> /tmp/codex_prompt.md
+            echo "" >> /tmp/codex_prompt.md
+          else
+            echo "Migration guide: none provided for this PR. Review against AGENTS.md, the PR description, and the diff." >> /tmp/codex_prompt.md
+            echo "" >> /tmp/codex_prompt.md
+          fi
           echo "PR description (from GitHub):" >> /tmp/codex_prompt.md
           cat <<'EOF' >> /tmp/codex_prompt.md
           ${{ needs.resolve-pr-context.outputs.pr_body }}
