@@ -2,6 +2,7 @@ package jp.oist.abcvlib.util.rp2040
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command
 import jp.oist.abcvlib.util.Logger
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -95,6 +96,22 @@ sealed class RP2040IncomingCommand {
                 chargeSideUSB.toBytes()
     }
 
+    class GetVersion(
+        val major: Int,
+        val minor: Int,
+        val patch: Int
+    ) : RP2040IncomingCommand() {
+        override val type = AndroidToRP2040Command.GET_VERSION
+
+        override fun serializeData(): ByteArray = ByteBuffer.allocate(3)
+            .apply {
+                put(major.toByte())
+                put(minor.toByte())
+                put(patch.toByte())
+            }
+            .array()
+    }
+
     companion object {
         private const val TAG = "RP2040Command"
 
@@ -154,6 +171,18 @@ sealed class RP2040IncomingCommand {
                     )
                 }
 
+                AndroidToRP2040Command.GET_VERSION -> {
+                    if (data.size != GET_VERSION_PAYLOAD_SIZE) {
+                        throw FirmwareCompatibilityException.invalidVersionPayload(data.size)
+                    }
+
+                    return GetVersion(
+                        major = data[0].toInt() and 0xFF,
+                        minor = data[1].toInt() and 0xFF,
+                        patch = data[2].toInt() and 0xFF
+                    )
+                }
+
                 AndroidToRP2040Command.START -> {
                     Logger.e(TAG, "parseStart. Start should never be a command")
 
@@ -167,5 +196,7 @@ sealed class RP2040IncomingCommand {
                 }
             }
         }
+
+        private const val GET_VERSION_PAYLOAD_SIZE = 3
     }
 }

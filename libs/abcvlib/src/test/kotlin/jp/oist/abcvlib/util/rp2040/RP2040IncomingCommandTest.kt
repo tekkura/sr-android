@@ -1,6 +1,7 @@
 package jp.oist.abcvlib.util.rp2040
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
 import org.junit.Assert.*
 import org.junit.Test
 import java.nio.ByteBuffer
@@ -163,6 +164,42 @@ class RP2040IncomingCommandTest {
         verifyMotorsState(motors, fromBytes.motorsState)
         verifyBatteryDetails(battery, fromBytes.batteryDetails)
         verifyChargeSideUSB(usb, fromBytes.chargeSideUSB)
+    }
+
+    @Test
+    fun testGetVersion() {
+        val command = RP2040IncomingCommand.GetVersion(1, 0, 100)
+
+        val payload = extractPayload(command.toBytes())
+        assertArrayEquals(byteArrayOf(1, 0, 100), payload)
+
+        val fromBytes = RP2040IncomingCommand.from(
+            AndroidToRP2040Command.GET_VERSION,
+            payload
+        ) as RP2040IncomingCommand.GetVersion
+
+        assertEquals(1, fromBytes.major)
+        assertEquals(0, fromBytes.minor)
+        assertEquals(100, fromBytes.patch)
+    }
+
+    @Test
+    fun testGetVersionRejectsInvalidPayloadLength() {
+        val badPayloads = listOf(
+            byteArrayOf(),
+            byteArrayOf(1),
+            byteArrayOf(1, 0),
+            byteArrayOf(1, 0, 0, 0)
+        )
+
+        badPayloads.forEach { payload ->
+            val exception = assertThrows(FirmwareCompatibilityException::class.java) {
+                RP2040IncomingCommand.from(AndroidToRP2040Command.GET_VERSION, payload)
+            }
+
+            assertTrue(exception.message!!.contains("exactly 3 bytes"))
+            assertTrue(exception.userFacingMessage.contains("Expected firmware version:"))
+        }
     }
 
     @Test

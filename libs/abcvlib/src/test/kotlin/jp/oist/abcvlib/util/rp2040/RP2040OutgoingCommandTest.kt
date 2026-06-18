@@ -46,6 +46,13 @@ class RP2040OutgoingCommandTest {
     }
 
     @Test
+    fun `test GetVersion packet structure`() {
+        val command = RP2040OutgoingCommand.GetVersion()
+        val bytes = command.toBytes()
+        verifyPacketStructure(bytes, AndroidToRP2040Command.GET_VERSION, byteArrayOf(0, 0))
+    }
+
+    @Test
     fun `test SetMotorLevels stop`() {
         val command = RP2040OutgoingCommand.SetMotorLevels(0f, 0f, false, false)
         val bytes = command.toBytes()
