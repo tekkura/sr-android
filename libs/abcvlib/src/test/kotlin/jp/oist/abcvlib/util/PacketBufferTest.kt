@@ -92,6 +92,39 @@ class PacketBufferTest {
     }
 
     @Test
+    fun `test consume packet with telemetry tail`() {
+        val telemetryBytes = ByteArray(16) { it.toByte() }
+        val basePacket = getStateCommand.toBytes()
+        val extendedPacket = appendTelemetry(basePacket, telemetryBytes)
+        val basePayloadSize = basePacket.size - 5
+
+        val packetBufferWithDecoder = PacketBuffer(payloadDecoder = { type, data ->
+            if (type == AndroidToRP2040Command.GET_STATE && data.size == basePayloadSize + telemetryBytes.size) {
+                PacketBuffer.PacketPayload(
+                    commandData = data.copyOfRange(0, basePayloadSize),
+                    additionalData = data.copyOfRange(basePayloadSize, data.size)
+                )
+            } else {
+                PacketBuffer.PacketPayload(data)
+            }
+        })
+
+        packetBufferWithDecoder.consume(extendedPacket) { results.add(it) }
+
+        assertEquals(1, results.size)
+        val result = results[0]
+        assertTrue(result is PacketBuffer.ParseResult.ReceivedPacket)
+        if (result is PacketBuffer.ParseResult.ReceivedPacket) {
+            assertArrayEquals(telemetryBytes, result.additionalData)
+            assertEquals(AndroidToRP2040Command.GET_STATE, result.command.type)
+            assertArrayEquals(
+                basePacket,
+                result.command.toBytes()
+            )
+        }
+    }
+
+    @Test
     fun `test consume multiple complete packets`() {
         val packet1 = getStateCommand.toBytes()
         val packet2 = ackCommand.toBytes()
@@ -150,7 +183,6 @@ class PacketBufferTest {
     @Test
     fun `test consume with leading noise`() {
         val noise = byteArrayOf(0x00, 0x11, 0x22)
-        val payload = byteArrayOf(0x44)
         val packet = resetStateCommand.toBytes()
         val combined = noise + packet
 
@@ -290,5 +322,21 @@ class PacketBufferTest {
         assertEquals("Expected 1 valid packet after overflow recovery", 1, packets.size)
         assertEquals(AndroidToRP2040Command.ACK, packets[0].command.type)
         assertArrayEquals(ackCommand.toBytes(), packets[0].command.toBytes())
+    }
+
+    private fun appendTelemetry(packet: ByteArray, telemetry: ByteArray): ByteArray {
+        val baseDataSize = packet.size - 5
+        val extendedPacket = ByteArray(packet.size + telemetry.size)
+        val newSize = (baseDataSize + telemetry.size).toShort()
+
+        extendedPacket[0] = packet[0]
+        extendedPacket[1] = packet[1]
+        extendedPacket[2] = (newSize.toInt() and 0xFF).toByte()
+        extendedPacket[3] = ((newSize.toInt() shr 8) and 0xFF).toByte()
+        System.arraycopy(packet, 4, extendedPacket, 4, baseDataSize)
+        System.arraycopy(telemetry, 0, extendedPacket, 4 + baseDataSize, telemetry.size)
+        extendedPacket[extendedPacket.lastIndex] = packet.last()
+
+        return extendedPacket
     }
 }

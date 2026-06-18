@@ -41,7 +41,7 @@ open class UsbSerial @Throws(IOException::class) constructor(
     private var badPacketCount = 0
 
     internal val fifoQueue: CircularFifoQueue<RP2040IncomingCommand> = CircularFifoQueue<RP2040IncomingCommand>(256)
-    private val packetBuffer = PacketBuffer()
+    protected open val packetBuffer = PacketBuffer()
 
     companion object {
         private const val TAG = "UsbSerial"
@@ -182,7 +182,7 @@ open class UsbSerial @Throws(IOException::class) constructor(
                         }
 
                         is PacketBuffer.ParseResult.ReceivedPacket -> {
-                            onCompletePacketReceived(result.command)
+                            onCompletePacketReceived(result.command, result.additionalData)
 
                             Logger.d(TAG, "Packet verified")
                             Logger.d(TAG, "packetReceived.signal()")
@@ -238,7 +238,10 @@ open class UsbSerial @Throws(IOException::class) constructor(
      * @throws IOException if fifoQueue is full
      */
     @Throws(IOException::class)
-    protected open fun onCompletePacketReceived(command: RP2040IncomingCommand) {
+    protected open fun onCompletePacketReceived(
+        command: RP2040IncomingCommand,
+        additionalData: ByteArray? = null
+    ) {
         synchronized(fifoQueue) {
             if (fifoQueue.isAtFullCapacity) {
                 Logger.e("serial", "fifoQueue is full")

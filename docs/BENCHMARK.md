@@ -106,3 +106,18 @@ Success Rate: 100.00% (10000/10000)
 | M6: Wake-up Lag            | 0.771     | 0.115    | 4.167    | 1.254    |
 | M7: App Logic              | 1.905     | 0.211    | 11.506   | 2.884    |
 | Total RTT                  | 11.196    | 6.248    | 30.403   | 13.139   |
+
+
+#### New packet parsing implementation
+
+| Metric                             | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |
+|:-----------------------------------|:----------|:---------|:---------|:---------|
+| M1: Outbound Queueing              | 0.436     | 0.045    | 2.259    | 0.959    |
+| M2: Handling/Serialization         | 0.143     | 0.019    | 1.563    | 0.281    |
+| M3: Android Write Blocking         | 1.070     | 0.219    | 4.029    | 1.677    |
+| M4: Firmware Processing            | 5.367     | 5.103    | 9.883    | 5.668    |
+| M5: Response Wait After Write      | 1.070     | 0.219    | 4.029    | 1.677    |
+| M6: Buffer Processing              | 1.048     | 0.187    | 3.827    | 1.716    |
+| M7: Wake-up Lag                    | 0.838     | 0.097    | 4.946    | 1.673    |
+| M8: App Logic                      | 1.714     | 0.195    | 5.855    | 3.092    |
+| Total RTT                          | 11.686    | 6.311    | 18.619   | 15.051   |

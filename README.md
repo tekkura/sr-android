@@ -166,6 +166,7 @@ These tests verify end-to-end communication using a mocked transport layer to si
 
 ### 3. Latency Benchmark
 A specialized test to measure communication round-trip time and identify bottlenecks. For details on the methodology and metrics, see [docs/BENCHMARK.md](docs/BENCHMARK.md).
+To successfully measure rtt on a real firmware, you need to build it with LATENCY_BENCHMARK flag enabled. Otherwise, firmware will not send latency telemetry and the benchmark will fail.
 
 ```bash
 # Run the benchmark
