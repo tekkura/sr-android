@@ -25,6 +25,8 @@ class PacketBufferTest {
 
     private val getLogCommand = RP2040IncomingCommand.GetLog(listOf("Log 1", "Log 2"))
 
+    private val getVersionCommand = RP2040IncomingCommand.GetVersion(1, 0, 100)
+
     private val getStateCommand = RP2040IncomingCommand.GetState(
         motorsState = MotorsState().apply {
             controlValues.left = 0x66
@@ -89,6 +91,45 @@ class PacketBufferTest {
                 result.command.toBytes()
             )
         }
+    }
+
+    @Test
+    fun `test consume firmware version response packet`() {
+        val packet = getVersionCommand.toBytes()
+
+        packetBuffer.consume(packet) { results.add(it) }
+
+        assertEquals(1, results.size)
+        val result = results[0]
+        assertTrue(result is PacketBuffer.ParseResult.ReceivedPacket)
+        val command = (result as PacketBuffer.ParseResult.ReceivedPacket).command
+        assertTrue(command is RP2040IncomingCommand.GetVersion)
+
+        command as RP2040IncomingCommand.GetVersion
+        assertEquals(1, command.major)
+        assertEquals(0, command.minor)
+        assertEquals(100, command.patch)
+    }
+
+    @Test
+    fun `test consume malformed firmware version response reports compatibility failure`() {
+        val packet = ByteBuffer.allocate(1 + 1 + 2 + 2 + 1).apply {
+            order(ByteOrder.LITTLE_ENDIAN)
+            put(AndroidToRP2040Command.START.hexValue)
+            put(AndroidToRP2040Command.GET_VERSION.hexValue)
+            putShort(2.toShort())
+            put(byteArrayOf(1, 0))
+            put(AndroidToRP2040Command.STOP.hexValue)
+        }.array()
+
+        packetBuffer.consume(packet) { results.add(it) }
+
+        assertEquals(1, results.size)
+        val result = results[0]
+        assertTrue(result is PacketBuffer.ParseResult.FirmwareCompatibilityFailure)
+        val exception = (result as PacketBuffer.ParseResult.FirmwareCompatibilityFailure).exception
+        assertTrue(exception.message!!.contains("exactly 3 bytes"))
+        assertTrue(exception.userFacingMessage.contains("Expected firmware version:"))
     }
 
     @Test

@@ -2,6 +2,7 @@ package jp.oist.abcvlib.util.rp2040
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command
 import jp.oist.abcvlib.util.Logger
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -171,10 +172,14 @@ sealed class RP2040IncomingCommand {
                 }
 
                 AndroidToRP2040Command.GET_VERSION -> {
+                    if (data.size != GET_VERSION_PAYLOAD_SIZE) {
+                        throw FirmwareCompatibilityException.invalidVersionPayload(data.size)
+                    }
+
                     return GetVersion(
-                        major = data[0].toInt(),
-                        minor = data[1].toInt(),
-                        patch = data[2].toInt()
+                        major = data[0].toInt() and 0xFF,
+                        minor = data[1].toInt() and 0xFF,
+                        patch = data[2].toInt() and 0xFF
                     )
                 }
 
@@ -191,5 +196,7 @@ sealed class RP2040IncomingCommand {
                 }
             }
         }
+
+        private const val GET_VERSION_PAYLOAD_SIZE = 3
     }
 }

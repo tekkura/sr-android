@@ -3,6 +3,7 @@ package jp.oist.abcvlib.util
 import jp.oist.abcvlib.util.AndroidToRP2040Command.Companion.getEnumByValue
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040ToAndroidPacket
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Arrays
@@ -108,7 +109,14 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                         packetDataSize
                     )
 
-                    val command = RP2040IncomingCommand.from(packetType, data)
+                    val command = try {
+                        RP2040IncomingCommand.from(packetType, data)
+                    } catch (e: FirmwareCompatibilityException) {
+                        onResult(ParseResult.FirmwareCompatibilityFailure(e))
+                        readIndex = startIdx + totalExpectedSize
+                        resetState()
+                        continue
+                    }
                     onResult(
                         command?.let {
                             ParseResult.ReceivedPacket(it)
@@ -188,6 +196,9 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
         object NotEnoughData : ParseResult()
         object Overflow : ParseResult()
         object ReceivedErrorPacket : ParseResult()
+        data class FirmwareCompatibilityFailure(
+            val exception: FirmwareCompatibilityException
+        ) : ParseResult()
         data class ReceivedPacket(
             val command: RP2040IncomingCommand
         ) : ParseResult()
