@@ -40,6 +40,11 @@ dependencies {
     api(libs.flatbuffers)
     api(libs.android.permissions)
     api(libs.abcvlib.fbclasses)
+
+    // Test
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }
 
 android {
@@ -51,6 +56,13 @@ android {
         val networkConfig = loadNetworkConfig(rootDir)
         buildConfigField("String", "IP", "\"${networkConfig.ip}\"")
         buildConfigField("int", "PORT", "${networkConfig.port}")
+        buildConfigField("String", "GIT_COMMIT", "\"${gitHash()}\"")
+        buildConfigField("boolean", "GIT_DIRTY", "${isDirty()}")
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
