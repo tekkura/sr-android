@@ -14,17 +14,17 @@ This file remains the stable methodology reference and keeps older result tables
 
 To precisely isolate delays, the following high-resolution timestamps (`System.nanoTime()`) are captured during a single command-response cycle:
 
-| ID     | Junction Point            | Location                                             |
-|:-------|:--------------------------|:-----------------------------------------------------|
-| **T1** | Command Creation Start    | `SerialCommManager.setMotorLevels()`                 |
-| **T2** | Writer Loop Wake-up       | `SerialCommManager.android2PiWriter` (after `wait`)  |
-| **T3** | Transport Dispatch        | `UsbSerial.send(ByteArray)` (start)                  |
-| **T4** | Firmware Received Command | `Firmware getBlock` (detecting a command)            |
-| **T5** | Firmware Processing Done  | `Firmware handle_packet` (after processing)          |
-| **T6** | Response Receipt at Phone | `UsbSerial.onNewData()` (start)                      |
-| **T7** | Packet Queue Entry        | `UsbSerial.onCompletePacketReceived()` (end)         |
-| **T8** | Manager Wake-up           | `SerialCommManager.receivePacket()` (after await)    |
-| **T9** | State Applied             | `SerialCommManager.parseStatus()` (after publishers) |
+| ID     | Junction Point            | Location                                                                                    |
+|:-------|:--------------------------|:--------------------------------------------------------------------------------------------|
+| **T1** | Command Creation Start    | `SerialCommManager.setMotorLevels()`                                                        |
+| **T2** | Writer Loop Wake-up       | `SerialCommManager.android2PiWriter` (after `wait`)                                         |
+| **T3** | Transport Dispatch        | `UsbSerial.send(ByteArray)` (start)                                                         |
+| **T4** | Firmware Received Command | `Firmware getBlock` (detecting a command) / `MockRP2040.processPacket` (start)              |
+| **T5** | Firmware Processing Done  | `Firmware handle_packet` (after processing) / `MockRP2040.processPacket` (after processing) |
+| **T6** | Response Receipt at Phone | `PacketBuffer.consume` (after reading the packet type)                                      |
+| **T7** | Packet Queue Entry        | `UsbSerial.onCompletePacketReceived()` (end)                                                |
+| **T8** | Manager Wake-up           | `SerialCommManager.receivePacket()` (after await)                                           |
+| **T9** | State Applied             | `SerialCommManager.parseStatus()` (after publishers)                                        |
 
 ## 2. Calculated Metrics
 
@@ -112,3 +112,18 @@ Success Rate: 100.00% (10000/10000)
 | M6: Wake-up Lag            | 0.771     | 0.115    | 4.167    | 1.254    |
 | M7: App Logic              | 1.905     | 0.211    | 11.506   | 2.884    |
 | Total RTT                  | 11.196    | 6.248    | 30.403   | 13.139   |
+
+
+#### New packet parsing implementation
+
+| Metric                     | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |
+|:---------------------------|:----------|:---------|:---------|:---------|
+| M1: Outbound Queueing      | 0.436     | 0.045    | 2.259    | 0.959    |
+| M2: Handling/Serialization | 0.143     | 0.019    | 1.563    | 0.281    |
+| M3: Transport Out          | 1.070     | 0.219    | 4.029    | 1.677    |
+| M4: Firmware Processing    | 5.367     | 5.103    | 9.883    | 5.668    |
+| M5: Response Transit in    | 1.070     | 0.219    | 4.029    | 1.677    |
+| M6: Buffer Processing      | 1.048     | 0.187    | 3.827    | 1.716    |
+| M7: Wake-up Lag            | 0.838     | 0.097    | 4.946    | 1.673    |
+| M8: App Logic              | 1.714     | 0.195    | 5.855    | 3.092    |
+| Total RTT                  | 11.686    | 6.311    | 18.619   | 15.051   |
