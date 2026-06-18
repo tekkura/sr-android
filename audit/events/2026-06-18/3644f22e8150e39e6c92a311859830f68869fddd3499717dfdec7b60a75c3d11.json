@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-06-18T07:30:56Z",
+  "event_ts": "2026-06-18T07:30:39Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "27743906745",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 252,
+    "title": "Firmware benchmarking/parse firmware benchmarks",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/252",
+    "milestone": {
+      "number": 15,
+      "title": "FirmwareBenchmarking"
+    }
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": {
+    "number": 15,
+    "title": "FirmwareBenchmarking",
+    "state": "open",
+    "due_on": null,
+    "html_url": "https://github.com/tekkura/sr-android/milestone/15",
+    "description": ""
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/252",
+  "event_id": "3644f22e8150e39e6c92a311859830f68869fddd3499717dfdec7b60a75c3d11"
+}
