@@ -15,6 +15,8 @@ data class Version(
         )
     }
 
+    override fun toString(): String = "$major.$minor.$patch"
+
     companion object {
         fun parse(version: String): Version? {
             val parts = version.split('.')

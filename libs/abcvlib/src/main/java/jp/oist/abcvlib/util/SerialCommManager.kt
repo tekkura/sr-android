@@ -9,8 +9,12 @@ import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040State
 import jp.oist.abcvlib.util.rp2040.StatusCommand
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
+import jp.oist.abcvlib.util.versioning.Version
 import jp.oist.abcvlib.util.versioning.checkVersionSupport
 import java.io.IOException
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -23,7 +27,8 @@ import java.util.concurrent.atomic.AtomicLong
 open class SerialCommManager @JvmOverloads constructor(
     protected val usbSerial: UsbSerial,
     batteryData: BatteryData? = null,
-    wheelData: WheelData? = null
+    wheelData: WheelData? = null,
+    private var firmwareCompatibilityFailureListener: FirmwareCompatibilityFailureListener? = null
 ) {
     private val rp2040State: RP2040State?
 
@@ -38,6 +43,7 @@ open class SerialCommManager @JvmOverloads constructor(
     private var durationAndroid: Long = 0
 
     private var versionTimeoutFuture: ScheduledFuture<*>? = null
+    private val firmwareCompatibilityFailureReported = AtomicBoolean(false)
     private val VERSION_TIMEOUT_MS = 2000L
 
     // Constructor to initialize SerialCommManager
@@ -57,6 +63,7 @@ open class SerialCommManager @JvmOverloads constructor(
     protected class RunContext(
         val stopRequested: AtomicBoolean = AtomicBoolean(false),
         var writerExecutor: ScheduledExecutorServiceWithException? = null,
+        var versionTimeoutExecutor: ScheduledExecutorService? = null,
         var delay: AtomicLong = AtomicLong(10),
         var initialDelay: AtomicLong = AtomicLong(0)
     )
@@ -128,7 +135,14 @@ open class SerialCommManager @JvmOverloads constructor(
             )
 
             context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory)
+            context.versionTimeoutExecutor = Executors.newSingleThreadScheduledExecutor(
+                ProcessPriorityThreadFactory(
+                    Thread.MAX_PRIORITY,
+                    "SerialCommManager_FirmwareVersionTimeout"
+                )
+            )
             runContext = context
+            firmwareCompatibilityFailureReported.set(false)
 
             // Only check version support for real firmware
             if (usbSerial.isPortReal)
@@ -150,7 +164,15 @@ open class SerialCommManager @JvmOverloads constructor(
             context.stopRequested.set(true)
             context.writerExecutor?.shutdownNow()
             context.writerExecutor = null
+            context.versionTimeoutExecutor?.shutdownNow()
+            context.versionTimeoutExecutor = null
         }
+    }
+
+    fun setFirmwareCompatibilityFailureListener(
+        listener: FirmwareCompatibilityFailureListener?
+    ) {
+        firmwareCompatibilityFailureListener = listener
     }
 
     //TODO paseFifoPacket() should call the various SerialResponseListener methods.
@@ -205,7 +227,11 @@ open class SerialCommManager @JvmOverloads constructor(
                     )) {
                         startPolling()
                     } else {
-                        throw IllegalStateException("Unsupported firmware version")
+                        handleFirmwareCompatibilityFailure(
+                            FirmwareCompatibilityException.unsupportedVersion(
+                                Version(command.major, command.minor, command.patch)
+                            )
+                        )
                     }
 
                     result = 1
@@ -397,15 +423,41 @@ open class SerialCommManager @JvmOverloads constructor(
 
     private fun requestFirmwareVersion() {
         with(runContext ?: throw IllegalStateException("SerialCommManager not started")) {
-            versionTimeoutFuture = writerExecutor?.schedule({
-                Logger.e("serial", "Firmware version request timed out after $VERSION_TIMEOUT_MS ms")
-                stop()
+            versionTimeoutFuture = versionTimeoutExecutor?.schedule({
+                handleFirmwareCompatibilityFailure(
+                    FirmwareCompatibilityException.versionRequestTimedOut(VERSION_TIMEOUT_MS)
+                )
             }, VERSION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
 
 
             writerExecutor?.execute {
-                sendCommand(RP2040OutgoingCommand.GetVersion())
+                try {
+                    sendCommand(RP2040OutgoingCommand.GetVersion())
+                } catch (e: FirmwareCompatibilityException) {
+                    handleFirmwareCompatibilityFailure(e)
+                } catch (e: RuntimeException) {
+                    if (firmwareCompatibilityFailureReported.get()) {
+                        Logger.d("serial", "Ignoring send failure after firmware compatibility failure")
+                    } else {
+                        handleFirmwareCompatibilityFailure(
+                            FirmwareCompatibilityException.versionRequestFailed(e)
+                        )
+                    }
+                }
             }
         }
+    }
+
+    private fun handleFirmwareCompatibilityFailure(exception: FirmwareCompatibilityException) {
+        if (!firmwareCompatibilityFailureReported.compareAndSet(false, true))
+            return
+
+        versionTimeoutFuture?.cancel(false)
+        versionTimeoutFuture = null
+        Logger.e("serial", exception.message ?: "Firmware compatibility failure", exception)
+        stop()
+        firmwareCompatibilityFailureListener?.onFirmwareCompatibilityFailure(
+            exception.userFacingMessage
+        )
     }
 }
