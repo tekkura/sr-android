@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-06-19T19:09:18Z",
+  "event_ts": "2026-06-19T19:09:00Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "27843926546",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 250,
+    "title": "HandsOnApp rotate the image in non UI Thread",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/250",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3444201990,
+    "html_url": "https://github.com/tekkura/sr-android/pull/250#discussion_r3444201990",
+    "created_at": "2026-06-19T19:09:00Z",
+    "updated_at": "2026-06-19T19:09:00Z",
+    "body": "#codex-reply resolved in [fe1c29d](https://github.com/tekkura/sr-android/commit/fe1c29d9f88b1f11057b6829e787ea8ae35dc2dd)"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/250#discussion_r3444201990",
+  "event_id": "efa12b2811b6a6d7b07440d846ad8ee855335121812e1badb05d86a47245cdbd"
+}
