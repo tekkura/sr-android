@@ -11,7 +11,7 @@ import jp.oist.abcvlib.util.Logger
  */
 class MainActivity : AbcvlibActivity() {
     private var speed: Float = 0.0f
-    private var increment: Float = 0.4f
+    private var increment: Float = 0.01f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Passes Android App information up to parent classes for various usages. Do not modify
