@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-21T12:52:15Z",
+  "event_ts": "2026-06-21T12:52:00Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "assigned",
+  "actor": "topherbuckley",
+  "run_id": "27904913821",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 264,
+    "title": "push tekkura branches to oist",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/264",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/264",
+  "event_id": "7ba97c0040e0ec25188240656530849e46a507b1ab15b8ac785088cc3495ab31"
+}
