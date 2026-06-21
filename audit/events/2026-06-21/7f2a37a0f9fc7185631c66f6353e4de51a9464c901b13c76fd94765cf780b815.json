@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-21T03:32:29Z",
+  "event_ts": "2026-06-21T03:32:12Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "assigned",
+  "actor": "topherbuckley",
+  "run_id": "27892314559",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 255,
+    "title": "Update Android Studio and build/test pipeline on laptop",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/255",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/255",
+  "event_id": "7f2a37a0f9fc7185631c66f6353e4de51a9464c901b13c76fd94765cf780b815"
+}
