@@ -92,8 +92,8 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
         val motionActionSpace = MotionActionSpace(5).apply {
             // I'm just overwriting an existing to show how
             addMotionAction("stop", 0.toByte(), 0f, 0f, false, false)
-            addMotionAction("forward", 1.toByte(), 1f, 1f, false, false)
-            addMotionAction("backward", 2.toByte(), -1f, -1f, false, false)
+            addMotionAction("forward", 1.toByte(), 0.75f, 0.75f, false, false)
+            addMotionAction("backward", 2.toByte(), -0.75f, -0.75f, false, false)
             addMotionAction("left", 3.toByte(), -1f, 1f, false, false)
             addMotionAction("right", 4.toByte(), 1f, -1f, false, false)
         }

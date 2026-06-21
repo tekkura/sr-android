@@ -30,7 +30,11 @@ class MyTrial(
         // Use data as input to your policy and select action here
         // Just using default actions of each set as an example but this
         // should be replaced by your policy's decision process
-        val motionAction: MotionAction = motionActionSet.motionActions[1]!!
+        val motionAction: MotionAction = if ((timeStep / 10) % 2 == 0) {
+            motionActionSet.motionActions[1]!!
+        } else {
+            motionActionSet.motionActions[2]!!
+        }
         val commAction: CommAction = commActionSet.commActions[0]!!
 
         // Add your selected actions to the TimeStepDataBuffer for record

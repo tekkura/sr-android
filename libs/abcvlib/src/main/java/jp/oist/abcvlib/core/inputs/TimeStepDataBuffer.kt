@@ -278,8 +278,10 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 private set
 
             private val levels = arrayListOf<Float>()
+            @Synchronized
             fun getLevels() = levels.toFloatArray()
 
+            @Synchronized
             fun add(levels: FloatArray, numSamples: Int) {
                 for (level in levels) {
                     this.levels.add(level)
