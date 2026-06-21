@@ -272,12 +272,11 @@ class SerialCommManager @JvmOverloads constructor(
         val brakes = booleanArrayOf(leftBrake, rightBrake)
 
         for (i in voltages.indices) {
-            val voltage = voltages[i] // Get the current voltage
             control_values[i] = 0 // Reset the control value
             // Exclude or truncate voltages between -0.48V and 0.48V to 0V
             // Changing to 0.49 as the scaling function would result in 0x05h for 0.48V and
             // cause the rp2040 to perform unexpectedly as it is a reserved register value
-            if (voltage >= -LOWER_LIMIT && voltage <= LOWER_LIMIT) {
+            if (voltages[i] >= -LOWER_LIMIT && voltages[i] <= LOWER_LIMIT) {
                 voltages[i] = 0.0f // Update the value in the array
             } else {
                 // Clamp the voltage within the valid range
@@ -302,10 +301,10 @@ class SerialCommManager @JvmOverloads constructor(
                 cv = cv or (1 shl DRV8830_IN1_BIT.toInt())
                 cv = cv or (1 shl DRV8830_IN2_BIT.toInt())
             } else {
-                if (voltage < 0) {
+                if (voltages[i] < 0) {
                     cv = cv or (1 shl DRV8830_IN1_BIT.toInt())
                     cv = cv and (1 shl DRV8830_IN2_BIT.toInt()).inv()
-                } else if (voltage > 0) {
+                } else if (voltages[i] > 0) {
                     cv = cv or (1 shl DRV8830_IN2_BIT.toInt())
                     cv = cv and (1 shl DRV8830_IN1_BIT.toInt()).inv()
                 } else {
@@ -355,8 +354,12 @@ class SerialCommManager @JvmOverloads constructor(
             if (activeContext.stopRequested.get()) {
                 return
             }
-            command =
-                generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
+            command = generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
+            Logger.i(
+                "MotorDiag",
+                "serial queued setMotorLevels left=$left right=$right brakeL=$leftBrake " +
+                        "brakeR=$rightBrake packet=${bytesToHex(command!!)}"
+            )
             queuedMotorLevelsAtMs = SystemClock.uptimeMillis()
             commandLock.notify()
         }
@@ -397,10 +400,17 @@ class SerialCommManager @JvmOverloads constructor(
         if (rp2040State != null) {
             val byteBuffer = ByteBuffer.wrap(bytes)
             byteBuffer.order(ByteOrder.LITTLE_ENDIAN)
-            if (rp2040State.motorsState.controlValues.left != byteBuffer.get()) {
+            val returnedLeftControl = byteBuffer.get()
+            val returnedRightControl = byteBuffer.get()
+            Logger.i(
+                "MotorDiag",
+                "rp2040 status returnedControlL=$returnedLeftControl " +
+                        "returnedControlR=$returnedRightControl"
+            )
+            if (rp2040State.motorsState.controlValues.left != returnedLeftControl) {
                 //Logger.e("serial", "Left control value mismatch");
             }
-            if (rp2040State.motorsState.controlValues.right != byteBuffer.get()) {
+            if (rp2040State.motorsState.controlValues.right != returnedRightControl) {
                 //Logger.e("serial", "Right control value mismatch");
             }
             rp2040State.motorsState.faults.left = byteBuffer.get()

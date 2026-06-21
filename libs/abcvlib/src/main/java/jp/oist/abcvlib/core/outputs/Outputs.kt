@@ -125,6 +125,11 @@ class Outputs(
         ControlLatencyTrace.sentRight = newRight
         ControlLatencyTrace.outputsDtMs = dt
 
+        Logger.i(
+            "MotorDiag",
+            "outputs dtMs=$dt requestedL=$left requestedR=$right sentL=$newLeft sentR=$newRight " +
+                    "brakeL=$leftBrake brakeR=$rightBrake maxChange=$maxChange"
+        )
         serialCommManager.setMotorLevels(newLeft, newRight, leftBrake, rightBrake)
         lastLeft = newLeft
         lastRight = newRight
