@@ -47,7 +47,31 @@ The CLI copies the template into `apps/<appName>`, rewrites package and
 namespace references, updates `apps-config.json`, and stores the local target in
 `.app.local.properties`. That local target file is ignored by Git.
 
-## 2. Select A Target App
+## 2. Find The App Source Files
+
+Each app lives under:
+
+`apps/<appName>/src/main/`
+
+Kotlin source files usually live under:
+
+`apps/<appName>/src/main/java/jp/oist/abcvlib/<packageName>/`
+
+For example, the main Kotlin entry point for `basicAssembler` is:
+
+`apps/basicAssembler/src/main/java/jp/oist/abcvlib/basicassembler/MainActivity.kt`
+
+After cloning `basicAssembler` into `myRlApp`, the equivalent file is usually:
+
+`apps/myRlApp/src/main/java/jp/oist/abcvlib/myrlapp/MainActivity.kt`
+
+Other common app files:
+
+- Android manifest: `apps/<appName>/src/main/AndroidManifest.xml`
+- Layout files: `apps/<appName>/src/main/res/layout/`
+- Strings/resources: `apps/<appName>/src/main/res/values/`
+
+## 3. Select A Target App
 
 Show the current target:
 
