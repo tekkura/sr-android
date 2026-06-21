@@ -2,6 +2,33 @@
 
 `basicAssembler` is the current RL-oriented demo app.
 
+## Where To Customize basicAssembler
+
+The policy loop is in:
+
+`apps/basicAssembler/src/main/java/jp/oist/abcvlib/basicassembler/MyTrial.kt`
+
+Customize `MyTrial.forward(data)`.
+
+`data` is the assembled `TimeStepData` for the current timestep. Read state from
+`data`, choose an action, record the selected action, then send outputs.
+
+```kotlin
+override fun forward(data: TimeStepData) {
+    // Read state from data.*
+    // Select a MotionAction / CommAction
+    // Record the selected action with data.actions.add(...)
+    // Send wheel output with outputs.setWheelOutput(...)
+}
+```
+
+The app setup is in:
+
+`apps/basicAssembler/src/main/java/jp/oist/abcvlib/basicassembler/MainActivity.kt`
+
+Use `MainActivity` for wiring publishers, timestep length/counts, action-space
+definitions, and GUI setup. Keep policy logic in `MyTrial.forward(data)`.
+
 ## Assembler Or Subscriber
 
 ![Subscriber vs Assembler workflow](../media/SubscriberVsAssembler.png)
