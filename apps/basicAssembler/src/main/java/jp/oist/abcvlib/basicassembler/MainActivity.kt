@@ -44,8 +44,8 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainActivity : AbcvlibActivity(), SerialReadyListener {
     private lateinit var binding: ActivityMainBinding
     private lateinit var guiUpdater: GuiUpdater
-    private val maxEpisodeCount = 3
-    private val maxTimeStepCount = 40
+    private val maxEpisodeCount = 10
+    private val maxTimeStepCount = 100
     private lateinit var stateSpace: StateSpace
     private lateinit var actionSpace: ActionSpace
     private lateinit var timeStepDataBuffer: TimeStepDataBuffer

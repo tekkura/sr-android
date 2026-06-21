@@ -8,7 +8,7 @@ import android.graphics.Path
 import android.util.AttributeSet
 import android.view.View
 import kotlin.math.max
-import kotlin.math.min
+import kotlin.math.abs
 
 class LineGraphView @JvmOverloads constructor(
     context: Context,
@@ -106,14 +106,12 @@ class LineGraphView @JvmOverloads constructor(
     }
 
     private fun rangeFor(seriesIndex: Int): Pair<Float, Float> {
-        var minValue = Float.POSITIVE_INFINITY
-        var maxValue = Float.NEGATIVE_INFINITY
+        var maxAbsValue = 0f
         for (sample in samples) {
-            minValue = min(minValue, sample[seriesIndex])
-            maxValue = max(maxValue, sample[seriesIndex])
+            maxAbsValue = max(maxAbsValue, abs(sample[seriesIndex]))
         }
-        val padding = max((maxValue - minValue) * 0.1f, 0.001f)
-        return Pair(minValue - padding, maxValue + padding)
+        val limit = max(maxAbsValue * 1.1f, 0.001f)
+        return Pair(-limit, limit)
     }
 
     companion object {

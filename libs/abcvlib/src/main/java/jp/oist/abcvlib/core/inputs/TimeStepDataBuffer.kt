@@ -211,6 +211,7 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 private val speedsBuffered = arrayListOf<Double>()
                 private val speedsExpAvg = arrayListOf<Double>()
 
+                @Synchronized
                 fun put(
                     timestamp: Long, count: Int, distance: Double, speedInstantaneous: Double,
                     speedBuffered: Double, speedExpAvg: Double
@@ -223,11 +224,17 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                     this.speedsExpAvg.add(speedExpAvg)
                 }
 
+                @Synchronized
                 fun getTimeStamps() = timestamps.toLongArray()
+                @Synchronized
                 fun getCounts() = counts.toIntArray()
+                @Synchronized
                 fun getDistances() = distances.toDoubleArray()
+                @Synchronized
                 fun getSpeedsInstantaneous() = speedsInstantaneous.toDoubleArray()
+                @Synchronized
                 fun getSpeedsBuffered() = speedsBuffered.toDoubleArray()
+                @Synchronized
                 fun getSpeedsExpAvg() = speedsExpAvg.toDoubleArray()
             }
 
@@ -238,14 +245,18 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             private val chargerVoltage = arrayListOf<Double>()
             private val coilVoltage = arrayListOf<Double>()
 
+            @Synchronized
             fun put(timestamp: Long, chargerVoltage: Double, coilVoltage: Double) {
                 this.timestamps.add(timestamp)
                 this.chargerVoltage.add(chargerVoltage)
                 this.coilVoltage.add(coilVoltage)
             }
 
+            @Synchronized
             fun getTimeStamps() = timestamps.toLongArray()
+            @Synchronized
             fun getChargerVoltage() = chargerVoltage.toDoubleArray()
+            @Synchronized
             fun getCoilVoltage() = coilVoltage.toDoubleArray()
         }
 
@@ -253,12 +264,15 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             private val timestamps = arrayListOf<Long>()
             private val voltage = arrayListOf<Double>()
 
+            @Synchronized
             fun put(voltage: Double, timestamp: Long) {
                 this.timestamps.add(timestamp)
                 this.voltage.add(voltage)
             }
 
+            @Synchronized
             fun getTimeStamps() = timestamps.toLongArray()
+            @Synchronized
             fun getVoltage() = voltage.toDoubleArray()
         }
 
@@ -289,6 +303,7 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 totalSamples += numSamples.toLong()
             }
 
+            @Synchronized
             fun setMetaData(sampleRate: Int, startTime: AudioTimestamp, endTime: AudioTimestamp) {
                 //Logger.i("audioFrame", (this.endTime.nanoTime - startTime.nanoTime) + " missing nanoseconds between last frames");
 
@@ -320,7 +335,8 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 return super.put(key, value)
             }
 
-            val images: ArrayList<SingleImage> get() = ArrayList(this.values)
+            val images: ArrayList<SingleImage>
+                @Synchronized get() = ArrayList(this.values)
 
             class SingleImage(
                 val timestamp: Long,
@@ -353,14 +369,18 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
              * @param tiltAngle in radians
              * @param angularVelocity in radians per second
              */
+            @Synchronized
             fun put(timestamp: Long, tiltAngle: Double, angularVelocity: Double) {
                 this.timestamps.add(timestamp)
                 this.tiltAngle.add(tiltAngle)
                 this.angularVelocity.add(angularVelocity)
             }
 
+            @Synchronized
             fun getTimeStamps() = timestamps.toLongArray()
+            @Synchronized
             fun getTiltAngle() = tiltAngle.toDoubleArray()
+            @Synchronized
             fun getAngularVelocity() = angularVelocity.toDoubleArray()
         }
     }

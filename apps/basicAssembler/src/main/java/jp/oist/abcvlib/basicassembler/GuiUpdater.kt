@@ -97,14 +97,6 @@ class GuiUpdater(
         binding.chargerGauge.progress = scaledProgress(chargerVoltage, 0.0, 6.0)
         binding.coilGauge.progress = scaledProgress(coilVoltage, 0.0, 6.0)
         binding.soundGauge.progress = scaledLogProgress(audioLevel)
-        val left = df.format(wheelCountL.toLong()) + " : " +
-                df.format(wheelDistanceL) + " : " +
-                df.format(wheelSpeedBufferedL) + " : " +
-                df.format(wheelSpeedExpAvgL)
-        val right = df.format(wheelCountR.toLong()) + " : " +
-                df.format(wheelDistanceR) + " : " +
-                df.format(wheelSpeedBufferedR) + " : " +
-                df.format(wheelSpeedExpAvgR)
         binding.soundData.text = audioDataString
     }
 
