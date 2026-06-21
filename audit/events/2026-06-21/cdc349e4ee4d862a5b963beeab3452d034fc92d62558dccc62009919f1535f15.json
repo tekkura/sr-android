@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-21T03:33:37Z",
+  "event_ts": "2026-06-21T03:33:19Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "assigned",
+  "actor": "topherbuckley",
+  "run_id": "27892337662",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 257,
+    "title": "Update firmware on all robots",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/257",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/257",
+  "event_id": "cdc349e4ee4d862a5b963beeab3452d034fc92d62558dccc62009919f1535f15"
+}
