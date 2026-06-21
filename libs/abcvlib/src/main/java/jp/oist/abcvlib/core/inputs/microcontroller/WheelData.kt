@@ -78,16 +78,15 @@ class WheelData(
             leftWheel.update(timestamp, countL)
             if (!paused) {
                 for (subscriber in subscribers) {
-                    // The right encoder counts in the opposite direction because the wheels are
-                    // physically mirrored. Negate right-wheel metrics here so subscriber-facing
-                    // APIs report positive values for forward motion on both sides.
+                    // Firmware now reports right-wheel encoder direction in the same
+                    // subscriber-facing convention as the left wheel.
                     subscriber.onWheelDataUpdate(
                         timestamp, leftWheel.latestEncoderCount,
-                        -rightWheel.latestEncoderCount, leftWheel.latestDistance,
-                        -rightWheel.latestDistance, leftWheel.speedInstantaneous,
-                        -rightWheel.speedInstantaneous, leftWheel.speedBuffered,
-                        -rightWheel.speedBuffered, leftWheel.speedExponentialAvg,
-                        -rightWheel.speedExponentialAvg
+                        rightWheel.latestEncoderCount, leftWheel.latestDistance,
+                        rightWheel.latestDistance, leftWheel.speedInstantaneous,
+                        rightWheel.speedInstantaneous, leftWheel.speedBuffered,
+                        rightWheel.speedBuffered, leftWheel.speedExponentialAvg,
+                        rightWheel.speedExponentialAvg
                     )
                 }
             }
