@@ -2,6 +2,7 @@ package jp.oist.abcvlib.core.inputs.phone
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -10,6 +11,7 @@ import android.media.AudioTimestamp
 import android.media.MediaRecorder
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.SystemClock
 import com.intentfilter.androidpermissions.models.DeniedPermissions
 import jp.oist.abcvlib.core.inputs.Publisher
 import jp.oist.abcvlib.core.inputs.PublisherManager
@@ -29,6 +31,7 @@ open class MicrophoneData(
 
     private lateinit var audioExecutor: ScheduledExecutorServiceWithException
     private lateinit var recorder: AudioRecord
+    private var microphoneAvailable = true
 
     class Builder(
         private val context: Context,
@@ -40,14 +43,28 @@ open class MicrophoneData(
     }
 
     override fun start() {
-        recorder.startRecording()
+        try {
+            recorder.startRecording()
+        } catch (e: IllegalStateException) {
+            failMicrophoneStartup(e)
+            return
+        }
+        if (recorder.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+            failMicrophoneStartup()
+            return
+        }
 
-        while (recorder.getTimestamp(
-                _startTime,
-                AudioTimestamp.TIMEBASE_MONOTONIC
-            ) == AudioRecord.ERROR_INVALID_OPERATION
+        val timeoutAtMs = SystemClock.uptimeMillis() + MICROPHONE_START_TIMEOUT_MS
+        var timestampStatus = recorder.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
+        while (timestampStatus == AudioRecord.ERROR_INVALID_OPERATION &&
+            SystemClock.uptimeMillis() < timeoutAtMs
         ) {
-            recorder.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
+            Thread.sleep(MICROPHONE_TIMESTAMP_RETRY_DELAY_MS)
+            timestampStatus = recorder.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
+        }
+        if (timestampStatus == AudioRecord.ERROR_INVALID_OPERATION) {
+            failMicrophoneStartup()
+            return
         }
         Logger.i(
             "microphone_start",
@@ -58,10 +75,16 @@ open class MicrophoneData(
     }
 
     override fun stop() {
-        recorder.stop()
-        recorder.setRecordPositionUpdateListener(null)
-        audioExecutor.shutdownNow()
-        recorder.release()
+        if (microphoneAvailable) {
+            recorder.stop()
+            recorder.setRecordPositionUpdateListener(null)
+        }
+        if (::audioExecutor.isInitialized) {
+            audioExecutor.shutdownNow()
+        }
+        if (::recorder.isInitialized) {
+            recorder.release()
+        }
         super.stop()
     }
 
@@ -174,6 +197,31 @@ open class MicrophoneData(
 
     override fun onPermissionDenied(deniedPermissions: DeniedPermissions) {
         ErrorHandler.eLog(TAG, "This app requires Audio Recording", Exception(), true)
+    }
+
+    private fun failMicrophoneStartup(cause: Exception? = null) {
+        microphoneAvailable = false
+        Logger.e(
+            TAG,
+            "Microphone did not become available. Another abcvlib app may still be using audio recording.",
+            cause ?: Exception("Microphone unavailable")
+        )
+        Handler(context.mainLooper).post {
+            AlertDialog.Builder(context)
+                .setTitle("Microphone unavailable")
+                .setMessage(
+                    "Close other abcvlib apps that may be using the microphone, then restart this app."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+        }
+        publisherManager.onPublisherInitialized()
+        super.start()
+    }
+
+    companion object {
+        private const val MICROPHONE_START_TIMEOUT_MS = 2_000L
+        private const val MICROPHONE_TIMESTAMP_RETRY_DELAY_MS = 20L
     }
     /*        public void processAudioFrame(short[] audioFrame) {
                 final double bufferLength = 20; //milliseconds

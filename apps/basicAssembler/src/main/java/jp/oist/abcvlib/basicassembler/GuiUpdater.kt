@@ -133,11 +133,15 @@ class GuiUpdater(
             audioDataString = arraySliceString
         }
         if (data.imageData.images.size > 1) {
-            // just taking difference between two but one could do an average over all differences
-            val frameRate = 1.0 / ((data.imageData.images[1].timestamp
-                    - data.imageData.images[0].timestamp) / 1000000000.0)
-            val df = DecimalFormat("#.0000000000000")
-            frameRateString = df.format(frameRate)
+            val timestamps = data.imageData.images.map { it.timestamp }.sorted()
+            val deltaNanos = timestamps.zipWithNext()
+                .map { (previous, next) -> next - previous }
+                .firstOrNull { it > 0 }
+            if (deltaNanos != null) {
+                val frameRate = 1_000_000_000.0 / deltaNanos
+                val df = DecimalFormat("#.0000000000000")
+                frameRateString = df.format(frameRate)
+            }
         }
     }
 }
