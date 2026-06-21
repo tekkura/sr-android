@@ -24,7 +24,7 @@ class WheelData(
         private val publisherManager: PublisherManager
     ) {
         private var bufferLength = 50
-        private var expWeight = 0.01
+        private var expWeight = 0.1
 
         fun build(): WheelData {
             return WheelData(context, publisherManager, bufferLength, expWeight)
@@ -63,7 +63,7 @@ class WheelData(
      *    when creating an instance of WheelData.
      *
      * 3. [SingleWheelData.speedExponentialAvg] is a running exponential average of
-     *    [SingleWheelData.speedBuffered]. The default weight of the average is 0.01, but this
+     *    [SingleWheelData.speedBuffered]. The default weight of the average is 0.1, but this
      *    can be set via the [WheelData] constructor or via the [WheelData.Builder.setExpWeight]
      *    builder method when creating an instance of WheelData.
      *
@@ -197,15 +197,17 @@ class WheelData(
         fun updateWheelSpeed(timestamp: Long) {
             timestamps[idxHead] = timestamp
             val dtBuffer = ((timestamps[idxHead] - timestamps[idxTail]) / 1000000000f).toDouble()
+            val dtInstant =
+                ((timestamps[idxHead] - timestamps[idxHeadPrev]) / 1000000000f).toDouble()
 
-            if (dtBuffer != 0.0) {
+            if (dtBuffer != 0.0 && dtInstant != 0.0) {
                 // Calculate the speed of each wheel in mm/s.
-                speedInstantaneous = (distance[idxHead] - distance[idxHeadPrev]) / 1000000000f
+                speedInstantaneous = (distance[idxHead] - distance[idxHeadPrev]) / dtInstant
                 speedBuffered = (distance[idxHead] - distance[idxTail]) / dtBuffer
                 speedExponentialAvg =
                     DSP.exponentialAvg(speedBuffered, speedExponentialAvg, expWeight)
             } else {
-                Logger.i("sensorDebugging", "dt_buffer == 0")
+                Logger.i("sensorDebugging", "dt_buffer or dt_instant == 0")
             }
         }
 

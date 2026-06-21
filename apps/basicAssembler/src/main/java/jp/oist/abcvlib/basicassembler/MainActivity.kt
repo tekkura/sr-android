@@ -44,8 +44,8 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainActivity : AbcvlibActivity(), SerialReadyListener {
     private lateinit var binding: ActivityMainBinding
     private lateinit var guiUpdater: GuiUpdater
-    private val maxEpisodeCount = 10
-    private val maxTimeStepCount = 100
+    private val maxEpisodeCount = 5
+    private val maxTimeStepCount = 50
     private lateinit var stateSpace: StateSpace
     private lateinit var actionSpace: ActionSpace
     private lateinit var timeStepDataBuffer: TimeStepDataBuffer
@@ -107,8 +107,8 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
 
         val publisherManager = PublisherManager()
         val wheelData = WheelData.Builder(this, publisherManager)
-            .setBufferLength(50)
-            .setExpWeight(0.01)
+            .setBufferLength(10)
+            .setExpWeight(0.1)
             .build()
         wheelData.addSubscriber(timeStepDataBuffer)
 
