@@ -29,6 +29,9 @@ class SerialCommManager @JvmOverloads constructor(
 
     private var command: ByteArray? = null
     private var queuedMotorLevelsAtMs: Long = 0L
+    private var queuedMotorLevelsTrace: MotorCommandTrace? = null
+    private var nextSerialTraceSeq: Long = 1L
+    private var inFlightTrace: SerialCommandTrace? = null
     private val commandLock = Object()
     private val lifecycleLock = Any()
     private var runContext: RunContext? = null
@@ -36,6 +39,22 @@ class SerialCommManager @JvmOverloads constructor(
     private var startTimeAndroid: Long = 0
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
+
+    private data class MotorCommandTrace(
+        val left: Float,
+        val right: Float,
+        val leftBrake: Boolean,
+        val rightBrake: Boolean,
+        val leftControl: Byte,
+        val rightControl: Byte
+    )
+
+    private data class SerialCommandTrace(
+        val seq: Long,
+        val command: AndroidToRP2040Command,
+        val sentAtMs: Long,
+        val motor: MotorCommandTrace? = null
+    )
 
     // Constructor to initialize SerialCommManager
     init {
@@ -61,14 +80,23 @@ class SerialCommManager @JvmOverloads constructor(
         while (!context.stopRequested.get()) {
             val nextCommand: ByteArray? = try {
                 synchronized(commandLock) {
-                    // this results in getState commands every 10ms unless another command
-                    // (e.g. setMotorLevels) is set, which case wait will return immediately
-                    commandLock.wait(10)
+                    while (command == null && !context.stopRequested.get()) {
+                        commandLock.wait()
+                    }
                     if (context.stopRequested.get()) {
                         return@synchronized null
                     }
-                    val localCommand = command ?: generateGetStateCmd()
+                    val localCommand = command ?: return@synchronized null
+                    val commandType = AndroidToRP2040Command.getEnumByValue(localCommand[1])
+                    val traceSeq = nextSerialTraceSeq++
+                    inFlightTrace = SerialCommandTrace(
+                        seq = traceSeq,
+                        command = commandType ?: AndroidToRP2040Command.NACK,
+                        sentAtMs = SystemClock.uptimeMillis(),
+                        motor = queuedMotorLevelsTrace
+                    )
                     command = null
+                    queuedMotorLevelsTrace = null
                     localCommand
                 }
             } catch (e: InterruptedException) {
@@ -83,6 +111,7 @@ class SerialCommManager @JvmOverloads constructor(
                 ControlLatencyTrace.queueToSendMs = SystemClock.uptimeMillis() - queuedMotorLevelsAtMs
                 queuedMotorLevelsAtMs = 0L
             }
+            logSerialTx(inFlightTrace)
             sendPacket(nextCommand)
             cnt++
             if (cnt == 100) {
@@ -157,6 +186,17 @@ class SerialCommManager @JvmOverloads constructor(
 
             // The first byte after the start mark is the command
             val command = fifoQueuePair.androidToRP2040Command
+            val trace = inFlightTrace
+            if (trace != null) {
+                Logger.i(
+                    "BasicAssemblerTrace",
+                    "SERIAL_RX seq=${trace.seq} sentType=${trace.command} rxType=$command " +
+                            "rttMs=${SystemClock.uptimeMillis() - trace.sentAtMs}"
+                )
+            } else {
+                Logger.w("BasicAssemblerTrace", "SERIAL_RX seq=unknown rxType=$command")
+            }
+            inFlightTrace = null
             Logger.i(Thread.currentThread().name, "Received $command from pi")
             if (command == null) {
                 Logger.e("Pi2AndroidReader", "Command not found")
@@ -222,6 +262,7 @@ class SerialCommManager @JvmOverloads constructor(
         require(bytes.size == AndroidToRP2040Packet.packetSize) {
             "Input byte array must have a length of " + AndroidToRP2040Packet.packetSize
         }
+        usbSerial.prepareForCommand(AndroidToRP2040Command.getEnumByValue(bytes[1]))
         try {
             this.usbSerial.send(bytes, 10000)
         } catch (e: SerialTimeoutException) {
@@ -241,6 +282,36 @@ class SerialCommManager @JvmOverloads constructor(
         if (receivedStatus == 1) {
             //Note this is actually calling the functions like parseLog, parseStatus, etc.
             parseFifoPacket()
+        } else {
+            inFlightTrace?.let {
+                Logger.e(
+                    "BasicAssemblerTrace",
+                    "SERIAL_TIMEOUT seq=${it.seq} type=${it.command} elapsedMs=${SystemClock.uptimeMillis() - it.sentAtMs}"
+                )
+            }
+            inFlightTrace = null
+        }
+    }
+
+    private fun logSerialTx(trace: SerialCommandTrace?) {
+        if (trace == null) {
+            Logger.w("BasicAssemblerTrace", "SERIAL_TX seq=unknown")
+            return
+        }
+        val motor = trace.motor
+        if (motor == null) {
+            Logger.i(
+                "BasicAssemblerTrace",
+                "SERIAL_TX seq=${trace.seq} type=${trace.command}"
+            )
+        } else {
+            Logger.i(
+                "BasicAssemblerTrace",
+                "SERIAL_TX seq=${trace.seq} type=${trace.command} " +
+                        "left=${motor.left} right=${motor.right} leftBrake=${motor.leftBrake} " +
+                        "rightBrake=${motor.rightBrake} leftControl=0x${"%02x".format(motor.leftControl.toInt() and 0xFF)} " +
+                        "rightControl=0x${"%02x".format(motor.rightControl.toInt() and 0xFF)}"
+            )
         }
     }
 
@@ -324,12 +395,6 @@ class SerialCommManager @JvmOverloads constructor(
         return androidToRP2040Packet.packetToBytes()
     }
 
-    private fun generateGetStateCmd(): ByteArray {
-        androidToRP2040Packet.clear()
-        androidToRP2040Packet.setCommand(AndroidToRP2040Command.GET_STATE)
-        return androidToRP2040Packet.packetToBytes()
-    }
-
     //-------------------------------------------------------------------///
     // ---- API function calls for requesting something from the mcu ----///
     //-------------------------------------------------------------------///
@@ -356,6 +421,14 @@ class SerialCommManager @JvmOverloads constructor(
             }
             command =
                 generateSetMotorLevels(androidToRP2040Packet, left, right, leftBrake, rightBrake)
+            queuedMotorLevelsTrace = MotorCommandTrace(
+                left = left,
+                right = right,
+                leftBrake = leftBrake,
+                rightBrake = rightBrake,
+                leftControl = command!![2],
+                rightControl = command!![3]
+            )
             queuedMotorLevelsAtMs = SystemClock.uptimeMillis()
             commandLock.notify()
         }
@@ -374,6 +447,8 @@ class SerialCommManager @JvmOverloads constructor(
                 return
             }
             command = generateGetLogCmd()
+            queuedMotorLevelsTrace = null
+            queuedMotorLevelsAtMs = 0L
             commandLock.notify()
         }
     }

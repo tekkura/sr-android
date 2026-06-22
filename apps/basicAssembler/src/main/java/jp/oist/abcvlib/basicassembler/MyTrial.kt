@@ -10,7 +10,6 @@ import jp.oist.abcvlib.core.learning.MotionAction
 import jp.oist.abcvlib.core.learning.StateSpace
 import jp.oist.abcvlib.core.learning.Trial
 import jp.oist.abcvlib.core.outputs.ActionSelector
-import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.RecordingWithoutTimeStepBufferException
 import java.io.IOException
 import java.util.concurrent.BrokenBarrierException
@@ -26,7 +25,8 @@ class MyTrial(
     private val mainHandler: Handler = Handler(context.mainLooper)
 
     override fun forward(data: TimeStepData) {
-        val motionAction: MotionAction = if ((timeStep / 10) % 2 == 0) {
+        val motionBlock = ((timeStep - 1).coerceAtLeast(0) / 10)
+        val motionAction: MotionAction = if (motionBlock % 2 == 0) {
             motionActionSet.motionActions[1]!!
         } else {
             motionActionSet.motionActions[2]!!
