@@ -36,11 +36,6 @@ class MyTrial(
         // Add your selected actions to the TimeStepDataBuffer for record
         data.actions.add(motionAction, commAction)
 
-        Logger.i(
-            "MotorDiag",
-            "trial episode=$episodeCount timestep=$timeStep action=${motionAction.actionName} " +
-                    "requestedL=${motionAction.leftWheelPWM} requestedR=${motionAction.rightWheelPWM}"
-        )
         outputs.setWheelOutput(
             motionAction.leftWheelPWM,
             motionAction.rightWheelPWM,
