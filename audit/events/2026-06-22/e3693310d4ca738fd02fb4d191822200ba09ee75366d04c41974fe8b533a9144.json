@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-06-22T23:42:08Z",
+  "event_ts": "2026-06-22T23:41:51Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "topherbuckley",
+  "run_id": "27991629940",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 256,
+    "title": "Assemble and charge all robots",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/256",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/256",
+  "event_id": "e3693310d4ca738fd02fb4d191822200ba09ee75366d04c41974fe8b533a9144"
+}
