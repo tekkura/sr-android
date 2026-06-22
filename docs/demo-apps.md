@@ -1,8 +1,11 @@
 # Demo Apps
 
 - `backAndForth`: minimal motor-output example.
+- `backAndForthPython`: minimal Python wheel-output loop; see
+  [Python Demo Apps](python-demo-apps.md).
 - `basicSubscriber`: Kotlin subscriber example.
-- `basicSubscriberPython`: Python subscriber example with direct callback control.
+- `basicSubscriberPython`: Python subscriber example with direct callback
+  control; see [Python Demo Apps](python-demo-apps.md).
 - `basicAssembler`: RL-style state/action loop using assembled timestep data; see
   [Reinforcement Learning Applications](reinforcement-learning-applications.md).
 - `basicQRTransmitter`: displays QR codes.
