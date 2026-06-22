@@ -58,7 +58,7 @@ class CircularGaugeView @JvmOverloads constructor(
     }
 
     fun setValue(value: Double) {
-        this.value = value.coerceIn(minValue, maxValue)
+        this.value = value
         invalidate()
     }
 

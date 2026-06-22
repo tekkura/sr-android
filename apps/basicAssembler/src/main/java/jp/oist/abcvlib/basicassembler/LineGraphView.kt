@@ -16,7 +16,13 @@ class LineGraphView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
     private val samples = ArrayDeque<FloatArray>()
-    private val seriesLabels = listOf("C", "D", "SI", "SB", "SE")
+    private val seriesLabels = listOf(
+        "Count",
+        "Distance",
+        "Instant speed",
+        "Buffered speed",
+        "Exponential avg"
+    )
     private val seriesColors = intArrayOf(
         Color.rgb(238, 198, 67),
         Color.rgb(72, 169, 255),
@@ -34,7 +40,7 @@ class LineGraphView @JvmOverloads constructor(
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(172, 184, 194)
-        textSize = 22f
+        textSize = 17f
     }
 
     fun addSample(
@@ -64,7 +70,8 @@ class LineGraphView @JvmOverloads constructor(
         val left = paddingLeft.toFloat() + 8f
         val top = paddingTop.toFloat() + 8f
         val right = width - paddingRight.toFloat() - 8f
-        val bottom = height - paddingBottom.toFloat() - 28f
+        val legendTop = height - paddingBottom.toFloat() - 32f
+        val bottom = legendTop - 10f
 
         canvas.drawLine(left, bottom, right, bottom, gridPaint)
         canvas.drawLine(left, top, left, bottom, gridPaint)
@@ -72,7 +79,7 @@ class LineGraphView @JvmOverloads constructor(
             val y = top + (bottom - top) * i / 4f
             canvas.drawLine(left, y, right, y, gridPaint)
         }
-        drawLegend(canvas, left, height - paddingBottom.toFloat() - 6f)
+        drawLegend(canvas, left, legendTop, right)
 
         if (samples.size < 2) return
 
@@ -96,12 +103,18 @@ class LineGraphView @JvmOverloads constructor(
         }
     }
 
-    private fun drawLegend(canvas: Canvas, startX: Float, baseline: Float) {
+    private fun drawLegend(canvas: Canvas, startX: Float, startBaseline: Float, right: Float) {
         var x = startX
+        var baseline = startBaseline
         seriesLabels.forEachIndexed { index, label ->
+            val labelWidth = textPaint.measureText(label)
+            if (x > startX && x + labelWidth > right) {
+                x = startX
+                baseline += textPaint.textSize + 6f
+            }
             textPaint.color = seriesColors[index]
             canvas.drawText(label, x, baseline, textPaint)
-            x += textPaint.measureText(label) + 24f
+            x += labelWidth + 18f
         }
     }
 

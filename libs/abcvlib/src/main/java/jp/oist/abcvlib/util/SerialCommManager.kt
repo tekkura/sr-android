@@ -196,9 +196,9 @@ class SerialCommManager @JvmOverloads constructor(
             } else {
                 Logger.w("BasicAssemblerTrace", "SERIAL_RX seq=unknown rxType=$command")
             }
-            inFlightTrace = null
             Logger.i(Thread.currentThread().name, "Received $command from pi")
             if (command == null) {
+                inFlightTrace = null
                 Logger.e("Pi2AndroidReader", "Command not found")
                 return
             }
@@ -212,6 +212,7 @@ class SerialCommManager @JvmOverloads constructor(
                 AndroidToRP2040Command.GET_STATE,
                 AndroidToRP2040Command.RESET_STATE -> {
                     parseStatus(packet)
+                    logStateResponse(trace, command)
                     result = 1
                 }
 
@@ -242,6 +243,7 @@ class SerialCommManager @JvmOverloads constructor(
                     result = -1
                 }
             }
+            inFlightTrace = null
         } else {
             Logger.i(Thread.currentThread().name, "No packet in queue")
             result = 0
@@ -313,6 +315,24 @@ class SerialCommManager @JvmOverloads constructor(
                         "rightControl=0x${"%02x".format(motor.rightControl.toInt() and 0xFF)}"
             )
         }
+    }
+
+    private fun logStateResponse(trace: SerialCommandTrace?, command: AndroidToRP2040Command?) {
+        val state = rp2040State ?: return
+        val seq = trace?.seq?.toString() ?: "unknown"
+        val rttMs = trace?.let { SystemClock.uptimeMillis() - it.sentAtMs } ?: -1L
+        Logger.i(
+            "BasicAssemblerState",
+            "SERIAL_STATE seq=$seq rxType=$command rttMs=$rttMs " +
+                    "encL=${state.motorsState.encoderCounts.left} " +
+                    "encR=${state.motorsState.encoderCounts.right} " +
+                    "faultL=0x${"%02x".format(state.motorsState.faults.left.toInt() and 0xFF)} " +
+                    "faultR=0x${"%02x".format(state.motorsState.faults.right.toInt() and 0xFF)} " +
+                    "wireless=${state.chargeSideUSB.isWirelessChargerAttached()} " +
+                    "usbMv=${state.chargeSideUSB.usb_charger_voltage.toInt() and 0xFFFF} " +
+                    "vrectMv=${state.chargeSideUSB.wireless_charger_vrect.toInt() and 0xFFFF} " +
+                    "batteryMv=${state.batteryDetails.voltageMv.toInt() and 0xFFFF}"
+        )
     }
 
     private fun generateSetMotorLevels(

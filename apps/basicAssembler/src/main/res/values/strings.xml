@@ -8,8 +8,8 @@
     <string name="rightWheelHeader">Right Wheel Count: </string>
     <string name="soundDataHeader">Sound Data: </string>
     <string name="frameRateHeader">Frame Rate: </string>
-    <string name="leftWheelHeaderText">Left Wheel: C counts, D distance, SI speed instantaneous, SB speed buffered, SE speed exponential average</string>
-    <string name="rightWheelHeaderText">Right Wheel: C counts, D distance, SI speed instantaneous, SB speed buffered, SE speed exponential average</string>
+    <string name="leftWheelHeaderText">Left Wheel</string>
+    <string name="rightWheelHeaderText">Right Wheel</string>
     <string name="coilVoltageTextValue">0.00</string>
     <string name="coilVoltageHeaderValue">Coil Voltage: </string>
     <string name="timeStepHeaderText">"TimeStep: "</string>

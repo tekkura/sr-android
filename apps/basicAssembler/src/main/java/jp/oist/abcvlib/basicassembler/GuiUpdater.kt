@@ -1,8 +1,10 @@
 package jp.oist.abcvlib.basicassembler
 
+import android.os.SystemClock
 import jp.oist.abcvlib.basicassembler.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer.TimeStepData
 import jp.oist.abcvlib.core.inputs.phone.OrientationData
+import jp.oist.abcvlib.util.Logger
 import java.text.DecimalFormat
 import kotlin.concurrent.Volatile
 import kotlin.math.abs
@@ -14,6 +16,7 @@ class GuiUpdater(
     private val maxEpisodeCount: Int
 ) {
     private val df = DecimalFormat("#.00")
+    private var nextTraceAtMs = 0L
 
     @Volatile
     var timeStep: String = ""
@@ -78,8 +81,8 @@ class GuiUpdater(
     init {
         binding.tiltGauge.configure("Tilt", "deg", -45.0, 45.0)
         binding.angularVelocityGauge.configure("Angular velocity", "deg/s", -360.0, 360.0)
-        binding.leftWheelGauge.configure("Left wheel", "mm/s", -500.0, 500.0)
-        binding.rightWheelGauge.configure("Right wheel", "mm/s", -500.0, 500.0)
+        binding.leftWheelGauge.configure("Left wheel", "mm/s", -2000.0, 2000.0)
+        binding.rightWheelGauge.configure("Right wheel", "mm/s", -2000.0, 2000.0)
     }
 
     fun displayGUIValues() {
@@ -177,6 +180,7 @@ class GuiUpdater(
             wheelSpeedBufferedR = rightSpeedsBuffered[latestRight]
             wheelSpeedExpAvgL = leftSpeedsExpAvg[latestLeft]
             wheelSpeedExpAvgR = rightSpeedsExpAvg[latestRight]
+            logUiState(timeStepCount, episodeCount)
         }
         val levels = data.soundData.getLevels()
         if (levels.isNotEmpty()) {
@@ -196,6 +200,23 @@ class GuiUpdater(
                 frameRateString = frameRate.toInt().toString()
             }
         }
+    }
+
+    private fun logUiState(timeStepCount: Int, episodeCount: Int) {
+        val now = SystemClock.uptimeMillis()
+        if (now < nextTraceAtMs) {
+            return
+        }
+        nextTraceAtMs = now + 500
+        Logger.i(
+            "BasicAssemblerUiState",
+            "UI_STATE timestep=$timeStepCount episode=$episodeCount " +
+                    "chargerV=$chargerVoltage coilV=$coilVoltage " +
+                    "countL=$wheelCountL countR=$wheelCountR " +
+                    "speedInstL=$wheelSpeedInstantL speedInstR=$wheelSpeedInstantR " +
+                    "speedBufL=$wheelSpeedBufferedL speedBufR=$wheelSpeedBufferedR " +
+                    "speedExpL=$wheelSpeedExpAvgL speedExpR=$wheelSpeedExpAvgR"
+        )
     }
 
     private fun scaledProgress(value: Double, min: Double, max: Double): Int {
