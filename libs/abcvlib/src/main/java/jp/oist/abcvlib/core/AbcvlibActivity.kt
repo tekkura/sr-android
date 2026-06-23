@@ -14,10 +14,17 @@ import jp.oist.abcvlib.util.ProcessPriorityThreadFactory
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.SerialReadyListener
 import jp.oist.abcvlib.util.UsbSerial
+import kotlinx.coroutines.CompletableJob
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -42,6 +49,9 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     private var alertDialog: AlertDialog? = null
     private var initialDelay: Long = 0
     private var serialReadyJob: Job? = null
+    private var connectJob: Job? = null
+    private lateinit var serialJob: CompletableJob
+    private lateinit var serialScope: CoroutineScope
 
     // Note anything less than 10ms will result in no GET_STATE commands being called and all
     // being overrides by whatever commands are sent in the main loop
@@ -52,32 +62,42 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         isCreated = true
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        serialJob = SupervisorJob(lifecycleScope.coroutineContext[Job])
+        serialScope = CoroutineScope(Dispatchers.Default + serialJob)
         usbInitialize()
         super.onCreate(savedInstanceState)
     }
 
     private fun usbInitialize() {
-        try {
-            val usbManager = getSystemService(USB_SERVICE) as UsbManager
-            this.usbSerial = UsbSerial(
-                context = this,
-                usbManager = usbManager,
-                serialReadyListener = object : SerialReadyListener {
-                    override fun onSerialReady(usbSerial: UsbSerial) {
-                        lifecycleScope.launch {
-                            // Cancel the previous serialReadyJob if it exists to avoid multiple executions in parallel.
-                            serialReadyJob?.cancelAndJoin()
-                            // Call Activity's onSerialReady inside (Dispatchers.Default) to avoid blocking the main thread
-                            serialReadyJob = launch(Dispatchers.Default) {
-                                this@AbcvlibActivity.onSerialReady(usbSerial)
-                            }
+        val usbManager = getSystemService(USB_SERVICE) as UsbManager
+        this.usbSerial = UsbSerial(
+            context = this,
+            usbManager = usbManager,
+            serialReadyListener = object : SerialReadyListener {
+                override fun onSerialReady(usbSerial: UsbSerial) {
+                    serialScope.launch {
+                        // Cancel the previous serialReadyJob if it exists to avoid multiple executions in parallel.
+                        serialReadyJob?.cancelAndJoin()
+                        // Call Activity's onSerialReady inside (Dispatchers.Default) to avoid blocking the main thread
+                        serialReadyJob = launch(Dispatchers.Default) {
+                            this@AbcvlibActivity.onSerialReady(usbSerial)
                         }
                     }
                 }
-            )
-        } catch (e: IOException) {
-            e.printStackTrace()
-            showCustomDialog()
+            },
+            coroutineScope = serialScope
+        )
+
+        connectJob = serialScope.launch(Dispatchers.IO) {
+            try {
+                usbSerial.connect()
+            } catch (e: IOException) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    showCustomDialog()
+                }
+            }
         }
     }
 
@@ -189,6 +209,17 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         alertDialog = builder.create()
         // Show the dialog
         alertDialog?.show()
+    }
+
+    override fun onDestroy() {
+        // Cleanup the serial connection on activity destruction
+        if (::usbSerial.isInitialized) {
+            usbSerial.close()
+        }
+
+        serialScope.cancel()
+
+        super.onDestroy()
     }
 
     override fun onStop() {
