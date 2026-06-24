@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-06-24T19:11:01Z",
+  "event_ts": "2026-06-24T19:10:03Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "28123120137",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 268,
+    "title": "Move connect outside the UI thread",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/268",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3469619630,
+    "html_url": "https://github.com/tekkura/sr-android/pull/268#discussion_r3469619630",
+    "created_at": "2026-06-24T19:10:02Z",
+    "updated_at": "2026-06-24T19:10:03Z",
+    "body": "#codex-reply resolved in [29961d9](https://github.com/tekkura/sr-android/commit/29961d968ad4036da637be2ff3e4a7d9cf22d9b5)"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/268#discussion_r3469619630",
+  "event_id": "e44a6d362367b33a9b437196bfa988f6dc8f9393f6ee479194e6c47a97994096"
+}
