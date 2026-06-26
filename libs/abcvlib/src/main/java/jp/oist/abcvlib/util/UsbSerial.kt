@@ -20,20 +20,36 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import jp.oist.abcvlib.util.AndroidToRP2040Command.Companion.getEnumByValue
 import jp.oist.abcvlib.util.ErrorHandler.eLog
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock
 
 class UsbSerial @Throws(IOException::class) constructor(
     private val context: Context,
     private val usbManager: UsbManager,
-    private val serialReadyListener: SerialReadyListener
+    private val serialReadyListener: SerialReadyListener,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : SerialInputOutputManager.Listener {
-    private lateinit var port: UsbSerialPort
+    private var port: UsbSerialPort? = null
+    private var usbIoManager: SerialInputOutputManager? = null
+    private var usbReceiver: BroadcastReceiver? = null
+    private var connectJob: Job? = null
+    private val isClosed = AtomicBoolean(false)
+    private val stateLock = Any()
 
     // Initialize as the smallest of the two packet sizes
     private var packetDataSize = RP2020_PACKET_SIZE_STATE
@@ -50,7 +66,7 @@ class UsbSerial @Throws(IOException::class) constructor(
     private class StartStopIndex(var startIdx: Int, var stopIdx: Int)
 
     //Ensure a proper start and stop mark present before adding anything to the fifoQueue
-    private var startStopIdx: StartStopIndex
+    private lateinit var startStopIdx: StartStopIndex
 
     companion object {
         private const val TAG = "UsbSerial"
@@ -66,7 +82,7 @@ class UsbSerial @Throws(IOException::class) constructor(
 
     }
 
-    init {
+    suspend fun connect() {
         // Find all available drivers from attached devices.
         val deviceList = usbManager.deviceList
         startStopIdx = StartStopIndex(-1, -1)
@@ -88,18 +104,39 @@ class UsbSerial @Throws(IOException::class) constructor(
                 connect(d)
             }
         }
+        // Unregister existing receiver if any to ensure idempotence
+        this.usbReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
         val filter = IntentFilter(ACTION_USB_PERMISSION).apply {
             addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
         }
-        val usbReceiver: BroadcastReceiver = MyBroadcastReceiver()
-        ContextCompat.registerReceiver(context, usbReceiver, filter, RECEIVER_NOT_EXPORTED)
+        val receiver = MyBroadcastReceiver()
+        this.usbReceiver = receiver
+
+        synchronized(stateLock) {
+            if (isClosed.get()) {
+                throw CancellationException("Connect aborted: UsbSerial is closed.")
+            }
+
+            coroutineScope.ensureActive()
+            ContextCompat.registerReceiver(context, receiver, filter, RECEIVER_NOT_EXPORTED)
+        }
     }
 
     @Throws(IOException::class)
-    private fun connect(device: UsbDevice) {
+    private suspend fun connect(device: UsbDevice) {
+        coroutineScope.ensureActive()
         if (usbManager.hasPermission(device)) {
             Logger.i(Thread.currentThread().name, "Has permission to connect to device")
             val connection: UsbDeviceConnection = usbManager.openDevice(device)
+                ?: throw IOException("Failed to open USB device connection")
+
             openPort(connection)
         } else {
             Logger.i(Thread.currentThread().name, "Requesting permission to connect to device")
@@ -119,26 +156,63 @@ class UsbSerial @Throws(IOException::class) constructor(
         }
     }
 
-    private fun openPort(connection: UsbDeviceConnection) {
+    private suspend fun openPort(connection: UsbDeviceConnection) {
         Logger.i(Thread.currentThread().name, "Opening port")
         val driver = getDriver()
-        val port = driver.ports[0] // Most devices have just one port (port 0)
+        val localPort = driver.ports[0] // Most devices have just one port (port 0)
+        var localIoManager: SerialInputOutputManager? = null
+        var isPortOpened = false
+
         try {
-            port.open(connection)
-            port.setParameters(115200, 8, 1, UsbSerialPort.PARITY_NONE)
-            port.dtr = true
-            this.port = port
-            val usbIoManager = SerialInputOutputManager(port, this)
+            synchronized(stateLock) {
+                if (isClosed.get()) throw CancellationException("Class is closed")
+                coroutineScope.ensureActive()
+                localPort.open(connection)
+                isPortOpened = true
+            }
+
+            localPort.setParameters(115200, 8, 1, UsbSerialPort.PARITY_NONE)
+            localPort.dtr = true
+            this.port = localPort
+            val ioManager = SerialInputOutputManager(localPort, this)
+            localIoManager = ioManager
+            this.usbIoManager = ioManager
             // Adding this as there doesn't appear to be any call back in the usbIoManager that
             // will call onSerialReady after initialization. As it stands, there were things occurring
             // in onSerialReady that were being executed before the usbIoManager was initialized.
-            Thread.sleep(100)
-            usbIoManager.start()
+            delay(100)
+            synchronized(stateLock) {
+                if (isClosed.get()) {
+                    throw CancellationException("Closed during initialization delay")
+                }
+
+                coroutineScope.ensureActive()
+                ioManager.start()
+            }
+
             serialReadyListener.onSerialReady(this)
         } catch (e: IOException) {
             e.printStackTrace()
+            close()
+            throw e
         } catch (e: InterruptedException) {
+            close()
             throw RuntimeException(e)
+        } catch (e: CancellationException) {
+            Logger.i(TAG, "openPort cancelled, closing port and stopping IO manager")
+
+            try {
+                localIoManager?.stop()
+            } catch (ex: Exception) {}
+
+            if (this.usbIoManager === localIoManager)
+                this.usbIoManager = null
+
+            withContext(NonCancellable) {
+                close()
+            }
+
+            throw e
         }
     }
 
@@ -187,8 +261,31 @@ class UsbSerial @Throws(IOException::class) constructor(
 
     @Throws(IOException::class)
     internal fun send(packet: ByteArray, timeout: Int) {
-        port.write(packet, timeout)
+        val activePort = port ?: throw IOException("Port is not open")
+        activePort.write(packet, timeout)
         Logger.i(Thread.currentThread().name, "send()")
+    }
+
+    internal fun close() {
+        isClosed.set(true)
+        synchronized(stateLock) {
+            // Stop and nullify your receivers and managers here safely
+            usbIoManager?.stop()
+            usbIoManager = null
+
+            try {
+                port?.close()
+            } catch (e: Exception) {}
+
+            port = null
+
+            usbReceiver?.let {
+                try { context.unregisterReceiver(it) }
+                catch (e: Exception) {}
+            }
+
+            this.usbReceiver = null
+        }
     }
 
     /**
@@ -440,10 +537,13 @@ class UsbSerial @Throws(IOException::class) constructor(
                 val action = intent.action
                 if (ACTION_USB_PERMISSION == action) {
                     synchronized(this) {
-                        try {
-                            connect(device!!)
-                        } catch (e: IOException) {
-                            e.printStackTrace()
+                        connectJob?.cancel()
+                        connectJob = coroutineScope.launch(Dispatchers.IO) {
+                            try {
+                                connect(device!!)
+                            } catch (e: IOException) {
+                                e.printStackTrace()
+                            }
                         }
                     }
                 }
