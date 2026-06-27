@@ -152,8 +152,12 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         getWriteData().orientationData.put(timestamp, thetaRad, angularVelocityRad)
     }
 
-    override fun onQRCodeDetected(qrDataDecoded: String) {
+    override fun onQRCodeDetected(qrDataDecoded: String, timestamp: Long) {
         Logger.i("qrcode", "Qrcode detected: $qrDataDecoded")
+        getWriteData().qrCodeData[timestamp] = TimeStepData.QRCodeData.SingleQRCode(
+            data = qrDataDecoded,
+            timestamp = timestamp
+        )
     }
 
     class TimeStepData {
@@ -185,6 +189,10 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         var orientationData: OrientationData = OrientationData()
             private set
 
+        @get:Synchronized
+        var qrCodeData: QRCodeData = QRCodeData()
+            private set
+
         @Synchronized
         fun clear() {
             wheelData = WheelData()
@@ -194,6 +202,7 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             soundData = SoundData()
             actions = RobotAction()
             orientationData = OrientationData()
+            qrCodeData = QRCodeData()
         }
 
         class WheelData {
@@ -360,6 +369,15 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             fun getTimeStamps() = timestamps.toLongArray()
             fun getTiltAngle() = tiltAngle.toDoubleArray()
             fun getAngularVelocity() = angularVelocity.toDoubleArray()
+        }
+
+        class QRCodeData : Hashtable<Long, QRCodeData.SingleQRCode>() {
+            data class SingleQRCode(
+                val data: String,
+                val timestamp: Long
+            )
+
+            val qrCodes get() = this.values.toList()
         }
     }
 }

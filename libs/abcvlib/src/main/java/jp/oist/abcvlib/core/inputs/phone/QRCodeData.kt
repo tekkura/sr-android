@@ -75,7 +75,7 @@ class QRCodeData(
                 val result = QRCodeReader().decode(binaryBitmap)
                 val qrDecodedData = result.text
                 for (subscriber in subscribers) {
-                    subscriber.onQRCodeDetected(qrDecodedData)
+                    subscriber.onQRCodeDetected(qrDecodedData, timestamp)
                 }
             } catch (e: FormatException) {
                 Logger.v("qrcode", "QR Code cannot be decoded")

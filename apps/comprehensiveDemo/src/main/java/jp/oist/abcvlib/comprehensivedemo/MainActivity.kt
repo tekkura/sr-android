@@ -228,7 +228,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         latestAngularVelocityDeg = OrientationData.getAngularVelocityDeg(angularVelocityRad)
     }
 
-    override fun onQRCodeDetected(qrDataDecoded: String) {
+    override fun onQRCodeDetected(qrDataDecoded: String, timestamp: Long) {
         val trimmedPayload = qrDataDecoded.trim()
         if (trimmedPayload.isEmpty()) {
             return
