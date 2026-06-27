@@ -2,11 +2,14 @@ package jp.oist.abcvlib.core.inputs
 
 import android.graphics.Bitmap
 import android.media.AudioTimestamp
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer.TimeStepData.ImageData.SingleImage
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryDataSubscriber
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.ImageDataRawSubscriber
 import jp.oist.abcvlib.core.inputs.phone.MicrophoneDataSubscriber
+import jp.oist.abcvlib.core.inputs.phone.ObjectDetectorDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.OrientationDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.QRCodeDataSubscriber
 import jp.oist.abcvlib.core.learning.CommAction
@@ -24,7 +27,8 @@ import java.util.concurrent.Future
 class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
     WheelDataSubscriber,
     ImageDataRawSubscriber, MicrophoneDataSubscriber,
-    OrientationDataSubscriber, QRCodeDataSubscriber {
+    OrientationDataSubscriber, QRCodeDataSubscriber,
+    ObjectDetectorDataSubscriber {
 
     init {
         require(bufferLength > 1) {
@@ -156,6 +160,28 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         Logger.i("qrcode", "Qrcode detected: $qrDataDecoded")
     }
 
+    override fun onObjectsDetected(
+        bitmap: Bitmap,
+        mpImage: MPImage,
+        results: MutableList<Detection>,
+        inferenceTime: Long,
+        frameCapturedAtNs: Long,
+        detectStartedAtNs: Long,
+        detectCompletedAtNs: Long,
+        height: Int,
+        width: Int
+    ) {
+        val detectionResult = TimeStepData.DetectionData.DetectionResult(
+            results = results,
+            inferenceTime = inferenceTime,
+            frameCapturedAtNs = frameCapturedAtNs,
+            imageWidth = width,
+            imageHeight = height
+        )
+
+        getWriteData().detectionData.put(detectionResult)
+    }
+
     class TimeStepData {
         @get:Synchronized
         var wheelData: WheelData = WheelData()
@@ -185,6 +211,10 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         var orientationData: OrientationData = OrientationData()
             private set
 
+        @get:Synchronized
+        var detectionData: DetectionData = DetectionData()
+            private set
+
         @Synchronized
         fun clear() {
             wheelData = WheelData()
@@ -194,6 +224,7 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             soundData = SoundData()
             actions = RobotAction()
             orientationData = OrientationData()
+            detectionData = DetectionData()
         }
 
         class WheelData {
@@ -360,6 +391,20 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             fun getTimeStamps() = timestamps.toLongArray()
             fun getTiltAngle() = tiltAngle.toDoubleArray()
             fun getAngularVelocity() = angularVelocity.toDoubleArray()
+        }
+
+        class DetectionData {
+            val detectionResults = mutableListOf<DetectionResult>()
+
+            fun put(detectionResult: DetectionResult) = detectionResults.add(detectionResult)
+
+            data class DetectionResult(
+                val results: List<Detection>,
+                val inferenceTime: Long,
+                val frameCapturedAtNs: Long,
+                val imageWidth: Int,
+                val imageHeight: Int
+            )
         }
     }
 }
