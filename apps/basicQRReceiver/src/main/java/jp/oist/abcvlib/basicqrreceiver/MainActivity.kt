@@ -48,7 +48,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
         publisherManager.startPublishers()
     }
 
-    override fun onQRCodeDetected(qrDataDecoded: String) {
+    override fun onQRCodeDetected(qrDataDecoded: String, timestamp: Long) {
         when (qrDataDecoded) {
             "L" -> turnLeft()
             "R" -> turnRight()

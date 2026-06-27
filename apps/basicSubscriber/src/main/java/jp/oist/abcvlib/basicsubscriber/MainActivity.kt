@@ -214,7 +214,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
         guiUpdater.frameRateString = String.format(Locale.getDefault(), "%.0f", frameRate)
     }
 
-    override fun onQRCodeDetected(qrDataDecoded: String) {
+    override fun onQRCodeDetected(qrDataDecoded: String, timestamp: Long) {
         guiUpdater.qrDataString = qrDataDecoded
     }
 

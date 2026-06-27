@@ -67,7 +67,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
         executor.scheduleAtFixedRate(swapAction, 0, 10, TimeUnit.SECONDS)
     }
 
-    override fun onQRCodeDetected(qrDataDecoded: String) {
+    override fun onQRCodeDetected(qrDataDecoded: String, timestamp: Long) {
         if (qrDataDecoded.isNotEmpty()) {
             Logger.i("qrcode", "QR Code Found and decoded: $qrDataDecoded")
         }
