@@ -21,6 +21,11 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
+private fun AudioTimestamp.snapshot() = AudioTimestamp().also {
+    it.framePosition = framePosition
+    it.nanoTime = nanoTime
+}
+
 class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
     WheelDataSubscriber,
     ImageDataRawSubscriber, MicrophoneDataSubscriber,
@@ -140,8 +145,17 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         startTime: AudioTimestamp,
         endTime: AudioTimestamp
     ) {
-        getWriteData().soundData.setMetaData(sampleRate, startTime, endTime)
-        getWriteData().soundData.add(audioData, numSamples)
+        if (numSamples <= 0) return
+
+        with(getWriteData().soundData) {
+            add(TimeStepData.SoundData.AudioFrame(
+                levels = audioData.copyOf(numSamples),
+                sampleCount = numSamples,
+                sampleRate = sampleRate,
+                startTime = startTime.snapshot(),
+                endTime = endTime.snapshot()
+            ))
+        }
     }
 
     override fun onOrientationUpdate(
@@ -262,43 +276,127 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             fun getVoltage() = voltage.toDoubleArray()
         }
 
+        /**
+         * Container for audio data recorded during a single timestep.
+         *
+         * This class manages a collection of [AudioFrame] objects and provides metadata regarding
+         * the audio stream, including start and end timestamps, total duration, and sample rates.
+         */
         class SoundData {
-            var startTime: AudioTimestamp = AudioTimestamp()
-                private set
-            var endTime: AudioTimestamp = AudioTimestamp()
-                private set
+            /**
+             * The timestamp of the start of the first audio frame in this buffer.
+             * If no frames are present, it returns a default [AudioTimestamp].
+             */
+            val startTime: AudioTimestamp get() = frameList.firstOrNull()
+                ?.startTime
+                ?.snapshot()
+                ?: AudioTimestamp()
 
-            var totalTime: Double = 0.0
-                private set
-            var sampleRate: Int = 0
-                private set
-            var totalSamples: Long = 0
-                private set
-            var totalSamplesCalculatedViaTime: Long = 0
-                private set
+            /**
+             * The timestamp of the end of the audio sequence within this time step.
+             * Returns the [AudioTimestamp] of the last recorded [AudioFrame],
+             * or a default instance if no frames are present.
+             */
+            val endTime: AudioTimestamp get() = frameList.lastOrNull()
+                ?.endTime
+                ?.snapshot()
+                ?: AudioTimestamp()
 
-            private val levels = arrayListOf<Float>()
-            fun getLevels() = levels.toFloatArray()
+            /**
+             * The total duration of the audio sequence in seconds.
+             *
+             * This value is calculated as the difference between [endTime] and [startTime].
+             */
+            val totalTime: Double
+                get() = (endTime.nanoTime - startTime.nanoTime) * 10e-10
 
-            fun add(levels: FloatArray, numSamples: Int) {
-                for (level in levels) {
-                    this.levels.add(level)
-                }
-                totalSamples += numSamples.toLong()
+            /**
+             * The sampling rate (samples per second) of the audio data.
+             *
+             * This value corresponds to the sampling frequency of the most recently recorded
+             * [AudioFrame]. Returns 0 if no frames have been collected for this timestep.
+             */
+            val sampleRate: Int
+                get() = frameList.lastOrNull()
+                    ?.sampleRate
+                    ?: 0
+
+            /**
+             * The total number of audio samples accumulated across all [AudioFrame] objects
+             * within this time step.
+             */
+            val totalSamples: Long get() = frameList
+                .sumOf { it.sampleCount.toLong() }
+
+            /**
+             * The total number of audio samples within this time step, calculated as the difference
+             * between the hardware frame positions at the [endTime] and [startTime].
+             *
+             * This provides a hardware-clock-referenced count of samples that elapsed during the
+             * recording interval, which can be used to verify the consistency of the received
+             * audio data chunks.
+             */
+            val totalSamplesCalculatedViaTime: Long
+                get() = endTime.framePosition - startTime.framePosition
+
+            /**
+             * The raw audio amplitude samples (PCM levels) recorded during this frame.
+             */
+            private val flattenedLevels get() = frameList
+                .flatMap { it.levels.asIterable() }
+
+            /**
+             * Returns all audio samples collected during this timestep as a single [FloatArray].
+             *
+             * This method flattens the audio data from all recorded [AudioFrame] objects into
+             * a continuous array of amplitude levels.
+             *
+             * @return A [FloatArray] containing the concatenated audio samples.
+             */
+            fun getLevels() = flattenedLevels.toFloatArray()
+
+            /**
+             * A mutable list of [AudioFrame] objects captured during this specific timestep.
+             * This serves as the primary storage for raw audio samples and their associated
+             * metadata, used to derive cumulative properties like total duration and sample levels.
+             */
+            private val frameList = mutableListOf<AudioFrame>()
+
+            /**
+             * Returns defensive snapshots of the audio frames captured in this timestep.
+             * Each snapshot owns its levels array and timestamp values.
+             */
+            val frames: List<AudioFrame> get() = frameList.map { frame ->
+                frame.snapshot()
             }
 
-            fun setMetaData(sampleRate: Int, startTime: AudioTimestamp, endTime: AudioTimestamp) {
-                //Logger.i("audioFrame", (this.endTime.nanoTime - startTime.nanoTime) + " missing nanoseconds between last frames");
-
-                if (startTime.framePosition != 0L) {
-                    this.startTime = startTime
+            /**
+             * Adds a new [AudioFrame] to the collection of audio data for this timestep.
+             *
+             * @param frame The audio frame containing raw sample data and metadata to be stored.
+             * @return `true` if the frame was successfully added to the internal list.
+             */
+            fun add(frame: AudioFrame): Boolean {
+                require(frame.sampleCount in 0..frame.levels.size) {
+                    "sampleCount must be between 0 and levels.size"
                 }
-                //todo add logic to test if timestamps overlap or have gaps.
-                this.endTime = endTime
-                this.totalTime = (endTime.nanoTime - startTime.nanoTime) * 10e-10
-                this.sampleRate = sampleRate
-                this.totalSamplesCalculatedViaTime = endTime.framePosition - startTime.framePosition
+
+                return frameList.add(frame.snapshot())
             }
+
+            private fun AudioFrame.snapshot() = copy(
+                levels = levels.copyOf(sampleCount),
+                startTime = startTime.snapshot(),
+                endTime = endTime.snapshot()
+            )
+
+            data class AudioFrame(
+                val levels: FloatArray,
+                val sampleCount: Int,
+                val sampleRate: Int,
+                val startTime: AudioTimestamp,
+                val endTime: AudioTimestamp
+            )
         }
 
         class ImageData : Hashtable<Long, SingleImage>() {
