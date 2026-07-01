@@ -5,6 +5,10 @@
 - Git: [GitHub: Set up Git](https://docs.github.com/en/get-started/git-basics/set-up-git)
 - Repository checkout: [GitHub: Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository)
 - Python 3.9 or newer: [Python downloads](https://www.python.org/downloads/)
+- Full JDK 17 or newer, not just a JRE/runtime. `JAVA_HOME` must point to the
+  JDK root and `JAVA_HOME/bin/javac` must exist. See
+  [Troubleshooting](troubleshooting.md#java_home-is-missing-or-wrong) if Gradle
+  cannot find a Java compiler.
 
 Choose one Android setup path:
 

@@ -156,6 +156,16 @@ adb install -r -d <apk>
 Use this section if Gradle cannot find Java, uses an old Java version, or shows
 a JDK compatibility error.
 
+Gradle may report:
+
+```text
+Toolchain installation '<path>' does not provide the required capabilities: [JAVA_COMPILER]
+```
+
+This means Gradle found a Java runtime at that path, but not a full JDK with
+`javac`. Java 17 or newer is acceptable, including Java 21, but it must be a JDK
+rather than a JRE/runtime-only install.
+
 ### 1. Check Java
 
 On macOS/Linux:
@@ -163,6 +173,7 @@ On macOS/Linux:
 ```bash
 java -version
 echo "$JAVA_HOME"
+"$JAVA_HOME/bin/javac" -version
 ```
 
 On Windows PowerShell:
@@ -170,6 +181,7 @@ On Windows PowerShell:
 ```powershell
 java -version
 echo $env:JAVA_HOME
+& "$env:JAVA_HOME\bin\javac.exe" -version
 ```
 
 ### 2. Find A JDK
@@ -179,6 +191,11 @@ If using Android Studio, the bundled JDK is usually here:
 - Linux: `<android-studio>/jbr`
 - macOS: `/Applications/Android Studio.app/Contents/jbr/Contents/Home`
 - Windows: `C:\Program Files\Android\Android Studio\jbr`
+
+You can also install a full JDK such as OpenJDK or Eclipse Temurin 17 or newer.
+On Linux, install a `-jdk` package, for example `openjdk-17-jdk` or
+`openjdk-21-jdk`, not a `-jre` package. On Windows, set `JAVA_HOME` to the JDK
+directory, not the `bin` directory.
 
 ### 3. Set JAVA_HOME
 
