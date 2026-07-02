@@ -168,12 +168,11 @@ These tests verify end-to-end communication using a mocked transport layer to si
 A specialized test to measure communication round-trip time and identify bottlenecks. For details on the methodology and metrics, see [docs/BENCHMARK.md](docs/BENCHMARK.md).
 
 ```bash
-# Run the benchmark
-./gradlew :abcvlib:connectedDebugAndroidTest "-Pandroid.testInstrumentationRunnerArguments.class=jp.oist.abcvlib.util.latency.LatencyBenchmark"
+# Run the benchmark and sync the published artifacts
+./gradlew :abcvlib:runLatencyBenchmark
 
-# Export results to docs/BENCHMARK.md
-./util/pull_benchmark.bat  # (Windows)
-./util/pull_benchmark.sh   # (Linux/macOS)
+# Run against attached hardware instead of the virtual simulator
+./gradlew :abcvlib:runLatencyBenchmark -PuseHardware=true
 ```
 
 ## Pairing with a smartphone via wireless debugging
