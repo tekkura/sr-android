@@ -3,6 +3,7 @@ import jp.oist.abcvlib.AppVersioning.isDirty
 import jp.oist.abcvlib.AppVersioning.isTagged
 import jp.oist.abcvlib.AppVersioning.scmTag
 import jp.oist.abcvlib.ModelDownload
+import jp.oist.abcvlib.configureLatencyBenchmarkTasks
 import jp.oist.abcvlib.loadNetworkConfig
 
 plugins {
@@ -66,23 +67,11 @@ android {
     }
 }
 
-val latencyBenchmarkDevicePath = "/sdcard/Download/benchmark_results.md"
-val latencyBenchmarkLatestFile = rootProject.file("docs/benchmarks/latency/latest.md")
-
 // Download default models; if you wish to use your own models then
 // place them in the "assets" directory and comment out this line.
 ModelDownload.configure(project)
 
-tasks.register<Exec>("pullLatencyBenchmarkLatest") {
-    group = "verification"
-    description = "Pull the latest latency benchmark result into docs/benchmarks/latency/latest.md."
-
-    doFirst {
-        latencyBenchmarkLatestFile.parentFile.mkdirs()
-    }
-
-    commandLine("adb", "pull", latencyBenchmarkDevicePath, latencyBenchmarkLatestFile.absolutePath)
-}
+configureLatencyBenchmarkTasks()
 
 tasks.withType<GenerateMavenPom>().configureEach {
     doFirst {
