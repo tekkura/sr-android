@@ -2,6 +2,14 @@
 
 This document defines the metrics and methodology for measuring the round-trip latency of the robot-phone communication stack. These benchmarks are used to identify bottlenecks and verify that the target latency of **< 20ms** is achieved.
 
+Benchmark outputs are stored separately from this specification:
+
+- Latest accepted result: [docs/benchmarks/latency/latest.md](docs/benchmarks/latency/latest.md)
+- Structured run history: [docs/benchmarks/latency/history.csv](docs/benchmarks/latency/history.csv)
+- Trend plot: [docs/benchmarks/latency/plot.svg](docs/benchmarks/latency/plot.svg)
+
+This file remains the stable methodology reference and keeps older result tables as a legacy appendix.
+
 ## 1. Timing Junctions (Markers)
 
 To precisely isolate delays, the following high-resolution timestamps (`System.nanoTime()`) are captured during a single command-response cycle:
@@ -34,14 +42,14 @@ The following metrics are derived from the timestamps above to measure specific 
 
 ## 3. Methodology
 
-- **Sample Size**: 10,000 iterations per benchmark run.
+- **Sample Size**: 1,000 iterations per benchmark run.
 - **Warm-up**: 100 iterations are discarded to allow for JIT optimization.
 - **Environment**: Dedicated Instrumentation Test (`LatencyBenchmark.kt`).
 - **Mock Latency**: `VirtualRobotPort` connects to `MockRP2040`. `MockRP2040` includes a 5ms `Thread.sleep()` to simulate firmware processing time.
-- **Reporting**: Results are logged in Markdown format and appended to this document under the [Results](#results) section.
+- **Reporting**: Results are logged in Markdown format and written to `docs/benchmarks/latency/latest.md`; accepted runs are also recorded in structured history and the trend plot is regenerated from that history.
 - **Run Metadata**: New result blocks include the Android runner, emulator/physical-device classification, virtual transport, simulated firmware, protocol, commit hash, and iteration counts. Older result blocks did not capture per-run runner metadata.
 
-## 4. Results
+## 4. Legacy Results
 
 ### Benchmark Results (10000 iterations)
  
