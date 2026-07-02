@@ -66,9 +66,23 @@ android {
     }
 }
 
+val latencyBenchmarkDevicePath = "/sdcard/Download/benchmark_results.md"
+val latencyBenchmarkLatestFile = rootProject.file("docs/benchmarks/latency/latest.md")
+
 // Download default models; if you wish to use your own models then
 // place them in the "assets" directory and comment out this line.
 ModelDownload.configure(project)
+
+tasks.register<Exec>("pullLatencyBenchmarkLatest") {
+    group = "verification"
+    description = "Pull the latest latency benchmark result into docs/benchmarks/latency/latest.md."
+
+    doFirst {
+        latencyBenchmarkLatestFile.parentFile.mkdirs()
+    }
+
+    commandLine("adb", "pull", latencyBenchmarkDevicePath, latencyBenchmarkLatestFile.absolutePath)
+}
 
 tasks.withType<GenerateMavenPom>().configureEach {
     doFirst {
