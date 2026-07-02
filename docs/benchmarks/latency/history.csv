@@ -1,0 +1,2 @@
+commit,generated_utc,runner,uses_real_firmware,firmware,measured_iterations,success_rate,mean_rtt_ms,p95_rtt_ms,max_rtt_ms
+4e96e9e0,2026-07-02T12:23:57.5957900Z,Samsung Galaxy A35,FALSE,,10000,100,11.196,13.139,30.403
