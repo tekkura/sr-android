@@ -3,7 +3,7 @@
 This guide defines the requirements and implementation plan for the **InstrumentationTests** milestone. The primary goal is to refactor the USB-serial communication layer for better abstraction and performance, validated by a robust, hardware-independent testing environment.
 
 ## Milestone Goal
-Refactor the low-level USB-serial logic into a robust, high-level API using a dedicated buffer abstraction and sealed class commands. This structure will be verified through targeted unit tests and full-loop instrumentation tests to ensure reliability and a round-trip latency of < 20ms.
+Refactor the low-level USB-serial logic into a robust, high-level API using a dedicated buffer abstraction and sealed class commands. This structure will be verified through targeted unit tests and full-loop instrumentation tests to ensure reliability and a round-trip latency of < 20ms. Benchmark methodology stays in `docs/BENCHMARK.md`; the latest accepted result and trend history live under `docs/benchmarks/latency/`.
 
 ---
 
@@ -36,6 +36,12 @@ The goal of this phase is to verify the entire communication stack and reach lat
    - Optimize round-trip latency
    - **Validation**: Confirm and document that the round-trip latency is significantly reduced (goal < 20ms).
 
+6. **Benchmark Documentation & Workflow Split**:
+   - Keep `docs/BENCHMARK.md` as the stable benchmark specification: timing markers, metric definitions, run conditions, and interpretation notes.
+   - Save the most recent accepted benchmark output to `docs/benchmarks/latency/latest.md` so each committed result corresponds to a specific revision.
+   - Track accepted runs in `docs/benchmarks/latency/history.csv` and generate `docs/benchmarks/latency/plot.svg` for a compact trend view over commits.
+   - Prefer a single Gradle task to run the benchmark and sync the artifacts in one command, while leaving the shell scripts as optional manual fallbacks.
+
 ---
 
 ## Acceptance Criteria
@@ -49,3 +55,4 @@ The goal of this phase is to verify the entire communication stack and reach lat
 ### Process AC
 - Documentation in `README.md` is updated to describe the new `PacketBuffer` API and instructions for running automated tests.
 - All new features or protocol changes include corresponding unit or instrumentation tests.
+- Latency benchmark methodology is separated from run results, with `docs/BENCHMARK.md` kept as the stable spec and legacy snapshot archive.
