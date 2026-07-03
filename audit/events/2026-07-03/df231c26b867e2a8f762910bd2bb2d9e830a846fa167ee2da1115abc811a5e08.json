@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-03T13:28:53Z",
+  "event_ts": "2026-07-03T13:28:37Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "28663678526",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 270,
+    "title": "Instrumentation tests/output format",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/270",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4876807306,
+    "html_url": "https://github.com/tekkura/sr-android/pull/270#issuecomment-4876807306",
+    "created_at": "2026-07-03T13:28:37Z",
+    "updated_at": "2026-07-03T13:28:37Z",
+    "body": "@topherbuckley Codex has a problem with me updating migration guide in the same PR with functional changes. It is abiding the rules we have established, but we ourselves have ditched them previously. Your call whether we should create two PRs or just merge this one"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/270#issuecomment-4876807306",
+  "event_id": "df231c26b867e2a8f762910bd2bb2d9e830a846fa167ee2da1115abc811a5e08"
+}
