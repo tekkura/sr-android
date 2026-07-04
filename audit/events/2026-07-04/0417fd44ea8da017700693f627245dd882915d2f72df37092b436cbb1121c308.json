@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-04T16:53:39Z",
+  "event_ts": "2026-07-04T16:53:24Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "28713127477",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 270,
+    "title": "Instrumentation tests/output format",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/270",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "comment": {
+    "id": 3523538815,
+    "html_url": "https://github.com/tekkura/sr-android/pull/270#discussion_r3523538815",
+    "created_at": "2026-07-04T16:53:24Z",
+    "updated_at": "2026-07-04T16:53:24Z",
+    "body": "#codex-reply resolved by enclosing all problem fields in quotes [4353b6c](https://github.com/tekkura/sr-android/commit/4353b6c18c6fd72f95f34b8bb58c6dfefc67229e)"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/270#discussion_r3523538815",
+  "event_id": "0417fd44ea8da017700693f627245dd882915d2f72df37092b436cbb1121c308"
+}
