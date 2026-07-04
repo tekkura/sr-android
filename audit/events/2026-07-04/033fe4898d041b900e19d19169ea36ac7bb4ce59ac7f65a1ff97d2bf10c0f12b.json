@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-04T16:30:59Z",
+  "event_ts": "2026-07-04T16:30:43Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "28712527446",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 270,
+    "title": "Instrumentation tests/output format",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/270",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4883061063,
+    "html_url": "https://github.com/tekkura/sr-android/pull/270#issuecomment-4883061063",
+    "created_at": "2026-07-04T16:30:43Z",
+    "updated_at": "2026-07-04T16:30:43Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/270#issuecomment-4883061063",
+  "event_id": "033fe4898d041b900e19d19169ea36ac7bb4ce59ac7f65a1ff97d2bf10c0f12b"
+}
