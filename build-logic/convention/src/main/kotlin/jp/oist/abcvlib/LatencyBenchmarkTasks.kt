@@ -236,7 +236,10 @@ private fun parseLatencyBenchmarkHistory(file: File): List<LatencyBenchmarkHisto
 
 private fun csvRow(vararg values: String): String =
     values.joinToString(",") { value ->
-        if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
+        if (value.any { it == '\n' || it == '\r' }) {
+            throw GradleException("Benchmark history CSV fields must be single-line: $value")
+        }
+        if (value.any { it == ',' || it == '"' }) {
             "\"${value.replace("\"", "\"\"")}\""
         } else {
             value
