@@ -97,7 +97,7 @@ private fun updateLatencyBenchmarkHistory(latestFile: File, historyFile: File) {
         throw GradleException("Unexpected benchmark history header: $header")
     }
 
-    val latestRow = listOf(
+    val latestRow = csvRow(
         latestMetadata.commit,
         latestMetadata.generatedUtc,
         latestMetadata.runner,
@@ -108,11 +108,11 @@ private fun updateLatencyBenchmarkHistory(latestFile: File, historyFile: File) {
         latestSummary.meanRtt,
         latestSummary.p95Rtt,
         latestSummary.maxRtt,
-    ).joinToString(",")
+    )
 
     val (hash, time) = existingLines.drop(1)
         .lastOrNull()
-        ?.split(",")
+        ?.let { parseCsvRow(it) }
         .let { it?.getOrNull(0) to it?.getOrNull(1) }
 
     if (hash == latestMetadata.commit && time == latestMetadata.generatedUtc)
@@ -215,7 +215,7 @@ private fun parseLatencyBenchmarkHistory(file: File): List<LatencyBenchmarkHisto
     }
 
     return lines.drop(1).map { line ->
-        val columns = line.split(",")
+        val columns = parseCsvRow(line)
         if (columns.size != 10) {
             throw GradleException("Unexpected benchmark history row: $line")
         }
@@ -232,6 +232,46 @@ private fun parseLatencyBenchmarkHistory(file: File): List<LatencyBenchmarkHisto
             maxRtt = columns[9].toDouble(),
         )
     }
+}
+
+private fun csvRow(vararg values: String): String =
+    values.joinToString(",") { value ->
+        if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
+            "\"${value.replace("\"", "\"\"")}\""
+        } else {
+            value
+        }
+    }
+
+private fun parseCsvRow(line: String): List<String> {
+    val values = mutableListOf<String>()
+    val current = StringBuilder()
+    var inQuotes = false
+    var index = 0
+
+    while (index < line.length) {
+        val char = line[index]
+        when {
+            inQuotes && char == '"' && line.getOrNull(index + 1) == '"' -> {
+                current.append('"')
+                index++
+            }
+            char == '"' -> inQuotes = !inQuotes
+            char == ',' && !inQuotes -> {
+                values.add(current.toString())
+                current.clear()
+            }
+            else -> current.append(char)
+        }
+        index++
+    }
+
+    if (inQuotes) {
+        throw GradleException("Unterminated quoted CSV field: $line")
+    }
+
+    values.add(current.toString())
+    return values
 }
 
 private fun renderLatencyBenchmarkPlot(rows: List<LatencyBenchmarkHistoryRow>): String {

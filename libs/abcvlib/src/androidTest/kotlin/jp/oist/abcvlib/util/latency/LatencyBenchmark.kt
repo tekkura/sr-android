@@ -291,14 +291,14 @@ class LatencyBenchmark {
 
         return buildString {
             append("- Generated at (UTC): ${Instant.now()}\n")
-            append("- Runner: ${Build.MANUFACTURER.escapeCsvField()} " +
-                    "${Build.MODEL.escapeCsvField()} " +
+            append("- Runner: ${Build.MANUFACTURER} " +
+                    "${Build.MODEL} " +
                     "($runnerType)\n")
-            append("- Android: ${Build.VERSION.RELEASE.escapeCsvField()} " +
+            append("- Android: ${Build.VERSION.RELEASE} " +
                     "(API ${Build.VERSION.SDK_INT})\n")
-            append("- Device: brand=${Build.BRAND.escapeCsvField()}, " +
-                    "device=${Build.DEVICE.escapeCsvField()}, " +
-                    "product=${Build.PRODUCT.escapeCsvField()}\n")
+            append("- Device: brand=${Build.BRAND}, " +
+                    "device=${Build.DEVICE}, " +
+                    "product=${Build.PRODUCT}\n")
             append("- Hardware loop: ${hardwareLoopMetadata()}\n")
             append("- Transport: ${transportMetadata()}\n")
             append("- Firmware: ${firmwareMetadata()}\n")
@@ -335,16 +335,6 @@ class LatencyBenchmark {
     private fun intRunnerArg(value: String?, defaultValue: Int): Int {
         val parsed = value?.toIntOrNull()
         return if (parsed != null && parsed > 0) parsed else defaultValue
-    }
-
-    private fun String.escapeCsvField(): String {
-        val needsQuotes = contains(",")
-                || contains("\"")
-                || contains("\n")
-                || contains("\r")
-
-        if (!needsQuotes) return this
-        return "\"${replace("\"", "\"\"")}\""
     }
 
     companion object {
