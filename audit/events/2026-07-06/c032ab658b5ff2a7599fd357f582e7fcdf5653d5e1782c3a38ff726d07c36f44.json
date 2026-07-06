@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-06T11:25:08Z",
+  "event_ts": "2026-07-06T11:24:50Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "28788044828",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 270,
+    "title": "Instrumentation tests/output format",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/270",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "comment": {
+    "id": 3528446822,
+    "html_url": "https://github.com/tekkura/sr-android/pull/270#discussion_r3528446822",
+    "created_at": "2026-07-06T11:24:50Z",
+    "updated_at": "2026-07-06T11:24:50Z",
+    "body": "#codex-reply\r\n\r\n@GeorgeChernyshov I agree it was not likely going to cause issues, but just in case I added the requested fix in [8150113](https://github.com/tekkura/sr-android/pull/270/commits/8150113ce5bfb9eb6b9cfcbfc939f96351092013). Ready to merge if you are ok with that change. "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/270#discussion_r3528446822",
+  "event_id": "c032ab658b5ff2a7599fd357f582e7fcdf5653d5e1782c3a38ff726d07c36f44"
+}
