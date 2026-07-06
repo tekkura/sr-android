@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-06T11:54:09Z",
+  "event_ts": "2026-07-06T11:53:26Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "deleted",
+  "actor": "topherbuckley",
+  "run_id": "28789585328",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 270,
+    "title": "Instrumentation tests/output format",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/270",
+    "milestone": {
+      "number": 13,
+      "title": "InstrumentationTests"
+    }
+  },
+  "comment": {
+    "id": 3528605282,
+    "html_url": "https://github.com/tekkura/sr-android/pull/270#discussion_r3528605282",
+    "created_at": "2026-07-06T11:53:26Z",
+    "updated_at": "2026-07-06T11:53:26Z",
+    "body": "#codex-review\r\nfixed in [556b936](https://github.com/tekkura/sr-android/pull/270/commits/556b93684f1ba5237dc7a6187027205290c7f16a)\r\n"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "HIGH",
+  "target_url": "https://github.com/tekkura/sr-android/pull/270#discussion_r3528605282",
+  "event_id": "34de1b5677fe5d530ba3982bebc7427aa263fd93283452364a1f7b93732b9418"
+}
