@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-08T10:38:50Z",
+  "event_ts": "2026-07-08T10:38:33Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "28936334746",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 252,
+    "title": "Firmware benchmarking/parse firmware benchmarks",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/252",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4913927759,
+    "html_url": "https://github.com/tekkura/sr-android/pull/252#issuecomment-4913927759",
+    "created_at": "2026-07-08T10:38:33Z",
+    "updated_at": "2026-07-08T10:38:33Z",
+    "body": "#codex-review"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/252#issuecomment-4913927759",
+  "event_id": "ffef4b14ea59b5597b3ced84104d35e5ec7eaa3fc9787b0f8c452c2c01b30446"
+}
