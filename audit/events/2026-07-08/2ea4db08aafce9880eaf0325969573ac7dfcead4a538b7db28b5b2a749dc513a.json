@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-08T13:51:10Z",
+  "event_ts": "2026-07-08T13:50:54Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "28947871708",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 252,
+    "title": "Firmware benchmarking/parse firmware benchmarks",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/252",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3544503180,
+    "html_url": "https://github.com/tekkura/sr-android/pull/252#discussion_r3544503180",
+    "created_at": "2026-07-08T13:50:53Z",
+    "updated_at": "2026-07-08T13:50:54Z",
+    "body": "#codex-reply resolved in [03f7462](https://github.com/tekkura/sr-android/commit/03f74625adff8476472d7b64eae6e8806c3b2536)"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/252#discussion_r3544503180",
+  "event_id": "2ea4db08aafce9880eaf0325969573ac7dfcead4a538b7db28b5b2a749dc513a"
+}
