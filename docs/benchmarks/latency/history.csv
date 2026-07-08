@@ -1,0 +1,5 @@
+commit,generated_utc,runner,uses_real_firmware,firmware,measured_iterations,success_rate,mean_rtt_ms,p95_rtt_ms,max_rtt_ms
+4e96e9e0,2026-07-02T12:23:57.5957900Z,Samsung Galaxy A35,FALSE,,10000,100,11.196,13.139,30.403
+3639c37a0ae8f8960bb493a226ff1c06e801a1f4,2026-07-02T16:39:20.082533Z,samsung SM-A356E (physical device),FALSE,MockRP2040 simulator with 5 ms processing delay,1000,100.00,6.760,8.058,14.482
+3639c37a0ae8f8960bb493a226ff1c06e801a1f4,2026-07-02T16:41:56.004538Z,samsung SM-A356E (physical device),FALSE,MockRP2040 simulator with 5 ms processing delay,1000,100.00,8.634,11.452,16.350
+858fe6da7833e028a5f519a5b0417f2d42996426,2026-07-02T16:45:33.510188Z,samsung SM-A356E (physical device),FALSE,MockRP2040 simulator with 5 ms processing delay,1000,100.00,8.508,11.359,19.376

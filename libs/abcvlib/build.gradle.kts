@@ -3,6 +3,7 @@ import jp.oist.abcvlib.AppVersioning.isDirty
 import jp.oist.abcvlib.AppVersioning.isTagged
 import jp.oist.abcvlib.AppVersioning.scmTag
 import jp.oist.abcvlib.ModelDownload
+import jp.oist.abcvlib.configureLatencyBenchmarkTasks
 import jp.oist.abcvlib.loadNetworkConfig
 
 plugins {
@@ -40,6 +41,11 @@ dependencies {
     api(libs.flatbuffers)
     api(libs.android.permissions)
     api(libs.abcvlib.fbclasses)
+
+    // Test
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }
 
 android {
@@ -48,15 +54,36 @@ android {
         buildConfig = true
     }
     defaultConfig {
+        val requestedTasks = gradle.startParameter.taskNames
+        val runLatencyBenchmarkRequested = requestedTasks.any { taskName ->
+            taskName == "runLatencyBenchmark" || taskName == ":abcvlib:runLatencyBenchmark"
+        }
+
         val networkConfig = loadNetworkConfig(rootDir)
         buildConfigField("String", "IP", "\"${networkConfig.ip}\"")
         buildConfigField("int", "PORT", "${networkConfig.port}")
+        buildConfigField("String", "GIT_COMMIT", "\"${gitHash()}\"")
+        buildConfigField("boolean", "GIT_DIRTY", "${isDirty()}")
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        if (runLatencyBenchmarkRequested) {
+            testInstrumentationRunnerArguments["class"] = "jp.oist.abcvlib.util.latency.LatencyBenchmark"
+            findProperty("useHardware")
+                ?.toString()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { testInstrumentationRunnerArguments["useHardware"] = it }
+        }
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
 // Download default models; if you wish to use your own models then
 // place them in the "assets" directory and comment out this line.
 ModelDownload.configure(project)
+
+configureLatencyBenchmarkTasks()
 
 tasks.withType<GenerateMavenPom>().configureEach {
     doFirst {
