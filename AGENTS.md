@@ -18,6 +18,12 @@ Correctness
 - Flag behavior changes outside stated scope.
 - Ensure tests/build/docs remain consistent with the change.
 
+Documentation ownership
+- Do not duplicate the same explanation, workflow, command sequence, diagram, or reference material across multiple docs.
+- Before adding or moving documentation, search for the same topic and choose one owner document.
+- Root and index docs should route users with short links; detailed content should live in exactly one topic document.
+- If a diagram is used to explain a concept, keep that diagram in the single document that owns the concept and link to it elsewhere.
+
 Commit/history hygiene
 - Commits must be reviewable and focused.
 - Messages should state what changed and why.
