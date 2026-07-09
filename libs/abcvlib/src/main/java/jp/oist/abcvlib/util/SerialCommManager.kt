@@ -60,16 +60,15 @@ open class SerialCommManager @JvmOverloads constructor(
         while (!context.stopRequested.get()) {
             val nextCommand = try {
                 synchronized(commandLock) {
-                    // this results in getState commands every 10ms unless another command
-                    // (e.g. setMotorLevels) is set, which case wait will return immediately
-                    if (command == null)
-                        commandLock.wait(context.delay.get())
+                    while (command == null && !context.stopRequested.get()) {
+                        commandLock.wait()
+                    }
 
                     if (context.stopRequested.get()) {
                         return@synchronized null
                     }
 
-                    val localCommand = command ?: RP2040OutgoingCommand.GetState()
+                    val localCommand = command ?: return@synchronized null
                     command = null
                     localCommand
                 }
