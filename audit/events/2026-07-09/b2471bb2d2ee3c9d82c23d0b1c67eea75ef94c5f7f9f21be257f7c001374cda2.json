@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-07-09T11:05:12Z",
+  "event_ts": "2026-07-09T10:59:55Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "assigned",
+  "actor": "topherbuckley",
+  "run_id": "29013414271",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 278,
+    "title": "Evaluate serial response validation improvements after PacketBuffer refactor",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/278",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/278",
+  "event_id": "b2471bb2d2ee3c9d82c23d0b1c67eea75ef94c5f7f9f21be257f7c001374cda2"
+}
