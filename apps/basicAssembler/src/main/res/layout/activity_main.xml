@@ -1,221 +1,372 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/tableLayout"
+    android:id="@+id/dashboardScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#0E141A"
+    android:fillViewport="true"
     tools:context=".MainActivity">
 
-
-    <TextView
-        android:id="@+id/timeStepHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/timeStepHeaderText"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/timeStep"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAlignment="viewStart"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/timeStepHeader"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/episodeHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/episodeHeader"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/timeStepHeader" />
-
-    <TextView
-        android:id="@+id/episodeCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAlignment="viewStart"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/voltageChargerHeader"
-        app:layout_constraintTop_toBottomOf="@id/timeStep"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/voltageChargerHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/voltageChargerHeader"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/episodeHeader" />
-
-    <TextView
-        android:id="@+id/voltageChargerLevel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAlignment="viewStart"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/voltageChargerHeader"
-        app:layout_constraintTop_toBottomOf="@id/episodeCount"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/coilVoltageHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/coilVoltageHeaderValue"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/voltageChargerHeader" />
-
-    <TextView
-        android:id="@+id/coilVoltageText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/coilVoltageHeader"
-        app:layout_constraintTop_toBottomOf="@id/voltageChargerLevel"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/voltageBatteryHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="1dp"
-        android:text="@string/voltageBatteryHeader"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/coilVoltageHeader" />
-
-    <TextView
-        android:id="@+id/voltageBattLevel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/voltageBatteryHeader"
-        app:layout_constraintTop_toBottomOf="@+id/coilVoltageText"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/tiltAngleHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/tiltAngleHeader"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/voltageBatteryHeader" />
-
-    <TextView
-        android:id="@+id/tiltAngle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_chainStyle="spread_inside"
-        app:layout_constraintStart_toEndOf="@id/tiltAngleHeader"
-        app:layout_constraintTop_toBottomOf="@+id/voltageBattLevel"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/angularVelcoityHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/angularVelocityHeader"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tiltAngleHeader"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/angularVelcoity"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/angularVelcoityHeader"
-        app:layout_constraintTop_toBottomOf="@+id/tiltAngle"
-        app:layout_constraintHorizontal_bias="0.05" />
-
-    <TextView
-        android:id="@+id/leftWheelHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text= "@string/leftWheelHeaderText"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/angularVelcoityHeader" />
-
-    <TextView
-        android:id="@+id/leftWheelCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/leftWheelHeader"
-        app:layout_constraintTop_toBottomOf="@+id/angularVelcoity"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/rightWheelHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/rightWheelHeaderText"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/leftWheelHeader"/>
-
-    <TextView
-        android:id="@+id/rightWheelCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/rightWheelHeader"
-        app:layout_constraintTop_toBottomOf="@+id/leftWheelCount"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <TextView
-        android:id="@+id/soundDataHeader"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/soundDataHeader"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/rightWheelHeader" />
-
-    <TextView
-        android:id="@+id/soundData"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/soundDataHeader"
-        app:layout_constraintTop_toBottomOf="@+id/rightWheelCount"
-        app:layout_constraintHorizontal_bias="0.05"/>
-
-    <FrameLayout
-        android:id="@+id/frameLayout"
+    <LinearLayout
+        android:id="@+id/dashboard"
         android:layout_width="match_parent"
-        android:layout_height="300dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/soundData"
-        app:layout_constraintVertical_bias="1.0">
-
-        <androidx.camera.view.PreviewView
-            android:id="@+id/camera_x_preview"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            />
-
-    </FrameLayout>
-
-    <TextView
-        android:id="@+id/frameRateHeader"
-        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/frameRateHeader"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/frameLayout" />
+        android:orientation="vertical"
+        android:padding="12dp">
 
-    <TextView
-        android:id="@+id/frameRate"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/frameRateHeader"
-        app:layout_constraintTop_toBottomOf="@+id/frameLayout"
-        app:layout_constraintHorizontal_bias="0.05"/>
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <FrameLayout
+            android:id="@+id/frameLayout"
+            android:layout_width="match_parent"
+            android:layout_height="280dp"
+            android:background="@drawable/dashboard_panel">
+
+            <androidx.camera.view.PreviewView
+                android:id="@+id/camera_x_preview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:weightSum="3">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/dashboard_panel"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/timeStepHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/timeStepHeaderText"
+                    android:textColor="#ACB8C2"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/timeStep"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#EBF0F4"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/dashboard_panel"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/episodeHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/episodeHeader"
+                    android:textColor="#ACB8C2"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/episodeCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#EBF0F4"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="72dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/dashboard_panel"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:id="@+id/frameRateHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/frameRateHeader"
+                    android:textColor="#ACB8C2"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/frameRate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#EBF0F4"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <jp.oist.abcvlib.basicassembler.CircularGaugeView
+                android:id="@+id/tiltGauge"
+                android:layout_width="0dp"
+                android:layout_height="180dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/dashboard_panel"
+                android:padding="12dp" />
+
+            <jp.oist.abcvlib.basicassembler.CircularGaugeView
+                android:id="@+id/angularVelocityGauge"
+                android:layout_width="0dp"
+                android:layout_height="180dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/dashboard_panel"
+                android:padding="12dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <jp.oist.abcvlib.basicassembler.CircularGaugeView
+                android:id="@+id/leftWheelGauge"
+                android:layout_width="0dp"
+                android:layout_height="160dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/dashboard_panel"
+                android:padding="12dp" />
+
+            <jp.oist.abcvlib.basicassembler.CircularGaugeView
+                android:id="@+id/rightWheelGauge"
+                android:layout_width="0dp"
+                android:layout_height="160dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/dashboard_panel"
+                android:padding="12dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/dashboard_panel"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/voltageBatteryHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/voltageBatteryHeader"
+                android:textColor="#ACB8C2"
+                android:textSize="12sp" />
+
+            <ProgressBar
+                android:id="@+id/batteryGauge"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="4dp"
+                android:max="1000"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/voltageBattLevel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#EBF0F4"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/voltageChargerHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/voltageChargerHeader"
+                android:textColor="#ACB8C2"
+                android:textSize="12sp" />
+
+            <ProgressBar
+                android:id="@+id/chargerGauge"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="4dp"
+                android:max="1000"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/voltageChargerLevel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#EBF0F4"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/coilVoltageHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/coilVoltageHeaderValue"
+                android:textColor="#ACB8C2"
+                android:textSize="12sp" />
+
+            <ProgressBar
+                android:id="@+id/coilGauge"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="4dp"
+                android:max="1000"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/coilVoltageText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#EBF0F4"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/dashboard_panel"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/soundDataHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/soundDataHeader"
+                android:textColor="#ACB8C2"
+                android:textSize="12sp" />
+
+            <ProgressBar
+                android:id="@+id/soundGauge"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="4dp"
+                android:max="1000"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/soundData"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#EBF0F4"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/leftWheelHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/leftWheelHeaderText"
+                android:textColor="#ACB8C2"
+                android:textSize="12sp" />
+
+            <jp.oist.abcvlib.basicassembler.LineGraphView
+                android:id="@+id/leftWheelGraph"
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:layout_marginTop="6dp"
+                android:background="#101820"
+                android:padding="8dp" />
+
+            <TextView
+                android:id="@+id/leftWheelCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#EBF0F4"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/rightWheelHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/rightWheelHeaderText"
+                android:textColor="#ACB8C2"
+                android:textSize="12sp" />
+
+            <jp.oist.abcvlib.basicassembler.LineGraphView
+                android:id="@+id/rightWheelGraph"
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:layout_marginTop="6dp"
+                android:background="#101820"
+                android:padding="8dp" />
+
+            <TextView
+                android:id="@+id/rightWheelCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="#EBF0F4"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tiltAngleHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tiltAngle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/angularVelcoityHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/angularVelcoity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
