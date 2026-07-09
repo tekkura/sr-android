@@ -77,14 +77,11 @@ class FlatbufferAssembler(
     @Throws(ExecutionException::class, InterruptedException::class)
     fun addTimeStep(timestep: Int) {
         // Wait for image compression to finish before trying to write to flatbuffer
-        synchronized(timeStepDataBuffer.imgCompFuturesTimeStep) {
-            for (future in timeStepDataBuffer.imgCompFuturesTimeStep) {
-                future.get()
-            }
+        for (future in timeStepDataBuffer.getImageCompressionFutures(timestep)) {
+            future.get()
         }
+        val timeStepData = timeStepDataBuffer.getTimeStepData(timestep)
         flatbufferWriteFutures.add(flatBufferWriter.submit {
-            val timeStepData = timeStepDataBuffer.getTimeStepData(timestep)
-
             val wheelData = addWheelData(timeStepData)
             val orientationData = addOrientationData(timeStepData)
             val chargerData = addChargerData(timeStepData)
