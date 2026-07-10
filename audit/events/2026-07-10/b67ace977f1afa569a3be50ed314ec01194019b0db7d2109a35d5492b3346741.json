@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-10T14:15:30Z",
+  "event_ts": "2026-07-10T14:15:13Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29099107099",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 281,
+    "title": "Handle unavailable microphone startup and model downloads",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/281",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3559577413,
+    "html_url": "https://github.com/tekkura/sr-android/pull/281#discussion_r3559577413",
+    "created_at": "2026-07-10T14:15:07Z",
+    "updated_at": "2026-07-10T14:15:13Z",
+    "body": "When startRecording() succeeds but getTimestamp() keeps returning ERROR_INVALID_OPERATION until the timeout, this\n    failure path marks the microphone unavailable while leaving the already-started AudioRecord and listener running,\n    then starts the publisher lifecycle. After PublisherManager.startPublishers() resumes it, periodic callbacks can\n    still read and publish audio with invalid timestamps despite showing the unavailable-microphone dialog; stop/detach/\n    release the recorder, or avoid starting the publisher, on this path."
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/281#discussion_r3559577413",
+  "event_id": "b67ace977f1afa569a3be50ed314ec01194019b0db7d2109a35d5492b3346741"
+}
