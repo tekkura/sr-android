@@ -56,7 +56,7 @@ jobs:
           script: |
             const eventName = context.eventName;
             const expectedCommand = '#codex-review';
-            const expectedAssociations = ['MEMBER', 'OWNER'];
+            const expectedAssociations = ['COLLABORATOR', 'MEMBER', 'OWNER'];
             const isIssueComment = eventName === 'issue_comment';
             const isPullRequestComment = Boolean(context.payload.issue?.pull_request);
             const receivedCommentBody = context.payload.comment?.body ?? '';
