@@ -8,6 +8,7 @@ import android.widget.Button
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.outputs.Outputs
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.ProcessPriorityThreadFactory
@@ -20,6 +21,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 /**
@@ -36,18 +38,26 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     var switches = Switches()
     protected lateinit var usbSerial: UsbSerial
     protected lateinit var outputs: Outputs
+    @Volatile
     private var serialCommManager: SerialCommManager? = null
     private var android2PiWriter: Runnable? = null
     private var pi2AndroidReader: Runnable? = null
     private var alertDialog: AlertDialog? = null
     private var initialDelay: Long = 0
     private var serialReadyJob: Job? = null
+    private val serialLifecycleLock = Any()
+    private val publisherManagers = mutableListOf<PublisherManager>()
+    private val publisherManagersLock = Any()
+    private var mainLoopExecutor: ScheduledExecutorService? = null
 
     // Note anything less than 10ms will result in no GET_STATE commands being called and all
     // being overrides by whatever commands are sent in the main loop
     private var delay: Long = 5
     private var isCreated = false
     private var mainLoopEnabled = true
+
+    @Volatile
+    protected var isActivityResumed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         isCreated = true
@@ -90,7 +100,11 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
             )
             serialCommManager = SerialCommManager(usbSerial)
         }
-        serialCommManager!!.start()
+        synchronized(serialLifecycleLock) {
+            if (isActivityResumed) {
+                serialCommManager!!.start()
+            }
+        }
 
         initializeOutputs()
         onOutputsReady()
@@ -101,7 +115,8 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
                 Thread.MAX_PRIORITY,
                 "AbcvlibActivityMainLoop"
             )
-            Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
+            mainLoopExecutor = Executors.newSingleThreadScheduledExecutor(priority)
+            mainLoopExecutor!!.scheduleWithFixedDelay(
                 AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
             )
         }
@@ -109,7 +124,9 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
 
     private inner class AbcvlibActivityRunnable : Runnable {
         override fun run() {
-            abcvlibMainLoop()
+            if (isActivityResumed) {
+                abcvlibMainLoop()
+            }
         }
     }
 
@@ -171,6 +188,32 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         this.pi2AndroidReader = pi2AndroidReader
     }
 
+    /**
+     * Registers publishers that should only process data while this Activity is visible.
+     * Applications create their managers when hardware becomes available, so registration is
+     * intentionally explicit and also handles managers created after onResume.
+     */
+    protected fun registerPublisherManager(publisherManager: PublisherManager) {
+        synchronized(publisherManagersLock) {
+            publisherManagers.add(publisherManager)
+            if (!isActivityResumed) {
+                publisherManager.pausePublishers()
+            }
+        }
+    }
+
+    private fun pausePublisherManagers() {
+        synchronized(publisherManagersLock) {
+            publisherManagers.toList()
+        }.forEach { it.pausePublishers() }
+    }
+
+    private fun resumePublisherManagers() {
+        synchronized(publisherManagersLock) {
+            publisherManagers.toList()
+        }.forEach { it.resumePublishers() }
+    }
+
     private fun showCustomDialog() {
         val builder = AlertDialog.Builder(this)
         val dialogView = layoutInflater.inflate(R.layout.missing_robot, null)
@@ -196,13 +239,33 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         Logger.v(TAG, "End of AbcvlibActivity.onStop")
     }
 
+    override fun onResume() {
+        super.onResume()
+        isActivityResumed = true
+        resumePublisherManagers()
+        synchronized(serialLifecycleLock) {
+            serialCommManager?.start()
+        }
+        Logger.i(TAG, "AbcvlibActivity resumed: publishers and main loop enabled")
+    }
+
     public override fun onPause() {
+        isActivityResumed = false
+        pausePublisherManagers()
         super.onPause()
-        serialCommManager?.let {
-            it.setMotorLevels(0f, 0f, true, true)
-            it.stop()
+        synchronized(serialLifecycleLock) {
+            serialCommManager?.let {
+                it.setMotorLevels(0f, 0f, true, true)
+                it.stop()
+            }
         }
         Logger.i(TAG, "End of AbcvlibActivity.onPause")
+    }
+
+    override fun onDestroy() {
+        mainLoopExecutor?.shutdownNow()
+        mainLoopExecutor = null
+        super.onDestroy()
     }
 
 
