@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-07-11T17:04:48Z",
+  "event_ts": "2026-07-11T17:04:30Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29160944367",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 290,
+    "title": "Handle activity lifecycle in apps",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/290",
+    "milestone": {
+      "number": 17,
+      "title": "Maintenance"
+    }
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": {
+    "number": 17,
+    "title": "Maintenance",
+    "state": "open",
+    "due_on": null,
+    "html_url": "https://github.com/tekkura/sr-android/milestone/17",
+    "description": ""
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/290",
+  "event_id": "29b9ae7dc937f613e2743f9ea5dda36fefe46a2fb2f87e462a992ddaf2625ae6"
+}
