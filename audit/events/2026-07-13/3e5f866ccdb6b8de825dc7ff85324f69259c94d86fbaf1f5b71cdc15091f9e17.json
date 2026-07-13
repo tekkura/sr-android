@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-13T07:11:50Z",
+  "event_ts": "2026-07-13T07:11:32Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "29231259788",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 293,
+    "title": "Removed System.nanoTime mention replacing it with internal timestamps",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/pull/293",
+    "milestone": {
+      "number": 18,
+      "title": "TimeStepData"
+    }
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4955364715,
+    "html_url": "https://github.com/tekkura/sr-android/pull/293#issuecomment-4955364715",
+    "created_at": "2026-07-13T07:11:32Z",
+    "updated_at": "2026-07-13T07:11:32Z",
+    "body": "@GeorgeChernyshov are these tiny documentation change PRs necessary? Why aren't these just commits within some larger PR? "
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/293#issuecomment-4955364715",
+  "event_id": "3e5f866ccdb6b8de825dc7ff85324f69259c94d86fbaf1f5b71cdc15091f9e17"
+}
