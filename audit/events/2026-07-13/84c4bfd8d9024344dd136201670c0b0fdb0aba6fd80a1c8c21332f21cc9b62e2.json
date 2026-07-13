@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-13T04:52:25Z",
+  "event_ts": "2026-07-13T04:52:07Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "chatgpt-codex-connector[bot]",
+  "run_id": "29224945623",
+  "run_attempt": "1",
+  "sender": {
+    "login": "chatgpt-codex-connector[bot]",
+    "html_url": "https://github.com/apps/chatgpt-codex-connector"
+  },
+  "issue": {
+    "number": 295,
+    "title": "Use shared Codex review workflows",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/295",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 4954549238,
+    "html_url": "https://github.com/tekkura/sr-android/pull/295#issuecomment-4954549238",
+    "created_at": "2026-07-13T04:52:07Z",
+    "updated_at": "2026-07-13T04:52:07Z",
+    "body": "To use Codex here, [create an environment for this repo](https://chatgpt.com/codex/cloud/settings/environments)."
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/295#issuecomment-4954549238",
+  "event_id": "84c4bfd8d9024344dd136201670c0b0fdb0aba6fd80a1c8c21332f21cc9b62e2"
+}
