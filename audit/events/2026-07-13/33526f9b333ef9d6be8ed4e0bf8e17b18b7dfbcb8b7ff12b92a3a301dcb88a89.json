@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-07-13T05:07:15Z",
+  "event_ts": "2026-07-13T05:06:59Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "topherbuckley",
+  "run_id": "29225506079",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 296,
+    "title": "Centralize Github Labels in Tekkura",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/296",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/296",
+  "event_id": "33526f9b333ef9d6be8ed4e0bf8e17b18b7dfbcb8b7ff12b92a3a301dcb88a89"
+}
