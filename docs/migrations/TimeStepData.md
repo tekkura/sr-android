@@ -12,8 +12,8 @@ Ensure that decoded QR code data is preserved in the `TimeStepData` snapshot rat
 - Add a `QRCodeData` class inside `TimeStepDataBuffer.TimeStepData`.
 - `QRCodeData` should store a list of detection events, each containing:
     - `data`: The decoded string.
-    - `timestampNs`: The time of detection (use `System.nanoTime()` as the subscriber currently doesn't provide one).
-- Update `TimeStepDataBuffer.onQRCodeDetected(qrDataDecoded: String)` to append the detection to `writeData.qrCodeData`.
+    - `timestampNs`: The time of detection (provided by `ImageData.customAnalysis`, but not collected by `QRCodeDataSubscriber`. Change its signature to accommodate).
+- Update `TimeStepDataBuffer.onQRCodeDetected(qrDataDecoded: String, timestamp: Long)` to append the detection to `writeData.qrCodeData`.
 - Ensure `TimeStepData.clear()` resets the `qrCodeData`.
 - Expose an accessor for the list of QR detections in `QRCodeData`.
 
