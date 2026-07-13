@@ -29,8 +29,9 @@ open class MicrophoneData(
     private val _startTime: AudioTimestamp = AudioTimestamp()
     private val _endTime: AudioTimestamp = AudioTimestamp()
 
-    private lateinit var audioExecutor: ScheduledExecutorServiceWithException
-    private lateinit var recorder: AudioRecord
+    private var audioExecutor: ScheduledExecutorServiceWithException? = null
+    private var recorder: AudioRecord? = null
+    private var audioHandlerThread: HandlerThread? = null
     private var microphoneAvailable = true
 
     class Builder(
@@ -43,24 +44,28 @@ open class MicrophoneData(
     }
 
     override fun start() {
+        val activeRecorder = recorder ?: run {
+            failMicrophoneStartup(IllegalStateException("AudioRecord was not initialized"))
+            return
+        }
         try {
-            recorder.startRecording()
+            activeRecorder.startRecording()
         } catch (e: IllegalStateException) {
             failMicrophoneStartup(e)
             return
         }
-        if (recorder.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+        if (activeRecorder.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
             failMicrophoneStartup()
             return
         }
 
         val timeoutAtMs = SystemClock.uptimeMillis() + MICROPHONE_START_TIMEOUT_MS
-        var timestampStatus = recorder.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
+        var timestampStatus = activeRecorder.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
         while (timestampStatus == AudioRecord.ERROR_INVALID_OPERATION &&
             SystemClock.uptimeMillis() < timeoutAtMs
         ) {
             Thread.sleep(MICROPHONE_TIMESTAMP_RETRY_DELAY_MS)
-            timestampStatus = recorder.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
+            timestampStatus = activeRecorder.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
         }
         if (timestampStatus == AudioRecord.ERROR_INVALID_OPERATION) {
             failMicrophoneStartup()
@@ -75,16 +80,7 @@ open class MicrophoneData(
     }
 
     override fun stop() {
-        if (microphoneAvailable) {
-            recorder.stop()
-            recorder.setRecordPositionUpdateListener(null)
-        }
-        if (::audioExecutor.isInitialized) {
-            audioExecutor.shutdownNow()
-        }
-        if (::recorder.isInitialized) {
-            recorder.release()
-        }
+        cleanupAudioResources()
         super.stop()
     }
 
@@ -99,17 +95,17 @@ open class MicrophoneData(
     }
 
     fun setStartTime() {
-        recorder.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
+        recorder?.getTimestamp(_startTime, AudioTimestamp.TIMEBASE_MONOTONIC)
     }
 
 
     fun getEndTime(): AudioTimestamp {
-        recorder.getTimestamp(_endTime, AudioTimestamp.TIMEBASE_MONOTONIC)
+        recorder?.getTimestamp(_endTime, AudioTimestamp.TIMEBASE_MONOTONIC)
         return _endTime
     }
 
     fun getSampleRate(): Int {
-        return recorder.sampleRate
+        return recorder?.sampleRate ?: 0
     }
 
     override fun onMarkerReached(recorder: AudioRecord) {
@@ -126,8 +122,15 @@ open class MicrophoneData(
      * @param audioRecord
      */
     override fun onPeriodicNotification(audioRecord: AudioRecord) {
+        if (!microphoneAvailable) {
+            return
+        }
+        val executor = audioExecutor ?: return
         try {
-            audioExecutor.execute {
+            executor.execute {
+                if (!microphoneAvailable) {
+                    return@execute
+                }
                 val readBufferSize = audioRecord.positionNotificationPeriod
                 val audioData = FloatArray(readBufferSize)
                 @SuppressLint("WrongConstant") val numSamples = audioRecord.read(
@@ -145,7 +148,7 @@ open class MicrophoneData(
     }
 
     protected fun onNewAudioData(audioData: FloatArray, numSamples: Int) {
-        if (subscribers.isNotEmpty() && !paused) {
+        if (microphoneAvailable && subscribers.isNotEmpty() && !paused) {
             for (subscriber in subscribers) {
                 subscriber.onMicrophoneDataUpdate(
                     audioData,
@@ -162,9 +165,8 @@ open class MicrophoneData(
     override fun onPermissionGranted() {
         val priority = ProcessPriorityThreadFactory(10, "dataGatherer")
         audioExecutor = ScheduledExecutorServiceWithException(1, priority)
-        val handlerThread = HandlerThread("audioHandlerThread")
-        handlerThread.start()
-        val handler = Handler(handlerThread.looper)
+        audioHandlerThread = HandlerThread("audioHandlerThread").also { it.start() }
+        val handler = Handler(audioHandlerThread!!.looper)
 
         val mAudioSource = MediaRecorder.AudioSource.UNPROCESSED
         val mSampleRate = 8000
@@ -183,15 +185,16 @@ open class MicrophoneData(
         } catch (e: SecurityException) {
             throw RuntimeException("You must grant audio record access to use this app")
         }
+        val activeRecorder = recorder ?: throw IllegalStateException("AudioRecord was not created")
 
         val bytesPerSample = 32 / 8 // 32 bits per sample (Float.size), 8 bytes per bit.
         // Need this as setPositionNotificationPeriod takes num of frames as period, and you want it to fire after each full cycle through the buffer.
-        val bytesPerFrame = bytesPerSample * recorder.channelCount
+        val bytesPerFrame = bytesPerSample * activeRecorder.channelCount
         val framePerBuffer =
             bufferSize / bytesPerFrame // # of frames that can be kept in a bufferSize dimension
         val framePeriod = framePerBuffer / 2 // Read from buffer two times per full buffer.
-        recorder.positionNotificationPeriod = framePeriod
-        recorder.setRecordPositionUpdateListener(this, handler)
+        activeRecorder.positionNotificationPeriod = framePeriod
+        activeRecorder.setRecordPositionUpdateListener(this, handler)
         publisherManager.onPublisherPermissionsGranted(this)
     }
 
@@ -215,8 +218,27 @@ open class MicrophoneData(
                 .setPositiveButton("OK", null)
                 .show()
         }
+        cleanupAudioResources()
         publisherManager.onPublisherInitialized()
-        super.start()
+    }
+
+    private fun cleanupAudioResources() {
+        recorder?.let { activeRecorder ->
+            activeRecorder.setRecordPositionUpdateListener(null)
+            if (activeRecorder.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                try {
+                    activeRecorder.stop()
+                } catch (e: IllegalStateException) {
+                    Logger.w(TAG, "Unable to stop microphone during cleanup", e)
+                }
+            }
+            activeRecorder.release()
+            recorder = null
+        }
+        audioExecutor?.shutdownNow()
+        audioExecutor = null
+        audioHandlerThread?.quitSafely()
+        audioHandlerThread = null
     }
 
     companion object {
