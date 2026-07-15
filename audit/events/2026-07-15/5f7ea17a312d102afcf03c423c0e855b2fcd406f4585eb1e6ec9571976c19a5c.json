@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-07-15T18:21:47Z",
+  "event_ts": "2026-07-15T18:21:30Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29440215105",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 299,
+    "title": "Preserve per-callback sound metadata in TimeStepData",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/299",
+    "milestone": {
+      "number": 18,
+      "title": "TimeStepData"
+    }
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": {
+    "number": 18,
+    "title": "TimeStepData",
+    "state": "open",
+    "due_on": null,
+    "html_url": "https://github.com/tekkura/sr-android/milestone/18",
+    "description": "Implement several tasks related to TimeStepData collection and processing"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/299",
+  "event_id": "5f7ea17a312d102afcf03c423c0e855b2fcd406f4585eb1e6ec9571976c19a5c"
+}
