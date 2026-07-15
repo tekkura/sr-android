@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-15T17:35:40Z",
+  "event_ts": "2026-07-15T17:35:22Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29437121645",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 298,
+    "title": "Storing object detection data in TimeStepData",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/298",
+    "milestone": {
+      "number": 18,
+      "title": "TimeStepData"
+    }
+  },
+  "comment": {
+    "id": 3589473288,
+    "html_url": "https://github.com/tekkura/sr-android/pull/298#discussion_r3589473288",
+    "created_at": "2026-07-15T17:35:22Z",
+    "updated_at": "2026-07-15T17:35:22Z",
+    "body": "#codex-reply addressed by [73a0cb8](https://github.com/tekkura/sr-android/commit/73a0cb821b466e547cd9df92ee0f69e949cccf93)"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/298#discussion_r3589473288",
+  "event_id": "afc59e6407394d56876b3b34b472cb8c21355e9e4e038cd9cc88857f2b66977c"
+}
