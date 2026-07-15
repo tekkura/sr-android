@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-07-15T17:12:47Z",
+  "event_ts": "2026-07-15T17:12:29Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29435549554",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 298,
+    "title": "Storing object detection data in TimeStepData",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/298",
+    "milestone": {
+      "number": 18,
+      "title": "TimeStepData"
+    }
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": {
+    "number": 18,
+    "title": "TimeStepData",
+    "state": "open",
+    "due_on": null,
+    "html_url": "https://github.com/tekkura/sr-android/milestone/18",
+    "description": "Implement several tasks related to TimeStepData collection and processing"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/298",
+  "event_id": "1f5c40ad0870af1239a79a3f5974764e93794c27ef94f215402a1c2bd13f4d51"
+}
