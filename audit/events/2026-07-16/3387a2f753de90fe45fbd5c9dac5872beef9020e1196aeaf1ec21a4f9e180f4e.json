@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-07-16T14:53:22Z",
+  "event_ts": "2026-07-16T14:53:03Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29508613872",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 299,
+    "title": "Preserve per-callback sound metadata in TimeStepData",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/299",
+    "milestone": {
+      "number": 18,
+      "title": "TimeStepData"
+    }
+  },
+  "comment": {
+    "id": 3596510118,
+    "html_url": "https://github.com/tekkura/sr-android/pull/299#discussion_r3596510118",
+    "created_at": "2026-07-16T14:53:02Z",
+    "updated_at": "2026-07-16T14:53:03Z",
+    "body": "#codex-reply [f79ec9f](https://github.com/tekkura/sr-android/commit/f79ec9f65b84f6ebc14de4952425506bc64ddee5)"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/299#discussion_r3596510118",
+  "event_id": "3387a2f753de90fe45fbd5c9dac5872beef9020e1196aeaf1ec21a4f9e180f4e"
+}
