@@ -2,11 +2,14 @@ package jp.oist.abcvlib.core.inputs
 
 import android.graphics.Bitmap
 import android.media.AudioTimestamp
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer.TimeStepData.ImageData.SingleImage
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryDataSubscriber
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.ImageDataRawSubscriber
 import jp.oist.abcvlib.core.inputs.phone.MicrophoneDataSubscriber
+import jp.oist.abcvlib.core.inputs.phone.ObjectDetectorDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.OrientationDataSubscriber
 import jp.oist.abcvlib.core.inputs.phone.QRCodeDataSubscriber
 import jp.oist.abcvlib.core.learning.CommAction
@@ -24,7 +27,8 @@ import java.util.concurrent.Future
 class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
     WheelDataSubscriber,
     ImageDataRawSubscriber, MicrophoneDataSubscriber,
-    OrientationDataSubscriber, QRCodeDataSubscriber {
+    OrientationDataSubscriber, QRCodeDataSubscriber,
+    ObjectDetectorDataSubscriber {
 
     init {
         require(bufferLength > 1) {
@@ -156,6 +160,46 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         Logger.i("qrcode", "Qrcode detected: $qrDataDecoded")
     }
 
+    @Synchronized
+    override fun onObjectsDetected(
+        bitmap: Bitmap,
+        mpImage: MPImage,
+        results: MutableList<Detection>,
+        inferenceTime: Long,
+        frameCapturedAtNs: Long,
+        detectStartedAtNs: Long,
+        detectCompletedAtNs: Long,
+        height: Int,
+        width: Int
+    ) {
+        val writeData = getWriteData()
+
+        results.forEach { detection ->
+            val detectionResult = TimeStepData.DetectionData.DetectionResult(
+                categories = detection.categories().map { category ->
+                    TimeStepData.DetectionData.Category(
+                        label = category.categoryName(),
+                        score = category.score()
+                    )
+                },
+                boundingBox = TimeStepData.DetectionData.BoundingBox(
+                    left = detection.boundingBox().left,
+                    top = detection.boundingBox().top,
+                    right = detection.boundingBox().right,
+                    bottom = detection.boundingBox().bottom
+                ),
+                inferenceTime = inferenceTime,
+                frameCapturedAtNs = frameCapturedAtNs,
+                detectStartedAtNs = detectStartedAtNs,
+                detectCompletedAtNs = detectCompletedAtNs,
+                imageWidth = width,
+                imageHeight = height
+            )
+
+            writeData.detectionData.put(detectionResult)
+        }
+    }
+
     class TimeStepData {
         @get:Synchronized
         var wheelData: WheelData = WheelData()
@@ -185,6 +229,10 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         var orientationData: OrientationData = OrientationData()
             private set
 
+        @get:Synchronized
+        var detectionData: DetectionData = DetectionData()
+            private set
+
         @Synchronized
         fun clear() {
             wheelData = WheelData()
@@ -194,6 +242,7 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             soundData = SoundData()
             actions = RobotAction()
             orientationData = OrientationData()
+            detectionData = DetectionData()
         }
 
         class WheelData {
@@ -360,6 +409,37 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             fun getTimeStamps() = timestamps.toLongArray()
             fun getTiltAngle() = tiltAngle.toDoubleArray()
             fun getAngularVelocity() = angularVelocity.toDoubleArray()
+        }
+
+        class DetectionData {
+            private val detectionResults = mutableListOf<DetectionResult>()
+
+            fun getDetectionResults(): List<DetectionResult> = detectionResults.toList()
+
+            fun put(detectionResult: DetectionResult) = detectionResults.add(detectionResult)
+
+            data class Category(
+                val label: String,
+                val score: Float
+            )
+
+            data class BoundingBox(
+                val left: Float,
+                val top: Float,
+                val right: Float,
+                val bottom: Float
+            )
+
+            data class DetectionResult(
+                val categories: List<Category>,
+                val boundingBox: BoundingBox,
+                val inferenceTime: Long,
+                val frameCapturedAtNs: Long,
+                val detectStartedAtNs: Long,
+                val detectCompletedAtNs: Long,
+                val imageWidth: Int,
+                val imageHeight: Int
+            )
         }
     }
 }
