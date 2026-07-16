@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-07-16T14:21:57Z",
+  "event_ts": "2026-07-16T14:21:37Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "milestoned",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29506232973",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 300,
+    "title": "Removed the requirement for explicitly maintaining two different impl…",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/300",
+    "milestone": {
+      "number": 18,
+      "title": "TimeStepData"
+    }
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": {
+    "number": 18,
+    "title": "TimeStepData",
+    "state": "open",
+    "due_on": null,
+    "html_url": "https://github.com/tekkura/sr-android/milestone/18",
+    "description": "Implement several tasks related to TimeStepData collection and processing"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/300",
+  "event_id": "47f5c84da9c30d606162191d14aa80bfa7dbecf79f9eda3833b134ae0a2a04cb"
+}
