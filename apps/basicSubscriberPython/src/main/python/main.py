@@ -67,7 +67,7 @@ class ObjectDetectorSubscriber(dynamic_proxy(ObjectDetectorDataSubscriber)):
 
 
 class QRCodeSubscriber(dynamic_proxy(QRCodeDataSubscriber)):
-    def onQRCodeDetected(self, qr_data_decoded):
+    def onQRCodeDetected(self, qr_data_decoded, timestamp):
         context.guiUpdater.setQrDataString(qr_data_decoded)
 
 def setup():
