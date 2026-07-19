@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-19T14:46:03Z",
+  "event_ts": "2026-07-19T14:45:45Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29691477518",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 249,
+    "title": "Add edge-to-edge support",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/249",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3610764041,
+    "html_url": "https://github.com/tekkura/sr-android/pull/249#discussion_r3610764041",
+    "created_at": "2026-07-19T14:45:45Z",
+    "updated_at": "2026-07-19T14:45:45Z",
+    "body": "#codex-reply\r\nThe stated mechanism is wrong. Codex's reasoning is \"That action bar is outside the activity content view\" — that's true for the framework ActionBar, but every affected activity extends AbcvlibActivity : AppCompatActivity, so they all get AppCompat's ActionBar, which lives inside the view tree under android.R.id.content, not outside it.\r\n\r\nThere's a second detail that makes it more wrong. In AbcvlibActivity.kt:62 the lookup happens inside AbcvlibActivity.onCreate, and every app calls setContentView after super.onCreate (e.g. MainActivity.kt:22). At that moment AppCompat's sub-decor doesn't exist yet, so findViewById(android.R.id.content) returns the framework content FrameLayout. setContentView later moves the android.R.id.content id onto AppCompat's inner container, but your listener stays bound to the outer view — which is the parent of the whole sub-decor, action bar included. So the action bar is padded."
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/249#discussion_r3610764041",
+  "event_id": "572b44e41ea7956e70443a0caada4b6fe6c2ad27579a53ab06e43949f75558ea"
+}
