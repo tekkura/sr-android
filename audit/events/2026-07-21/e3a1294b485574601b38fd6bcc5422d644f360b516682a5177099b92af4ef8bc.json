@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-07-21T04:55:40Z",
+  "event_ts": "2026-07-21T04:55:26Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "milestone",
+  "action": "edited",
+  "actor": "topherbuckley",
+  "run_id": "29802548686",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": null,
+  "comment": null,
+  "milestone": {
+    "number": 10,
+    "title": "pythonDroid",
+    "state": "closed",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/10",
+    "description": "Investigate available options for developing Android applications in Python to improve accessibility for research users. If viable frameworks or toolchains are identified, create comparable demo applications in each option to evaluate feasibility, performance, deployment workflow, and long-term maintainability."
+  },
+  "changes": {
+    "description": {
+      "from": "Milestone spec moved to: [docs/milestones/pythonDroid.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/pythonDroid.md)"
+    }
+  },
+  "severity": "HIGH",
+  "target_url": "https://github.com/tekkura/sr-android/milestone/10",
+  "event_id": "e3a1294b485574601b38fd6bcc5422d644f360b516682a5177099b92af4ef8bc"
+}
