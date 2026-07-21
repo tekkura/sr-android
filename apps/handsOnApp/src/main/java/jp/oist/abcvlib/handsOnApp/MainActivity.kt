@@ -58,6 +58,7 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
 
     override fun onSerialReady(usbSerial: UsbSerial) {
         publisherManager = PublisherManager()
+        registerPublisherManager(publisherManager)
 
         val wheelData = WheelData.Builder(this, publisherManager)
             .setBufferLength(50)

@@ -111,7 +111,9 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
             delay(100)
             updateBehavior()
             while (isActive) {
-                updateBehavior()
+                if (isActivityResumed) {
+                    updateBehavior()
+                }
                 delay(2.seconds)
             }
         }
@@ -128,6 +130,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
 
     override fun onSerialReady(usbSerial: UsbSerial) {
         publisherManager = PublisherManager()
+        registerPublisherManager(publisherManager)
 
         val batteryData = BatteryData.Builder(this, publisherManager).build()
         batteryData.addSubscriber(this)
@@ -229,6 +232,9 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     }
 
     override fun onQRCodeDetected(qrDataDecoded: String) {
+        if (!isActivityResumed) {
+            return
+        }
         val trimmedPayload = qrDataDecoded.trim()
         if (trimmedPayload.isEmpty()) {
             return
