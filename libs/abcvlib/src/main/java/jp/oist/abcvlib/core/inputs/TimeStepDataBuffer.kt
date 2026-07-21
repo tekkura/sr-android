@@ -41,9 +41,6 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
     val imgCompFuturesTimeStep: MutableCollection<Future<*>> =
         Collections.synchronizedList(LinkedList())
 
-    val imgCompFuturesEpisode: MutableCollection<MutableCollection<Future<*>>> =
-        Collections.synchronizedList(LinkedList())
-
     private val imgCompFuturesByIndex: Array<MutableList<Future<*>>> =
         Array(bufferLength) { Collections.synchronizedList(LinkedList()) }
 
@@ -53,12 +50,6 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
 
     @Synchronized
     fun nextTimeStep() {
-        // Keeps track of how many image compression threads have yet to finish per timestep
-        val completedFutures = getImageCompressionFutures(writeIndex)
-        val episodeFutures = Collections.synchronizedList(LinkedList<Future<*>>())
-        episodeFutures.addAll(completedFutures)
-        imgCompFuturesEpisode.add(episodeFutures)
-
         writeData.freeze()
 
         // Update index for read and write pointer
@@ -282,12 +273,12 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                     speedExpAvgSnapshot = speedsExpAvg.toDoubleArray()
                 }
 
-                fun getTimeStamps() = timestampSnapshot
-                fun getCounts() = countSnapshot
-                fun getDistances() = distanceSnapshot
-                fun getSpeedsInstantaneous() = speedInstantaneousSnapshot
-                fun getSpeedsBuffered() = speedBufferedSnapshot
-                fun getSpeedsExpAvg() = speedExpAvgSnapshot
+                fun getTimeStamps() = timestampSnapshot.copyOf()
+                fun getCounts() = countSnapshot.copyOf()
+                fun getDistances() = distanceSnapshot.copyOf()
+                fun getSpeedsInstantaneous() = speedInstantaneousSnapshot.copyOf()
+                fun getSpeedsBuffered() = speedBufferedSnapshot.copyOf()
+                fun getSpeedsExpAvg() = speedExpAvgSnapshot.copyOf()
             }
 
         }
@@ -312,9 +303,9 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 coilVoltageSnapshot = coilVoltage.toDoubleArray()
             }
 
-            fun getTimeStamps() = timestampSnapshot
-            fun getChargerVoltage() = chargerVoltageSnapshot
-            fun getCoilVoltage() = coilVoltageSnapshot
+            fun getTimeStamps() = timestampSnapshot.copyOf()
+            fun getChargerVoltage() = chargerVoltageSnapshot.copyOf()
+            fun getCoilVoltage() = coilVoltageSnapshot.copyOf()
         }
 
         class BatteryData {
@@ -333,8 +324,8 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 voltageSnapshot = voltage.toDoubleArray()
             }
 
-            fun getTimeStamps() = timestampSnapshot
-            fun getVoltage() = voltageSnapshot
+            fun getTimeStamps() = timestampSnapshot.copyOf()
+            fun getVoltage() = voltageSnapshot.copyOf()
         }
 
         class SoundData {
@@ -355,7 +346,7 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             private val levels = arrayListOf<Float>()
             private var levelSnapshot = FloatArray(0)
 
-            fun getLevels() = levelSnapshot
+            fun getLevels() = levelSnapshot.copyOf()
 
             fun add(levels: FloatArray, numSamples: Int) {
                 for (level in levels) {
@@ -402,7 +393,7 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             }
 
             val images: ArrayList<SingleImage>
-                get() = imageSnapshot
+                get() = ArrayList(imageSnapshot)
 
             @Synchronized
             fun freeze() {
@@ -455,9 +446,9 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 angularVelocitySnapshot = angularVelocity.toDoubleArray()
             }
 
-            fun getTimeStamps() = timestampSnapshot
-            fun getTiltAngle() = tiltAngleSnapshot
-            fun getAngularVelocity() = angularVelocitySnapshot
+            fun getTimeStamps() = timestampSnapshot.copyOf()
+            fun getTiltAngle() = tiltAngleSnapshot.copyOf()
+            fun getAngularVelocity() = angularVelocitySnapshot.copyOf()
         }
     }
 }
