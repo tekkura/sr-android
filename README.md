@@ -24,7 +24,8 @@ firmware, model, and Android project context, see the
   benchmarks.
 - [Contributing](docs/contributing.md): contributor and maintainer references.
 
-## Repository Layout
+See the shared Tekkura PR workflow for issue scope, milestone, review, and merge policy:
+https://github.com/tekkura/.github/blob/main/docs/pr-workflow.md
 
 - `apps/`: Android demo app modules.
 - `libs/abcvlib/`: shared Android framework/library code used by app modules.

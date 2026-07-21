@@ -1,1 +1,0 @@
-Create a demo application that integrates the existing object-detection, charging,  mating, and evolutionary-parameter-update components into a single cohesive app. Since standalone demos already exist, the scope focuses on integration, interface unification, and ensuring the combined behaviors operate smoothly together.

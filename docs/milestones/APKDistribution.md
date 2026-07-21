@@ -1,1 +1,0 @@
-Refine project distribution so the canonical repository remains the source of APK releases while `abcvlib` is consumable publicly without GitHub Packages credentials. For this milestone, APKs stay on GitHub Releases and the library path is adapted for JitPack-based public consumption.
