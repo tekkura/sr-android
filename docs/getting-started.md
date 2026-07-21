@@ -14,7 +14,7 @@ Choose one Android setup path:
 
 - Android Studio: [Android Studio install guide](https://developer.android.com/studio/install)
 - Command line:
-  [Android CLI Setup](android-cli-setup.md) and
+  [Android SDK command-line tools setup](android-sdk-command-line-tools-setup.md) and
   [JDK setup](https://developer.android.com/build/jdks)
 
 ## 2. Check The App CLI

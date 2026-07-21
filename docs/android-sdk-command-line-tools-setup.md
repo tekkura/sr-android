@@ -1,4 +1,4 @@
-# Android CLI Setup
+# Android SDK Command-Line Tools Setup
 
 An automated installer is available here:
 [cmdline-tools-install](https://github.com/topherbuckley/cmdline-tools-install/blob/main/install-cmdline-tools).

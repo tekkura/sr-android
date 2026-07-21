@@ -51,7 +51,7 @@ If this works, `adb` is installed but not on your terminal `PATH`.
 If this file does not exist, install Android SDK Platform Tools:
 
 - Android Studio: install `Android SDK Platform-Tools` from the SDK Manager.
-- Command line: see [Android CLI Setup](android-cli-setup.md).
+- Command line: see [Android SDK command-line tools setup](android-sdk-command-line-tools-setup.md).
 
 ### 3. Make adb Available To This Project
 
