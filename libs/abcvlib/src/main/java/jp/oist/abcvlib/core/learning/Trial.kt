@@ -175,22 +175,12 @@ open class Trial(
     )
     protected open fun endEpisode() {
         Logger.d("Episode", "End of episode: $episodeCount")
-        // Waits for all image compression to finish prior to finishing flatbuffer
-        val start = System.nanoTime()
-        synchronized(timeStepDataBuffer.imgCompFuturesEpisode) {
-            for (timestepFutures in timeStepDataBuffer.imgCompFuturesEpisode) {
-                synchronized(timestepFutures) {
-                    for (future in timestepFutures) {
-                        future.get()
-                    }
-                }
-            }
-        }
         synchronized(flatBufferAssembler.flatbufferWriteFutures) {
             // Waits for all timestep flatbuffer writes to finish prior to finishing flatbuffer
             for (future in flatBufferAssembler.flatbufferWriteFutures) {
                 future.get()
             }
+            flatBufferAssembler.flatbufferWriteFutures.clear()
         }
         flatBufferAssembler.endEpisode()
         pausePublishers()

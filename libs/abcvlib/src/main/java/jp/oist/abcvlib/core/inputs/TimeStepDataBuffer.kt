@@ -41,8 +41,8 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
     val imgCompFuturesTimeStep: MutableCollection<Future<*>> =
         Collections.synchronizedList(LinkedList())
 
-    val imgCompFuturesEpisode: MutableCollection<MutableCollection<Future<*>>> =
-        Collections.synchronizedList(LinkedList())
+    private val imgCompFuturesByIndex: Array<MutableList<Future<*>>> =
+        Array(bufferLength) { Collections.synchronizedList(LinkedList()) }
 
     private val imageCompressionExecutor: ExecutorService = Executors.newCachedThreadPool(
         ProcessPriorityThreadFactory(Thread.MAX_PRIORITY, "ImageCompression")
@@ -50,16 +50,20 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
 
     @Synchronized
     fun nextTimeStep() {
-        // Keeps track of how many image compression threads have yet to finish per timestep
-        imgCompFuturesEpisode.add(imgCompFuturesTimeStep)
-        imgCompFuturesTimeStep.clear()
+        writeData.freeze()
 
         // Update index for read and write pointer
         writeIndex = ((writeIndex + 1) % bufferLength)
         readIndex = ((readIndex + 1) % bufferLength)
 
-        // Clear the next TimeStepData object for new writing
-        buffer[writeIndex].clear()
+        // Replace the next write slot so async readers can keep using the old frozen object.
+        buffer[writeIndex] = TimeStepData()
+        synchronized(imgCompFuturesByIndex[writeIndex]) {
+            imgCompFuturesByIndex[writeIndex].clear()
+        }
+        synchronized(imgCompFuturesTimeStep) {
+            imgCompFuturesTimeStep.clear()
+        }
 
         // Move pointer for reading and writing objects one index forward;
         writeData = buffer[writeIndex]
@@ -86,18 +90,28 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         return readIndex
     }
 
-    override fun onBatteryVoltageUpdate(timestamp: Long, voltage: Double) {
-        getWriteData().batteryData.put(voltage, timestamp)
+    fun getImageCompressionFutures(timestep: Int): List<Future<*>> {
+        val futures = imgCompFuturesByIndex[timestep]
+        synchronized(futures) {
+            return futures.toList()
+        }
     }
 
+    @Synchronized
+    override fun onBatteryVoltageUpdate(timestamp: Long, voltage: Double) {
+        writeData.batteryData.put(voltage, timestamp)
+    }
+
+    @Synchronized
     override fun onChargerVoltageUpdate(
         timestamp: Long,
         chargerVoltage: Double,
         coilVoltage: Double
     ) {
-        getWriteData().chargerData.put(timestamp, chargerVoltage, coilVoltage)
+        writeData.chargerData.put(timestamp, chargerVoltage, coilVoltage)
     }
 
+    @Synchronized
     override fun onWheelDataUpdate(
         timestamp: Long, wheelCountL: Int, wheelCountR: Int,
         wheelDistanceL: Double, wheelDistanceR: Double,
@@ -105,31 +119,35 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         wheelSpeedBufferedL: Double, wheelSpeedBufferedR: Double,
         wheelSpeedExpAvgL: Double, wheelSpeedExpAvgR: Double
     ) {
-        getWriteData().wheelData.getLeft().put(
+        writeData.wheelData.getLeft().put(
             timestamp, wheelCountL, wheelDistanceL,
             wheelSpeedInstantL, wheelSpeedBufferedL,
             wheelSpeedExpAvgL
         )
-        getWriteData().wheelData.getRight().put(
+        writeData.wheelData.getRight().put(
             timestamp, wheelCountR, wheelDistanceR,
             wheelSpeedInstantR, wheelSpeedBufferedR, wheelSpeedExpAvgR
         )
     }
 
+    @Synchronized
     override fun onImageDataRawUpdate(timestamp: Long, width: Int, height: Int, bitmap: Bitmap) {
-        getWriteData().imageData.add(timestamp, width, height, bitmap, null)
+        val targetIndex = writeIndex
+        writeData.imageData.add(timestamp, width, height, bitmap, null)
         // Handler to compress and put images into buffer
         synchronized(imgCompFuturesTimeStep) {
-            imgCompFuturesTimeStep.add(
-                imageCompressionExecutor.submit {
-                    ImageOps.addCompressedImage2Buffer(
-                        writeIndex,
-                        timestamp,
-                        bitmap,
-                        buffer
-                    )
-                }
-            )
+            val future = imageCompressionExecutor.submit {
+                ImageOps.addCompressedImage2Buffer(
+                    targetIndex,
+                    timestamp,
+                    bitmap,
+                    buffer
+                )
+            }
+            imgCompFuturesTimeStep.add(future)
+            synchronized(imgCompFuturesByIndex[targetIndex]) {
+                imgCompFuturesByIndex[targetIndex].add(future)
+            }
         }
     }
 
@@ -140,16 +158,19 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
         startTime: AudioTimestamp,
         endTime: AudioTimestamp
     ) {
-        getWriteData().soundData.setMetaData(sampleRate, startTime, endTime)
-        getWriteData().soundData.add(audioData, numSamples)
+        synchronized(this) {
+            writeData.soundData.setMetaData(sampleRate, startTime, endTime)
+            writeData.soundData.add(audioData, numSamples)
+        }
     }
 
+    @Synchronized
     override fun onOrientationUpdate(
         timestamp: Long,
         thetaRad: Double,
         angularVelocityRad: Double
     ) {
-        getWriteData().orientationData.put(timestamp, thetaRad, angularVelocityRad)
+        writeData.orientationData.put(timestamp, thetaRad, angularVelocityRad)
     }
 
     override fun onQRCodeDetected(qrDataDecoded: String) {
@@ -196,12 +217,26 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             orientationData = OrientationData()
         }
 
+        fun freeze() {
+            wheelData.freeze()
+            chargerData.freeze()
+            batteryData.freeze()
+            imageData.freeze()
+            soundData.freeze()
+            orientationData.freeze()
+        }
+
         class WheelData {
             private val left: IndividualWheelData = IndividualWheelData()
             private val right: IndividualWheelData = IndividualWheelData()
 
             fun getLeft() = left
             fun getRight() = right
+
+            fun freeze() {
+                left.freeze()
+                right.freeze()
+            }
 
             class IndividualWheelData {
                 private val timestamps = arrayListOf<Long>()
@@ -210,6 +245,12 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 private val speedsInstantaneous = arrayListOf<Double>()
                 private val speedsBuffered = arrayListOf<Double>()
                 private val speedsExpAvg = arrayListOf<Double>()
+                private var timestampSnapshot = LongArray(0)
+                private var countSnapshot = IntArray(0)
+                private var distanceSnapshot = DoubleArray(0)
+                private var speedInstantaneousSnapshot = DoubleArray(0)
+                private var speedBufferedSnapshot = DoubleArray(0)
+                private var speedExpAvgSnapshot = DoubleArray(0)
 
                 fun put(
                     timestamp: Long, count: Int, distance: Double, speedInstantaneous: Double,
@@ -223,12 +264,21 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                     this.speedsExpAvg.add(speedExpAvg)
                 }
 
-                fun getTimeStamps() = timestamps.toLongArray()
-                fun getCounts() = counts.toIntArray()
-                fun getDistances() = distances.toDoubleArray()
-                fun getSpeedsInstantaneous() = speedsInstantaneous.toDoubleArray()
-                fun getSpeedsBuffered() = speedsBuffered.toDoubleArray()
-                fun getSpeedsExpAvg() = speedsExpAvg.toDoubleArray()
+                fun freeze() {
+                    timestampSnapshot = timestamps.toLongArray()
+                    countSnapshot = counts.toIntArray()
+                    distanceSnapshot = distances.toDoubleArray()
+                    speedInstantaneousSnapshot = speedsInstantaneous.toDoubleArray()
+                    speedBufferedSnapshot = speedsBuffered.toDoubleArray()
+                    speedExpAvgSnapshot = speedsExpAvg.toDoubleArray()
+                }
+
+                fun getTimeStamps() = timestampSnapshot.copyOf()
+                fun getCounts() = countSnapshot.copyOf()
+                fun getDistances() = distanceSnapshot.copyOf()
+                fun getSpeedsInstantaneous() = speedInstantaneousSnapshot.copyOf()
+                fun getSpeedsBuffered() = speedBufferedSnapshot.copyOf()
+                fun getSpeedsExpAvg() = speedExpAvgSnapshot.copyOf()
             }
 
         }
@@ -237,6 +287,9 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             private val timestamps = arrayListOf<Long>()
             private val chargerVoltage = arrayListOf<Double>()
             private val coilVoltage = arrayListOf<Double>()
+            private var timestampSnapshot = LongArray(0)
+            private var chargerVoltageSnapshot = DoubleArray(0)
+            private var coilVoltageSnapshot = DoubleArray(0)
 
             fun put(timestamp: Long, chargerVoltage: Double, coilVoltage: Double) {
                 this.timestamps.add(timestamp)
@@ -244,22 +297,35 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 this.coilVoltage.add(coilVoltage)
             }
 
-            fun getTimeStamps() = timestamps.toLongArray()
-            fun getChargerVoltage() = chargerVoltage.toDoubleArray()
-            fun getCoilVoltage() = coilVoltage.toDoubleArray()
+            fun freeze() {
+                timestampSnapshot = timestamps.toLongArray()
+                chargerVoltageSnapshot = chargerVoltage.toDoubleArray()
+                coilVoltageSnapshot = coilVoltage.toDoubleArray()
+            }
+
+            fun getTimeStamps() = timestampSnapshot.copyOf()
+            fun getChargerVoltage() = chargerVoltageSnapshot.copyOf()
+            fun getCoilVoltage() = coilVoltageSnapshot.copyOf()
         }
 
         class BatteryData {
             private val timestamps = arrayListOf<Long>()
             private val voltage = arrayListOf<Double>()
+            private var timestampSnapshot = LongArray(0)
+            private var voltageSnapshot = DoubleArray(0)
 
             fun put(voltage: Double, timestamp: Long) {
                 this.timestamps.add(timestamp)
                 this.voltage.add(voltage)
             }
 
-            fun getTimeStamps() = timestamps.toLongArray()
-            fun getVoltage() = voltage.toDoubleArray()
+            fun freeze() {
+                timestampSnapshot = timestamps.toLongArray()
+                voltageSnapshot = voltage.toDoubleArray()
+            }
+
+            fun getTimeStamps() = timestampSnapshot.copyOf()
+            fun getVoltage() = voltageSnapshot.copyOf()
         }
 
         class SoundData {
@@ -278,7 +344,9 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 private set
 
             private val levels = arrayListOf<Float>()
-            fun getLevels() = levels.toFloatArray()
+            private var levelSnapshot = FloatArray(0)
+
+            fun getLevels() = levelSnapshot.copyOf()
 
             fun add(levels: FloatArray, numSamples: Int) {
                 for (level in levels) {
@@ -299,9 +367,15 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 this.sampleRate = sampleRate
                 this.totalSamplesCalculatedViaTime = endTime.framePosition - startTime.framePosition
             }
+
+            fun freeze() {
+                levelSnapshot = levels.toFloatArray()
+            }
         }
 
         class ImageData : Hashtable<Long, SingleImage>() {
+            private var imageSnapshot = ArrayList<SingleImage>()
+
             fun add(
                 timestamp: Long,
                 width: Int,
@@ -318,7 +392,13 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 return super.put(key, value)
             }
 
-            val images: ArrayList<SingleImage> get() = ArrayList(this.values)
+            val images: ArrayList<SingleImage>
+                get() = ArrayList(imageSnapshot)
+
+            @Synchronized
+            fun freeze() {
+                imageSnapshot = ArrayList(this.values)
+            }
 
             class SingleImage(
                 val timestamp: Long,
@@ -345,6 +425,9 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
             private val timestamps = arrayListOf<Long>()
             private val tiltAngle = arrayListOf<Double>()
             private val angularVelocity = arrayListOf<Double>()
+            private var timestampSnapshot = LongArray(0)
+            private var tiltAngleSnapshot = DoubleArray(0)
+            private var angularVelocitySnapshot = DoubleArray(0)
 
             /**
              * @param timestamp long nano-time
@@ -357,9 +440,15 @@ class TimeStepDataBuffer(private val bufferLength: Int) : BatteryDataSubscriber,
                 this.angularVelocity.add(angularVelocity)
             }
 
-            fun getTimeStamps() = timestamps.toLongArray()
-            fun getTiltAngle() = tiltAngle.toDoubleArray()
-            fun getAngularVelocity() = angularVelocity.toDoubleArray()
+            fun freeze() {
+                timestampSnapshot = timestamps.toLongArray()
+                tiltAngleSnapshot = tiltAngle.toDoubleArray()
+                angularVelocitySnapshot = angularVelocity.toDoubleArray()
+            }
+
+            fun getTimeStamps() = timestampSnapshot.copyOf()
+            fun getTiltAngle() = tiltAngleSnapshot.copyOf()
+            fun getAngularVelocity() = angularVelocitySnapshot.copyOf()
         }
     }
 }
