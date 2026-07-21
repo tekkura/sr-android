@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-07-21T04:50:22Z",
+  "event_ts": "2026-07-21T04:50:04Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "milestone",
+  "action": "closed",
+  "actor": "topherbuckley",
+  "run_id": "29802306613",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": null,
+  "comment": null,
+  "milestone": {
+    "number": 7,
+    "title": "ROS",
+    "state": "closed",
+    "due_on": "2026-03-31T00:00:00Z",
+    "html_url": "https://github.com/tekkura/sr-android/milestone/7",
+    "description": "Milestone spec moved to: [docs/milestones/ROS.md](https://github.com/tekkura/sr-android/blob/main/docs/milestones/ROS.md)"
+  },
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/milestone/7",
+  "event_id": "ff79e4a9a0e015c4cfbf805359cb6eb14d964b939e7a56b8391547b0c22722aa"
+}
