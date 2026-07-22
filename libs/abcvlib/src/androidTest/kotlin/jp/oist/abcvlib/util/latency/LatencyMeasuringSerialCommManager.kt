@@ -3,19 +3,18 @@ package jp.oist.abcvlib.util.latency
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.util.SerialCommManager
-import jp.oist.abcvlib.util.UsbSerial
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import jp.oist.abcvlib.util.rp2040.StatusCommand
 import java.util.concurrent.atomic.AtomicInteger
 
-class LatencyMeasuringSerialCommManager @JvmOverloads constructor(
-    usbSerial: UsbSerial,
+internal class LatencyMeasuringSerialCommManager @JvmOverloads constructor(
+    private val benchmarkUsbSerial: LatencyMeasuringUsbSerial,
     private val currentIteration: AtomicInteger,
     batteryData: BatteryData? = null,
     wheelData: WheelData? = null
 ) : SerialCommManager(
-    usbSerial = usbSerial,
+    usbSerial = benchmarkUsbSerial,
     batteryData = batteryData,
     wheelData = wheelData
 ) {
@@ -28,16 +27,22 @@ class LatencyMeasuringSerialCommManager @JvmOverloads constructor(
     override fun sendCommand(command: RP2040OutgoingCommand): Int {
         if (command is RP2040OutgoingCommand.SetMotorLevels) {
             BenchmarkClock.mark(currentIteration.get(), 2)
+            benchmarkUsbSerial.setBenchmarkTrafficActive(true)
+            try {
+                return super.sendCommand(command)
+            } finally {
+                benchmarkUsbSerial.setBenchmarkTrafficActive(false)
+            }
         }
 
         return super.sendCommand(command)
     }
 
     override fun receivePacket() {
-        val receivedStatus = usbSerial.awaitPacketReceived(10000)
+        val receivedStatus = benchmarkUsbSerial.awaitPacketReceived(10000)
 
-        // T7: Manager Wake-up
-        BenchmarkClock.mark(currentIteration.get(), 7)
+        // T8: Manager Wake-up
+        BenchmarkClock.mark(currentIteration.get(), 8)
 
         if (receivedStatus == 1) {
             //Note this is actually calling the functions like parseLog, parseStatus, etc.
@@ -62,9 +67,9 @@ class LatencyMeasuringSerialCommManager @JvmOverloads constructor(
         val result = super.parseStatus(command)
 
         if (result && command is RP2040IncomingCommand.SetMotorLevels) {
-            // T8: State Applied
+            // T9: State Applied
             val iteration = currentIteration.get()
-            BenchmarkClock.mark(iteration, 8)
+            BenchmarkClock.mark(iteration, 9)
             BenchmarkClock.recordSuccess(iteration)
             currentIteration.compareAndSet(iteration, NO_ITERATION)
             onResultProcessed?.invoke()
