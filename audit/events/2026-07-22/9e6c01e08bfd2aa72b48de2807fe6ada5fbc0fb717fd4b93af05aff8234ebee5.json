@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-22T09:25:33Z",
+  "event_ts": "2026-07-22T09:25:16Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29907889300",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 252,
+    "title": "Firmware benchmarking/parse firmware benchmarks",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/252",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3629068903,
+    "html_url": "https://github.com/tekkura/sr-android/pull/252#discussion_r3629068903",
+    "created_at": "2026-07-22T09:25:16Z",
+    "updated_at": "2026-07-22T09:25:16Z",
+    "body": "@topherbuckley This is a outside of the scope of this PR. The problem is that the commit hash in latest.md is tied to the last commited change, which kind of goes against what we want to measure. In practice, most of the times we would want to measure changes in the worktree. The simplest solution would be removing clean/dirty tag from latest.md and after each meaningful change in latency benchmark, generating new data entries in a separate commit. This will bloat git history a bit, but otherwise we'll have to come up with a different datapoint labeling method"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/252#discussion_r3629068903",
+  "event_id": "9e6c01e08bfd2aa72b48de2807fe6ada5fbc0fb717fd4b93af05aff8234ebee5"
+}
