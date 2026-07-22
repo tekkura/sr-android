@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-07-22T12:01:12Z",
+  "event_ts": "2026-07-22T12:00:55Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "GeorgeChernyshov",
+  "run_id": "29917925017",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 314,
+    "title": "[Issue]: Migrate demo apps to Jetpack Compose",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/314",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/314",
+  "event_id": "bf8b08287e806ab54375e7c270027135241096d84c267e543a05d416d0573e82"
+}
