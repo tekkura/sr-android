@@ -1,10 +1,14 @@
 package jp.oist.abcvlib.basicassembler
 
+import android.os.SystemClock
 import jp.oist.abcvlib.basicassembler.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer.TimeStepData
 import jp.oist.abcvlib.core.inputs.phone.OrientationData
+import jp.oist.abcvlib.util.Logger
 import java.text.DecimalFormat
 import kotlin.concurrent.Volatile
+import kotlin.math.abs
+import kotlin.math.log10
 
 class GuiUpdater(
     private val binding: ActivityMainBinding,
@@ -12,6 +16,7 @@ class GuiUpdater(
     private val maxEpisodeCount: Int
 ) {
     private val df = DecimalFormat("#.00")
+    private var nextTraceAtMs = 0L
 
     @Volatile
     var timeStep: String = ""
@@ -68,30 +73,34 @@ class GuiUpdater(
     var audioDataString: String = ""
 
     @Volatile
+    var audioLevel: Double = 0.0
+
+    @Volatile
     var frameRateString: String = ""
+
+    init {
+        binding.tiltGauge.configure("Tilt", "deg", -45.0, 45.0)
+        binding.angularVelocityGauge.configure("Angular velocity", "deg/s", -360.0, 360.0)
+        binding.leftWheelGauge.configure("Left wheel", "mm/s", -2000.0, 2000.0)
+        binding.rightWheelGauge.configure("Right wheel", "mm/s", -2000.0, 2000.0)
+    }
 
     fun displayGUIValues() {
         binding.timeStep.text = timeStep
         binding.episodeCount.text = episode
-        binding.voltageBattLevel.text = df.format(batteryVoltage)
-        binding.voltageChargerLevel.text = df.format(chargerVoltage)
-        binding.coilVoltageText.text = df.format(coilVoltage)
-        binding.tiltAngle.text = df.format(thetaDeg)
-        binding.angularVelcoity.text = df.format(angularVelocityDeg)
-        val left = df.format(wheelCountL.toLong()) + " : " +
-                df.format(wheelDistanceL) + " : " +
-                df.format(wheelSpeedInstantL) + " : " +
-                df.format(wheelSpeedBufferedL) + " : " +
-                df.format(wheelSpeedExpAvgL)
-        val right = df.format(wheelCountR.toLong()) + " : " +
-                df.format(wheelDistanceR) + " : " +
-                df.format(wheelSpeedInstantR) + " : " +
-                df.format(wheelSpeedBufferedR) + " : " +
-                df.format(wheelSpeedExpAvgR)
-        binding.leftWheelCount.text = left
-        binding.rightWheelCount.text = right
+        binding.voltageBattLevel.text = "${df.format(batteryVoltage)} V"
+        binding.voltageChargerLevel.text = "${df.format(chargerVoltage)} V"
+        binding.coilVoltageText.text = "${df.format(coilVoltage)} V"
+        binding.frameRate.text = "$frameRateString fps"
+        binding.tiltGauge.setValue(thetaDeg)
+        binding.angularVelocityGauge.setValue(angularVelocityDeg)
+        binding.leftWheelGauge.setValue(wheelSpeedBufferedL)
+        binding.rightWheelGauge.setValue(wheelSpeedBufferedR)
+        binding.batteryGauge.progress = scaledProgress(batteryVoltage, 3.0, 4.3)
+        binding.chargerGauge.progress = scaledProgress(chargerVoltage, 0.0, 6.0)
+        binding.coilGauge.progress = scaledProgress(coilVoltage, 0.0, 6.0)
+        binding.soundGauge.progress = scaledLogProgress(audioLevel)
         binding.soundData.text = audioDataString
-        binding.frameRate.text = frameRateString
     }
 
     fun updateGUIValues(data: TimeStepData, timeStepCount: Int, episodeCount: Int) {
@@ -114,30 +123,116 @@ class GuiUpdater(
                 data.orientationData.getAngularVelocity()[0]
             )
         }
-        if (data.wheelData.getLeft().getCounts().size > 0) {
-            wheelCountL = data.wheelData.getLeft().getCounts()[0]
-            wheelCountR = data.wheelData.getRight().getCounts()[0]
-            wheelDistanceL = data.wheelData.getLeft().getDistances()[0]
-            wheelDistanceR = data.wheelData.getRight().getDistances()[0]
-            wheelSpeedInstantL = data.wheelData.getLeft().getSpeedsInstantaneous()[0]
-            wheelSpeedInstantR = data.wheelData.getRight().getSpeedsInstantaneous()[0]
-            wheelSpeedBufferedL = data.wheelData.getLeft().getSpeedsBuffered()[0]
-            wheelSpeedBufferedR = data.wheelData.getRight().getSpeedsBuffered()[0]
-            wheelSpeedExpAvgL = data.wheelData.getLeft().getSpeedsExpAvg()[0]
-            wheelSpeedExpAvgR = data.wheelData.getRight().getSpeedsExpAvg()[0]
+        val leftCounts = data.wheelData.getLeft().getCounts()
+        val rightCounts = data.wheelData.getRight().getCounts()
+        if (leftCounts.isNotEmpty() && rightCounts.isNotEmpty()) {
+            val leftDistances = data.wheelData.getLeft().getDistances()
+            val rightDistances = data.wheelData.getRight().getDistances()
+            val leftSpeedsInstant = data.wheelData.getLeft().getSpeedsInstantaneous()
+            val rightSpeedsInstant = data.wheelData.getRight().getSpeedsInstantaneous()
+            val leftSpeedsBuffered = data.wheelData.getLeft().getSpeedsBuffered()
+            val rightSpeedsBuffered = data.wheelData.getRight().getSpeedsBuffered()
+            val leftSpeedsExpAvg = data.wheelData.getLeft().getSpeedsExpAvg()
+            val rightSpeedsExpAvg = data.wheelData.getRight().getSpeedsExpAvg()
+            val leftSampleCount = minOf(
+                leftCounts.size,
+                leftDistances.size,
+                leftSpeedsInstant.size,
+                leftSpeedsBuffered.size,
+                leftSpeedsExpAvg.size
+            )
+            val rightSampleCount = minOf(
+                rightCounts.size,
+                rightDistances.size,
+                rightSpeedsInstant.size,
+                rightSpeedsBuffered.size,
+                rightSpeedsExpAvg.size
+            )
+            if (leftSampleCount == 0 || rightSampleCount == 0) {
+                Logger.w(
+                    "BasicAssemblerUiState",
+                    "Skipping wheel dashboard update because a wheel data series is empty"
+                )
+            } else {
+                for (i in 0 until leftSampleCount) {
+                    binding.leftWheelGraph.addSample(
+                        leftCounts[i],
+                        leftDistances[i],
+                        leftSpeedsInstant[i],
+                        leftSpeedsBuffered[i],
+                        leftSpeedsExpAvg[i]
+                    )
+                }
+                for (i in 0 until rightSampleCount) {
+                    binding.rightWheelGraph.addSample(
+                        rightCounts[i],
+                        rightDistances[i],
+                        rightSpeedsInstant[i],
+                        rightSpeedsBuffered[i],
+                        rightSpeedsExpAvg[i]
+                    )
+                }
+
+                val latestLeft = leftSampleCount - 1
+                val latestRight = rightSampleCount - 1
+                wheelCountL = leftCounts[latestLeft]
+                wheelCountR = rightCounts[latestRight]
+                wheelDistanceL = leftDistances[latestLeft]
+                wheelDistanceR = rightDistances[latestRight]
+                wheelSpeedInstantL = leftSpeedsInstant[latestLeft]
+                wheelSpeedInstantR = rightSpeedsInstant[latestRight]
+                wheelSpeedBufferedL = leftSpeedsBuffered[latestLeft]
+                wheelSpeedBufferedR = rightSpeedsBuffered[latestRight]
+                wheelSpeedExpAvgL = leftSpeedsExpAvg[latestLeft]
+                wheelSpeedExpAvgR = rightSpeedsExpAvg[latestRight]
+                logUiState(timeStepCount, episodeCount)
+            }
         }
-        if (data.soundData.getLevels().size > 0) {
-            val arraySlice = data.soundData.getLevels().copyOfRange(0, 5)
+        val levels = data.soundData.getLevels()
+        if (levels.isNotEmpty()) {
+            audioLevel = levels.maxOf { abs(it.toDouble()) }.coerceIn(0.0, 1.0)
+            val arraySlice = levels.copyOfRange(0, 5.coerceAtMost(levels.size))
             val df = DecimalFormat("0.#E0")
             val arraySliceString = arraySlice.joinToString(", ") { v -> df.format(v) }
             audioDataString = arraySliceString
         }
         if (data.imageData.images.size > 1) {
-            // just taking difference between two but one could do an average over all differences
-            val frameRate = 1.0 / ((data.imageData.images[1].timestamp
-                    - data.imageData.images[0].timestamp) / 1000000000.0)
-            val df = DecimalFormat("#.0000000000000")
-            frameRateString = df.format(frameRate)
+            val timestamps = data.imageData.images.map { it.timestamp }.sorted()
+            val deltaNanos = timestamps.zipWithNext()
+                .map { (previous, next) -> next - previous }
+                .firstOrNull { it > 0 }
+            if (deltaNanos != null) {
+                val frameRate = 1_000_000_000.0 / deltaNanos
+                frameRateString = frameRate.toInt().toString()
+            }
         }
+    }
+
+    private fun logUiState(timeStepCount: Int, episodeCount: Int) {
+        val now = SystemClock.uptimeMillis()
+        if (now < nextTraceAtMs) {
+            return
+        }
+        nextTraceAtMs = now + 500
+        Logger.i(
+            "BasicAssemblerUiState",
+            "UI_STATE timestep=$timeStepCount episode=$episodeCount " +
+                    "chargerV=$chargerVoltage coilV=$coilVoltage " +
+                    "countL=$wheelCountL countR=$wheelCountR " +
+                    "speedInstL=$wheelSpeedInstantL speedInstR=$wheelSpeedInstantR " +
+                    "speedBufL=$wheelSpeedBufferedL speedBufR=$wheelSpeedBufferedR " +
+                    "speedExpL=$wheelSpeedExpAvgL speedExpR=$wheelSpeedExpAvgR"
+        )
+    }
+
+    private fun scaledProgress(value: Double, min: Double, max: Double): Int {
+        val normalized = ((value - min) / (max - min)).coerceIn(0.0, 1.0)
+        return (normalized * 1000).toInt()
+    }
+
+    private fun scaledLogProgress(value: Double): Int {
+        val clamped = value.coerceIn(1e-6, 1.0)
+        val normalized = ((log10(clamped) + 6.0) / 6.0).coerceIn(0.0, 1.0)
+        return (normalized * 1000).toInt()
     }
 }

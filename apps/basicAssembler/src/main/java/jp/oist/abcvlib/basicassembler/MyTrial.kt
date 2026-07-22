@@ -26,17 +26,16 @@ class MyTrial(
     private val mainHandler: Handler = Handler(context.mainLooper)
 
     override fun forward(data: TimeStepData) {
-
-        // Use data as input to your policy and select action here
-        // Just using default actions of each set as an example but this
-        // should be replaced by your policy's decision process
-        val motionAction: MotionAction = motionActionSet.motionActions[1]!!
+        val motionAction: MotionAction = if ((timeStep / 10) % 2 == 0) {
+            motionActionSet.motionActions[1]!!
+        } else {
+            motionActionSet.motionActions[2]!!
+        }
         val commAction: CommAction = commActionSet.commActions[0]!!
 
         // Add your selected actions to the TimeStepDataBuffer for record
         data.actions.add(motionAction, commAction)
 
-        Logger.i("myTrail", "Current motionAction: " + motionAction.actionName)
         outputs.setWheelOutput(
             motionAction.leftWheelPWM,
             motionAction.rightWheelPWM,
@@ -73,7 +72,7 @@ class MyTrial(
 
     @Throws(RecordingWithoutTimeStepBufferException::class, InterruptedException::class)
     override fun endTrial() {
-        // Do stuff here
+        outputs.setWheelOutput(0f, 0f, false, false, 1.0f)
         super.endTrial()
     }
 
