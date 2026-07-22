@@ -14,7 +14,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:paddingHorizontal="12dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp">
 
         <FrameLayout
             android:id="@+id/frameLayout"
