@@ -119,10 +119,7 @@ class LineGraphView @JvmOverloads constructor(
     }
 
     private fun rangeFor(seriesIndex: Int): Pair<Float, Float> {
-        var maxAbsValue = 0f
-        for (sample in samples) {
-            maxAbsValue = max(maxAbsValue, abs(sample[seriesIndex]))
-        }
+        val maxAbsValue = samples.maxOf { abs(it[seriesIndex]) }
         val limit = max(maxAbsValue * 1.1f, 0.001f)
         return Pair(-limit, limit)
     }

@@ -148,39 +148,45 @@ class GuiUpdater(
                 rightSpeedsBuffered.size,
                 rightSpeedsExpAvg.size
             )
-
-            for (i in 0 until leftSampleCount) {
-                binding.leftWheelGraph.addSample(
-                    leftCounts[i],
-                    leftDistances[i],
-                    leftSpeedsInstant[i],
-                    leftSpeedsBuffered[i],
-                    leftSpeedsExpAvg[i]
+            if (leftSampleCount == 0 || rightSampleCount == 0) {
+                Logger.w(
+                    "BasicAssemblerUiState",
+                    "Skipping wheel dashboard update because a wheel data series is empty"
                 )
-            }
-            for (i in 0 until rightSampleCount) {
-                binding.rightWheelGraph.addSample(
-                    rightCounts[i],
-                    rightDistances[i],
-                    rightSpeedsInstant[i],
-                    rightSpeedsBuffered[i],
-                    rightSpeedsExpAvg[i]
-                )
-            }
+            } else {
+                for (i in 0 until leftSampleCount) {
+                    binding.leftWheelGraph.addSample(
+                        leftCounts[i],
+                        leftDistances[i],
+                        leftSpeedsInstant[i],
+                        leftSpeedsBuffered[i],
+                        leftSpeedsExpAvg[i]
+                    )
+                }
+                for (i in 0 until rightSampleCount) {
+                    binding.rightWheelGraph.addSample(
+                        rightCounts[i],
+                        rightDistances[i],
+                        rightSpeedsInstant[i],
+                        rightSpeedsBuffered[i],
+                        rightSpeedsExpAvg[i]
+                    )
+                }
 
-            val latestLeft = leftSampleCount - 1
-            val latestRight = rightSampleCount - 1
-            wheelCountL = leftCounts[latestLeft]
-            wheelCountR = rightCounts[latestRight]
-            wheelDistanceL = leftDistances[latestLeft]
-            wheelDistanceR = rightDistances[latestRight]
-            wheelSpeedInstantL = leftSpeedsInstant[latestLeft]
-            wheelSpeedInstantR = rightSpeedsInstant[latestRight]
-            wheelSpeedBufferedL = leftSpeedsBuffered[latestLeft]
-            wheelSpeedBufferedR = rightSpeedsBuffered[latestRight]
-            wheelSpeedExpAvgL = leftSpeedsExpAvg[latestLeft]
-            wheelSpeedExpAvgR = rightSpeedsExpAvg[latestRight]
-            logUiState(timeStepCount, episodeCount)
+                val latestLeft = leftSampleCount - 1
+                val latestRight = rightSampleCount - 1
+                wheelCountL = leftCounts[latestLeft]
+                wheelCountR = rightCounts[latestRight]
+                wheelDistanceL = leftDistances[latestLeft]
+                wheelDistanceR = rightDistances[latestRight]
+                wheelSpeedInstantL = leftSpeedsInstant[latestLeft]
+                wheelSpeedInstantR = rightSpeedsInstant[latestRight]
+                wheelSpeedBufferedL = leftSpeedsBuffered[latestLeft]
+                wheelSpeedBufferedR = rightSpeedsBuffered[latestRight]
+                wheelSpeedExpAvgL = leftSpeedsExpAvg[latestLeft]
+                wheelSpeedExpAvgR = rightSpeedsExpAvg[latestRight]
+                logUiState(timeStepCount, episodeCount)
+            }
         }
         val levels = data.soundData.getLevels()
         if (levels.isNotEmpty()) {
