@@ -2,20 +2,17 @@ name: Codex PR Review
 
 on:
   pull_request_target:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize, ready_for_review]
   issue_comment:
     types: [created]
 
 permissions:
   contents: read
+  issues: read
   pull-requests: write
 
 jobs:
   codex-review:
-    uses: tekkura/github-workflows/.github/workflows/codex-review.yml@main
-    with:
-      codex_model: ${{ vars.CODEX_MODEL || 'gpt-5.5' }}
-      review_prompt_path: .github/codex/prompts/review.md
-      migration_guides_dir: docs/migrations
+    uses: tekkura/.github/.github/workflows/codex-review.yml@main
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
