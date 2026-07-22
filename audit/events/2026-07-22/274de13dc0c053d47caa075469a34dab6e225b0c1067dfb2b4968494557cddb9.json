@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-07-22T05:09:06Z",
+  "event_ts": "2026-07-22T05:08:49Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "assigned",
+  "actor": "topherbuckley",
+  "run_id": "29892960147",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 313,
+    "title": "Add repeatable Android UI validation for dashboard changes",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/313",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/313",
+  "event_id": "274de13dc0c053d47caa075469a34dab6e225b0c1067dfb2b4968494557cddb9"
+}
