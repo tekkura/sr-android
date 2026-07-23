@@ -1,0 +1,45 @@
+# Audit Event 3849d81ae428a05f1ed6ccc9311c5bff9afac3becf7ffbb0f7d92b8817bdc63b
+
+- Timestamp: 2026-07-23T16:25:11Z
+- Actor: GeorgeChernyshov
+- Event: pull_request_review_comment.created
+- Target URL: https://github.com/tekkura/sr-android/pull/315#discussion_r3639702429
+
+## Raw Event
+
+```json
+{
+  "timestamp": "2026-07-23T16:25:11Z",
+  "event_ts": "2026-07-23T16:22:46Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "30024840787",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 315,
+    "title": "Communication framing/tinyframe",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/315",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3639702429,
+    "html_url": "https://github.com/tekkura/sr-android/pull/315#discussion_r3639702429",
+    "created_at": "2026-07-23T16:22:45Z",
+    "updated_at": "2026-07-23T16:22:46Z",
+    "body": "#codex-reply resolved in [2876a65](https://github.com/tekkura/sr-android/commit/2876a658b4e2635f0646969186904e295cbafecc)"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/315#discussion_r3639702429",
+  "event_id": "3849d81ae428a05f1ed6ccc9311c5bff9afac3becf7ffbb0f7d92b8817bdc63b"
+}
+```
