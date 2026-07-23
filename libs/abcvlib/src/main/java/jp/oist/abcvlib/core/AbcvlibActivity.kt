@@ -21,6 +21,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 /**
@@ -43,6 +44,7 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     private var alertDialog: AlertDialog? = null
     private var initialDelay: Long = 0
     private var serialReadyJob: Job? = null
+    private var mainLoopExecutor: ScheduledExecutorService? = null
 
     // Note anything less than 10ms will result in no GET_STATE commands being called and all
     // being overrides by whatever commands are sent in the main loop
@@ -107,7 +109,9 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
                 Thread.MAX_PRIORITY,
                 "AbcvlibActivityMainLoop"
             )
-            Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
+            mainLoopExecutor?.shutdownNow()
+            mainLoopExecutor = Executors.newSingleThreadScheduledExecutor(priority)
+            mainLoopExecutor!!.scheduleWithFixedDelay(
                 AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
             )
         }
@@ -192,6 +196,11 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         // Set a click listener for the Confirm button
         confirmButton.setOnClickListener { // Dismiss the dialog
             alertDialog?.dismiss()
+            mainLoopExecutor?.shutdownNow()
+            mainLoopExecutor = null
+            serialCommManager?.stop()
+            serialCommManager = null
+
             usbInitialize()
         }
 
