@@ -41,6 +41,7 @@ open class SerialCommManager @JvmOverloads constructor(
     protected var startTimeAndroid: Long = 0
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
+    private var commandId = 0
 
     private var versionTimeoutFuture: ScheduledFuture<*>? = null
     private val firmwareCompatibilityFailureReported = AtomicBoolean(false)
@@ -133,7 +134,7 @@ open class SerialCommManager @JvmOverloads constructor(
                 "SerialCommManager_Android2Pi"
             )
 
-            context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory)
+            context.writerExecutor = ScheduledExecutorServiceWithException(2, priorityFactory)
             context.versionTimeoutExecutor = Executors.newSingleThreadScheduledExecutor(
                 ProcessPriorityThreadFactory(
                     Thread.MAX_PRIORITY,
@@ -250,7 +251,12 @@ open class SerialCommManager @JvmOverloads constructor(
 
     protected open fun sendCommand(command: RP2040OutgoingCommand): Int {
         try {
-            this.usbSerial.send(command, 10000)
+            this.usbSerial.send(
+                command.apply { id = this@SerialCommManager.commandId++ },
+                10000
+            )
+
+            commandId %= 0x7F
         } catch (e: SerialTimeoutException) {
             throw RuntimeException(
                 "SerialTimeoutException on send. The serial connection " +
