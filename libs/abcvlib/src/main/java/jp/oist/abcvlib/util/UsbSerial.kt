@@ -22,6 +22,7 @@ import jp.oist.abcvlib.util.ByteArrayExtensions.toHexString
 import jp.oist.abcvlib.util.ErrorHandler.eLog
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -36,12 +37,14 @@ open class UsbSerial @Throws(IOException::class) constructor(
 ) : SerialInputOutputManager.Listener {
 
     private lateinit var _port: RobotSerialPort
+    val isPortReal get() = _port is RealRobotSerialPort
 
     private val timeout: Int = 1000 //1s
     private var badPacketCount = 0
 
     internal val fifoQueue: CircularFifoQueue<RP2040IncomingCommand> = CircularFifoQueue<RP2040IncomingCommand>(256)
     private val packetBuffer = PacketBuffer()
+    private var firmwareCompatibilityException: FirmwareCompatibilityException? = null
 
     companion object {
         private const val TAG = "UsbSerial"
@@ -181,6 +184,13 @@ open class UsbSerial @Throws(IOException::class) constructor(
                             packetReceived.signal()
                         }
 
+                        is PacketBuffer.ParseResult.FirmwareCompatibilityFailure -> {
+                            firmwareCompatibilityException = result.exception
+                            Logger.e(TAG, result.exception.message ?: "Firmware compatibility failure")
+                            Logger.d(TAG, "packetReceived.signal()")
+                            packetReceived.signal()
+                        }
+
                         is PacketBuffer.ParseResult.ReceivedPacket -> {
                             onCompletePacketReceived(result.command)
 
@@ -220,6 +230,10 @@ open class UsbSerial @Throws(IOException::class) constructor(
                 // throw new RuntimeException("SerialTimeoutException on send. The serial connection " +
                 // "with the rp2040 is not working as expected and timed out");
             } else {
+                firmwareCompatibilityException?.let {
+                    firmwareCompatibilityException = null
+                    throw it
+                }
                 Logger.d(
                     Thread.currentThread().name,
                     "packetReceived.await() completed. Packet received from rp2040"
