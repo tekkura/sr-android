@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-25T04:38:11Z",
+  "event_ts": "2026-07-25T04:37:52Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "30144362501",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 315,
+    "title": "Communication framing/tinyframe",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/315",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 5076963179,
+    "html_url": "https://github.com/tekkura/sr-android/pull/315#issuecomment-5076963179",
+    "created_at": "2026-07-25T04:37:52Z",
+    "updated_at": "2026-07-25T04:37:52Z",
+    "body": "@topherbuckley I think this is ready for review. Codex keeps insisting on omitting SOF byte. I have rebutted this once and I don't want to do this three more times"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/315#issuecomment-5076963179",
+  "event_id": "68f1eb8714507c220ddf32522df64bcb9ffa69506d82f0227d1d47db1d5c41ed"
+}
