@@ -1,6 +1,8 @@
 package jp.oist.abcvlib.util.rp2040
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command
+import jp.oist.abcvlib.util.ByteArrayExtensions.toCrc
+import java.nio.ByteBuffer
 /**
  * A simulator for the RP2040 firmware behavior.
  * This class maintains a simulated state and responds to incoming commands.
@@ -26,8 +28,7 @@ internal class MockRP2040 {
      * Mimics the firmware's request-response cycle.
      */
     fun processPacket(packet: ByteArray): ByteArray? {
-        // Simple manual parsing of the header
-        if (packet.size < 4) {
+        if (!isValidTinyFramePacket(packet)) {
             // Simulate firmware processing time.
             // We still want to do this even in case of error
             Thread.sleep(5)
@@ -39,7 +40,7 @@ internal class MockRP2040 {
         // This ensures the Android side has time to enter its 'await' state.
         Thread.sleep(5)
         
-        val typeByte = packet[1]
+        val typeByte = packet[4]
         val type = AndroidToRP2040Command.getEnumByValue(typeByte) ?: return null
         
         val response = when (type) {
@@ -48,9 +49,9 @@ internal class MockRP2040 {
             }
             AndroidToRP2040Command.SET_MOTOR_LEVELS -> {
                 // Update simulated motor state
-                if (packet.size == RP2040OutgoingCommand.PACKET_SIZE) {
-                    motorsState.controlValues.left = packet[2]
-                    motorsState.controlValues.right = packet[3]
+                if (payloadSize(packet) == 2) {
+                    motorsState.controlValues.left = packet[7]
+                    motorsState.controlValues.right = packet[8]
                     
                     logEntries.add("Motors set: L=${motorsState.controlValues.left}, R=${motorsState.controlValues.right}")
                 }
@@ -85,4 +86,25 @@ internal class MockRP2040 {
         }
         return command.toBytes()
     }
+
+    private fun isValidTinyFramePacket(packet: ByteArray): Boolean {
+        if (packet.size < RP2040Command.TINYFRAME_HEADER_SIZE ||
+            packet[0] != AndroidToRP2040Command.START.hexValue
+        ) return false
+
+        val payloadSize = ((packet[2].toInt() and 0xFF) shl 8) or (packet[3].toInt() and 0xFF)
+        val expectedSize = RP2040Command.TINYFRAME_HEADER_SIZE + payloadSize +
+                if (payloadSize == 0) 0 else RP2040Command.TINYFRAME_CRC_SIZE
+        if (packet.size != expectedSize) return false
+
+        if (packet.sliceArray(0 until 5).toCrc() !=
+            ByteBuffer.wrap(packet, 5, 2).short
+        ) return false
+
+        return payloadSize == 0 || packet.sliceArray(7 until 7 + payloadSize).toCrc() ==
+                ByteBuffer.wrap(packet, 7 + payloadSize, 2).short
+    }
+
+    private fun payloadSize(packet: ByteArray): Int =
+        ((packet[2].toInt() and 0xFF) shl 8) or (packet[3].toInt() and 0xFF)
 }

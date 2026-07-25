@@ -6,6 +6,7 @@ import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.util.HexBinConverters.bytesToHex
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
+import jp.oist.abcvlib.util.rp2040.RP2040Command
 import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040State
 import jp.oist.abcvlib.util.rp2040.StatusCommand
@@ -41,6 +42,7 @@ open class SerialCommManager @JvmOverloads constructor(
     protected var startTimeAndroid: Long = 0
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
+    private var commandId = 0
 
     private var versionTimeoutFuture: ScheduledFuture<*>? = null
     private val firmwareCompatibilityFailureReported = AtomicBoolean(false)
@@ -133,7 +135,7 @@ open class SerialCommManager @JvmOverloads constructor(
                 "SerialCommManager_Android2Pi"
             )
 
-            context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory)
+            context.writerExecutor = ScheduledExecutorServiceWithException(2, priorityFactory)
             context.versionTimeoutExecutor = Executors.newSingleThreadScheduledExecutor(
                 ProcessPriorityThreadFactory(
                     Thread.MAX_PRIORITY,
@@ -250,7 +252,12 @@ open class SerialCommManager @JvmOverloads constructor(
 
     protected open fun sendCommand(command: RP2040OutgoingCommand): Int {
         try {
-            this.usbSerial.send(command, 10000)
+            this.usbSerial.send(
+                command.apply { id = this@SerialCommManager.commandId++ },
+                10000
+            )
+
+            commandId %= 0x7F
         } catch (e: SerialTimeoutException) {
             throw RuntimeException(
                 "SerialTimeoutException on send. The serial connection " +
@@ -273,8 +280,15 @@ open class SerialCommManager @JvmOverloads constructor(
      * -2 if SerialTimeoutException on send
      */
     protected fun sendPacket(bytes: ByteArray): Int {
-        require(bytes.size == RP2040OutgoingCommand.PACKET_SIZE) {
-            "Input byte array must have a length of " + RP2040OutgoingCommand.PACKET_SIZE
+        require(bytes.size >= RP2040Command.TINYFRAME_HEADER_SIZE) {
+            "Input byte array must contain at least a TinyFrame header"
+        }
+
+        val payloadSize = ((bytes[2].toInt() and 0xFF) shl 8) or (bytes[3].toInt() and 0xFF)
+        val expectedSize = RP2040Command.TINYFRAME_HEADER_SIZE + payloadSize +
+                if (payloadSize == 0) 0 else RP2040Command.TINYFRAME_CRC_SIZE
+        require(bytes.size == expectedSize) {
+            "Input byte array length does not match its TinyFrame payload length"
         }
         try {
             this.usbSerial.send(bytes, 10000)
