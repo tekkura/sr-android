@@ -22,6 +22,8 @@ import com.google.mediapipe.framework.image.MediaImageBuilder
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizer
+import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import jp.oist.abcvlib.core.AbcvlibActivity
@@ -39,8 +41,10 @@ class MainActivity : AbcvlibActivity() {
     private lateinit var imageExecutor: ExecutorService
     private lateinit var publisherManager: PublisherManager
     private var poseLandmarker: PoseLandmarker? = null
+    private var gestureRecognizer: GestureRecognizer? = null
     private var lastMetricsLogAtMs = 0L
     private var debugViewVisible = false
+    private var loveFaceVisible = false
     @Volatile private var latestMetrics = PoseMetrics.EMPTY
     @Volatile private var latestPoseAtMs = 0L
 
@@ -83,6 +87,20 @@ class MainActivity : AbcvlibActivity() {
                 .setMinPosePresenceConfidence(0.5f)
                 .setResultListener(::onPoseResult)
                 .setErrorListener { error -> Log.e(TAG, "PoseLandmarker error", error) }
+                .build()
+        )
+        gestureRecognizer = GestureRecognizer.createFromOptions(
+            this,
+            GestureRecognizer.GestureRecognizerOptions.builder()
+                .setBaseOptions(
+                    BaseOptions.builder()
+                        .setModelAssetPath(GESTURE_MODEL_ASSET)
+                        .build()
+                )
+                .setRunningMode(RunningMode.LIVE_STREAM)
+                .setNumHands(1)
+                .setResultListener(::onGestureResult)
+                .setErrorListener { error -> Log.e(TAG, "GestureRecognizer error", error) }
                 .build()
         )
 
@@ -164,7 +182,9 @@ class MainActivity : AbcvlibActivity() {
         }
 
         val mpImage = MediaImageBuilder(image).build()
-        poseLandmarker?.detectAsync(mpImage, SystemClock.uptimeMillis())
+        val timestampMs = SystemClock.uptimeMillis()
+        poseLandmarker?.detectAsync(mpImage, timestampMs)
+        gestureRecognizer?.recognizeAsync(mpImage, timestampMs)
         imageProxy.close()
     }
 
@@ -177,6 +197,43 @@ class MainActivity : AbcvlibActivity() {
         latestPoseAtMs = if (metrics.person) SystemClock.uptimeMillis() else 0L
         logMetrics(metrics)
         runOnUiThread { binding.poseOverlay.updatePose(overlayPose, input.height, input.width) }
+    }
+
+    private fun onGestureResult(
+        result: GestureRecognizerResult,
+        @Suppress("UNUSED_PARAMETER") input: MPImage
+    ) {
+        val topGesture = result.gestures()
+            .flatten()
+            .maxByOrNull { it.score() }
+        val overlayGesture = topGesture?.let { gesture ->
+            OverlayGesture(
+                label = result.gestures()
+                    .flatten()
+                    .sortedByDescending { it.score() }
+                    .take(DEBUG_GESTURE_COUNT)
+                    .joinToString(" ") {
+                        "${it.categoryName()}=${"%.2f".format(it.score())}"
+                    },
+                landmarks = result.landmarks().firstOrNull()
+                    ?.map { it.toPosePoint().toNormalizedPoint() }
+                    ?: emptyList()
+            )
+        }
+        val loveDetected = result.gestures().any { gestures ->
+            gestures.any { gesture ->
+                gesture.categoryName() == LOVE_GESTURE && gesture.score() >= LOVE_GESTURE_SCORE
+            }
+        }
+        if (loveDetected && !loveFaceVisible) {
+            loveFaceVisible = true
+            runOnUiThread {
+                binding.faceView.setImageResource(R.drawable.face_love)
+                binding.poseOverlay.updateGesture(overlayGesture)
+            }
+        } else {
+            runOnUiThread { binding.poseOverlay.updateGesture(overlayGesture) }
+        }
     }
 
     private fun toOverlayPose(
@@ -283,6 +340,7 @@ class MainActivity : AbcvlibActivity() {
 
     override fun onDestroy() {
         poseLandmarker?.close()
+        gestureRecognizer?.close()
         imageExecutor.shutdown()
         super.onDestroy()
     }
@@ -305,6 +363,10 @@ class MainActivity : AbcvlibActivity() {
     private companion object {
         const val TAG = "KidsFaceDemo"
         const val POSE_MODEL_ASSET = "pose_landmarker_lite.task"
+        const val GESTURE_MODEL_ASSET = "gesture_recognizer.task"
+        const val LOVE_GESTURE = "ILoveYou"
+        const val LOVE_GESTURE_SCORE = 0.6f
+        const val DEBUG_GESTURE_COUNT = 3
         const val POSE_TIMEOUT_MS = 500L
         const val METRICS_LOG_INTERVAL_MS = 100L
         const val RAISED_MARGIN = 0.03f

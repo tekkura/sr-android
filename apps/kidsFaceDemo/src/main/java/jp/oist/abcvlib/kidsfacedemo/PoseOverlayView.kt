@@ -31,6 +31,10 @@ class PoseOverlayView @JvmOverloads constructor(
         color = Color.rgb(76, 175, 80)
         style = Paint.Style.FILL
     }
+    private val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(233, 30, 99)
+        style = Paint.Style.FILL
+    }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textSize = 44f
@@ -38,6 +42,7 @@ class PoseOverlayView @JvmOverloads constructor(
     }
 
     private var pose: OverlayPose? = null
+    private var gesture: OverlayGesture? = null
     private var imageWidth = 0
     private var imageHeight = 0
     private val imageDest = RectF()
@@ -49,15 +54,24 @@ class PoseOverlayView @JvmOverloads constructor(
         invalidate()
     }
 
+    fun updateGesture(gesture: OverlayGesture?) {
+        this.gesture = gesture
+        invalidate()
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         updateImageDest()
         val pose = this.pose
         if (pose == null) {
             canvas.drawText("No pose", 32f, 64f, textPaint)
-            return
+        } else {
+            drawPose(canvas, pose)
         }
+        drawGesture(canvas)
+    }
 
+    private fun drawPose(canvas: Canvas, pose: OverlayPose) {
         val leftShoulder = pose.leftShoulder.toViewPoint()
         val rightShoulder = pose.rightShoulder.toViewPoint()
         val leftWrist = pose.leftWrist.toViewPoint()
@@ -98,6 +112,24 @@ class PoseOverlayView @JvmOverloads constructor(
         )
     }
 
+    private fun drawGesture(canvas: Canvas) {
+        val gesture = this.gesture
+        if (gesture == null) {
+            canvas.drawText("gesture=None", 32f, 120f, textPaint)
+            return
+        }
+        gesture.landmarks.forEach { landmark ->
+            val point = landmark.toViewPoint()
+            canvas.drawCircle(point.x, point.y, HAND_POINT_RADIUS, handPaint)
+        }
+        canvas.drawText(
+            "gesture=${gesture.label}",
+            32f,
+            120f,
+            textPaint
+        )
+    }
+
     private fun NormalizedPoint.toViewPoint(): ViewPoint {
         return ViewPoint(
             imageDest.left + ((x + 1f) / 2f) * imageDest.width(),
@@ -123,6 +155,7 @@ class PoseOverlayView @JvmOverloads constructor(
 
     companion object {
         private const val POINT_RADIUS = 18f
+        private const val HAND_POINT_RADIUS = 10f
     }
 }
 
@@ -139,6 +172,11 @@ data class OverlayPose(
 data class NormalizedPoint(
     val x: Float,
     val y: Float
+)
+
+data class OverlayGesture(
+    val label: String,
+    val landmarks: List<NormalizedPoint>
 )
 
 private data class ViewPoint(
