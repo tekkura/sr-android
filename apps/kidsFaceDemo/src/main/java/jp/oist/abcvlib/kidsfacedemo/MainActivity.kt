@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.bumptech.glide.Glide
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.framework.image.MediaImageBuilder
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
@@ -48,6 +49,7 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
     private var debugViewVisible = false
     private var cameraStarted = false
     private var currentGestureFace: String? = null
+    private var faceInitialized = false
     @Volatile private var currentKnownGesture: String? = null
     @Volatile private var forcedGestureFace: String? = null
     @Volatile private var forcedGestureFaceUntilMs = 0L
@@ -84,6 +86,7 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
             setDebugViewVisible(!debugViewVisible)
         }
         setDebugViewVisible(debugViewVisible)
+        updateGestureFace(null)
 
         imageExecutor = Executors.newSingleThreadExecutor()
         gestureRecognizer = GestureRecognizer.createFromOptions(
@@ -300,13 +303,51 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
 
     private fun updateGestureFace(gesture: String?) {
         val faceGesture = gesture?.takeIf { it in FACE_GESTURES }
-        if (faceGesture == currentGestureFace) {
+        if (faceInitialized && faceGesture == currentGestureFace) {
             return
         }
+        faceInitialized = true
         currentGestureFace = faceGesture
         if (faceGesture != THUMBS_UP_GESTURE && dizzyFaceAnimator?.isRunning == true) {
             stopDizzyFaceAnimation()
         }
+        if (faceGesture == null) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.playful_expectation_face)
+                .into(binding.faceView)
+            return
+        }
+        if (faceGesture == LOVE_GESTURE) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.face_love_animated)
+                .into(binding.faceView)
+            return
+        }
+        if (faceGesture == STOP_GESTURE) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.face_open_palm_animated)
+                .into(binding.faceView)
+            return
+        }
+        if (faceGesture == VICTORY_GESTURE) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.face_victory_animated)
+                .into(binding.faceView)
+            return
+        }
+        if (faceGesture == THUMBS_UP_GESTURE) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.face_dizzy_animated)
+                .into(binding.faceView)
+            return
+        }
+
+        Glide.with(this).clear(binding.faceView)
         binding.faceView.setImageResource(
             when (faceGesture) {
                 LOVE_GESTURE -> R.drawable.face_love

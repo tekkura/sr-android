@@ -9,3 +9,7 @@ android {
         viewBinding = true
     }
 }
+
+dependencies {
+    implementation(libs.glide)
+}
