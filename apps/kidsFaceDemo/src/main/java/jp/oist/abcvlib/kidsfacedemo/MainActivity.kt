@@ -47,6 +47,9 @@ class MainActivity : AbcvlibActivity() {
     private var debugViewVisible = false
     private var cameraStarted = false
     private var currentGestureFace: String? = null
+    @Volatile private var currentKnownGesture: String? = null
+    @Volatile private var thumbsUpMotionActive = false
+    @Volatile private var thumbsUpMotionStep = 0
     @Volatile private var stopGestureActive = false
     @Volatile private var latestMetrics = PoseMetrics.EMPTY
     @Volatile private var latestPoseAtMs = 0L
@@ -141,6 +144,25 @@ class MainActivity : AbcvlibActivity() {
     }
 
     override fun abcvlibMainLoop() {
+        if (thumbsUpMotionActive) {
+            if (thumbsUpMotionStep < THUMBS_UP_BACKWARD_LOOPS) {
+                thumbsUpMotionStep += 1
+                outputs.setWheelOutput(-MAX_WHEEL_SPEED, -MAX_WHEEL_SPEED, false, false)
+            } else if (thumbsUpMotionStep < THUMBS_UP_TOTAL_MOTION_LOOPS) {
+                thumbsUpMotionStep += 1
+                outputs.setWheelOutput(MAX_WHEEL_SPEED, MAX_WHEEL_SPEED, false, false)
+            } else {
+                thumbsUpMotionActive = false
+                outputs.setWheelOutput(0f, 0f, false, false)
+            }
+            return
+        }
+
+        if (currentKnownGesture == THUMBS_UP_GESTURE) {
+            outputs.setWheelOutput(0f, 0f, false, false)
+            return
+        }
+
         val metrics = latestMetrics
         val poseIsFresh = SystemClock.uptimeMillis() - latestPoseAtMs <= POSE_TIMEOUT_MS
         if (!poseIsFresh || metrics.stopped) {
@@ -242,6 +264,13 @@ class MainActivity : AbcvlibActivity() {
             ?.takeIf { it.score() >= GESTURE_SCORE_THRESHOLD }
             ?.categoryName()
             ?.takeIf { it in KNOWN_GESTURES }
+        if (detectedKnownGesture == THUMBS_UP_GESTURE &&
+            currentKnownGesture != THUMBS_UP_GESTURE
+        ) {
+            thumbsUpMotionActive = true
+            thumbsUpMotionStep = 0
+        }
+        currentKnownGesture = detectedKnownGesture
         stopGestureActive = detectedKnownGesture == STOP_GESTURE
         runOnUiThread {
             updateGestureFace(detectedKnownGesture)
@@ -260,6 +289,7 @@ class MainActivity : AbcvlibActivity() {
                 LOVE_GESTURE -> R.drawable.face_love
                 STOP_GESTURE -> R.drawable.face_stop
                 VICTORY_GESTURE -> R.drawable.face_victory
+                THUMBS_UP_GESTURE -> R.drawable.face_pointing_up
                 else -> R.drawable.face_default
             }
         )
@@ -375,7 +405,10 @@ class MainActivity : AbcvlibActivity() {
         const val LOVE_GESTURE = "ILoveYou"
         const val STOP_GESTURE = "Open_Palm"
         const val VICTORY_GESTURE = "Victory"
+        const val THUMBS_UP_GESTURE = "Thumb_Up"
         const val GESTURE_SCORE_THRESHOLD = 0.6f
+        const val THUMBS_UP_BACKWARD_LOOPS = 10
+        const val THUMBS_UP_TOTAL_MOTION_LOOPS = 20
         const val DEBUG_GESTURE_COUNT = 3
         const val POSE_TIMEOUT_MS = 500L
         const val METRICS_LOG_INTERVAL_MS = 100L
@@ -386,8 +419,18 @@ class MainActivity : AbcvlibActivity() {
         const val TURN_GAIN = 0.35f
         const val MAX_FORWARD_SPEED = 0.75f
         const val MAX_WHEEL_SPEED = 1.0f
-        val KNOWN_GESTURES = setOf(LOVE_GESTURE, STOP_GESTURE, VICTORY_GESTURE)
-        val FACE_GESTURES = setOf(LOVE_GESTURE, STOP_GESTURE, VICTORY_GESTURE)
+        val KNOWN_GESTURES = setOf(
+            LOVE_GESTURE,
+            STOP_GESTURE,
+            VICTORY_GESTURE,
+            THUMBS_UP_GESTURE
+        )
+        val FACE_GESTURES = setOf(
+            LOVE_GESTURE,
+            STOP_GESTURE,
+            VICTORY_GESTURE,
+            THUMBS_UP_GESTURE
+        )
         const val LEFT_FOOT_INDEX = 31
         const val RIGHT_FOOT_INDEX = 32
     }
