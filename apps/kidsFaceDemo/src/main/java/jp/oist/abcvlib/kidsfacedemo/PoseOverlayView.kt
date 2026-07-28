@@ -62,18 +62,18 @@ class PoseOverlayView @JvmOverloads constructor(
         val rightShoulder = pose.rightShoulder.toViewPoint()
         val leftWrist = pose.leftWrist.toViewPoint()
         val rightWrist = pose.rightWrist.toViewPoint()
-        val leftAnkle = pose.leftAnkle.toViewPoint()
-        val rightAnkle = pose.rightAnkle.toViewPoint()
+        val leftFoot = pose.leftFoot.toViewPoint()
+        val rightFoot = pose.rightFoot.toViewPoint()
 
         canvas.drawLine(leftShoulder.x, leftShoulder.y, rightShoulder.x, rightShoulder.y, linePaint)
         canvas.drawLine(leftShoulder.x, leftShoulder.y, leftWrist.x, leftWrist.y, linePaint)
         canvas.drawLine(rightShoulder.x, rightShoulder.y, rightWrist.x, rightWrist.y, linePaint)
-        canvas.drawLine(leftAnkle.x, leftAnkle.y, rightAnkle.x, rightAnkle.y, linePaint)
+        canvas.drawLine(leftFoot.x, leftFoot.y, rightFoot.x, rightFoot.y, linePaint)
 
         canvas.drawCircle(leftShoulder.x, leftShoulder.y, POINT_RADIUS, leftPaint)
         canvas.drawCircle(rightShoulder.x, rightShoulder.y, POINT_RADIUS, rightPaint)
-        canvas.drawCircle(leftAnkle.x, leftAnkle.y, POINT_RADIUS, leftPaint)
-        canvas.drawCircle(rightAnkle.x, rightAnkle.y, POINT_RADIUS, rightPaint)
+        canvas.drawCircle(leftFoot.x, leftFoot.y, POINT_RADIUS, leftPaint)
+        canvas.drawCircle(rightFoot.x, rightFoot.y, POINT_RADIUS, rightPaint)
         canvas.drawCircle(
             leftWrist.x,
             leftWrist.y,
@@ -131,8 +131,8 @@ data class OverlayPose(
     val rightShoulder: NormalizedPoint,
     val leftWrist: NormalizedPoint,
     val rightWrist: NormalizedPoint,
-    val leftAnkle: NormalizedPoint,
-    val rightAnkle: NormalizedPoint,
+    val leftFoot: NormalizedPoint,
+    val rightFoot: NormalizedPoint,
     val metrics: PoseMetrics
 )
 
