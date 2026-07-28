@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import android.view.View
+import android.widget.SeekBar
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -50,6 +51,8 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
     private var cameraStarted = false
     private var currentGestureFace: String? = null
     private var faceInitialized = false
+    @Volatile private var forwardGain = DEFAULT_FORWARD_GAIN
+    @Volatile private var turnGain = DEFAULT_TURN_GAIN
     @Volatile private var currentKnownGesture: String? = null
     @Volatile private var forcedGestureFace: String? = null
     @Volatile private var forcedGestureFaceUntilMs = 0L
@@ -85,6 +88,7 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
         binding.viewToggleButton.setOnClickListener {
             setDebugViewVisible(!debugViewVisible)
         }
+        setupGainControls()
         setDebugViewVisible(debugViewVisible)
         updateGestureFace(null)
 
@@ -117,11 +121,48 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
         debugViewVisible = visible
         binding.cameraPreview.visibility = if (visible) View.VISIBLE else View.GONE
         binding.poseOverlay.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.debugControls.visibility = if (visible) View.VISIBLE else View.GONE
         binding.faceView.visibility = if (visible) View.GONE else View.VISIBLE
         binding.viewToggleButton.text = if (visible) "Face" else "Debug"
         if (cameraStarted) {
             startCameraAnalysis()
         }
+    }
+
+    private fun setupGainControls() {
+        binding.forwardGainSeekBar.progress = (forwardGain * GAIN_SCALE).toInt()
+        binding.turnGainSeekBar.progress = (turnGain * GAIN_SCALE).toInt()
+        updateGainLabels()
+
+        binding.forwardGainSeekBar.setOnSeekBarChangeListener(
+            gainSeekBarListener { progress ->
+                forwardGain = progress.toFloat() / GAIN_SCALE
+                updateGainLabels()
+            }
+        )
+        binding.turnGainSeekBar.setOnSeekBarChangeListener(
+            gainSeekBarListener { progress ->
+                turnGain = progress.toFloat() / GAIN_SCALE
+                updateGainLabels()
+            }
+        )
+    }
+
+    private fun gainSeekBarListener(
+        handleProgressChanged: (progress: Int) -> Unit
+    ) = object : SeekBar.OnSeekBarChangeListener {
+        override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+            handleProgressChanged(progress)
+        }
+
+        override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+
+        override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+    }
+
+    private fun updateGainLabels() {
+        binding.forwardGainLabel.text = "Forward gain: ${"%.2f".format(forwardGain)}"
+        binding.turnGainLabel.text = "Turn gain: ${"%.2f".format(turnGain)}"
     }
 
     override fun onSerialReady(usbSerial: UsbSerial) {
@@ -417,8 +458,8 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
         val targetX = if (targetVisible) gesturePoints.sumOf { it.x.toDouble() }.toFloat() / gesturePoints.size else 0f
         val targetY = if (targetVisible) gesturePoints.sumOf { it.y.toDouble() }.toFloat() / gesturePoints.size else 0f
         val stopped = stopGestureActive || !targetVisible
-        val turn = targetX.deadband(CENTER_DEADBAND) * TURN_GAIN
-        val forward = ((targetY - TARGET_GESTURE_Y) * FORWARD_GAIN)
+        val turn = targetX.deadband(CENTER_DEADBAND) * turnGain
+        val forward = ((targetY - TARGET_GESTURE_Y) * forwardGain)
             .coerceIn(0f, MAX_FORWARD_SPEED)
         val leftWheel = if (stopped) 0f else (forward + turn).coerceIn(-MAX_WHEEL_SPEED, MAX_WHEEL_SPEED)
         val rightWheel = if (stopped) 0f else (forward - turn).coerceIn(-MAX_WHEEL_SPEED, MAX_WHEEL_SPEED)
@@ -513,8 +554,9 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
         const val MIN_VISIBILITY = 0.4f
         const val TARGET_GESTURE_Y = 0.1f
         const val CENTER_DEADBAND = 0.08f
-        const val FORWARD_GAIN = 0.85f
-        const val TURN_GAIN = 0.20f
+        const val DEFAULT_FORWARD_GAIN = 0.85f
+        const val DEFAULT_TURN_GAIN = 0.20f
+        const val GAIN_SCALE = 100f
         const val MAX_FORWARD_SPEED = 0.75f
         const val MAX_WHEEL_SPEED = 1.0f
         val KNOWN_GESTURES = setOf(

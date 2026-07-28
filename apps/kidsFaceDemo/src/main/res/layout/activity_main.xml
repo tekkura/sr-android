@@ -28,6 +28,45 @@
         android:scaleType="fitCenter"
         android:src="@drawable/face_default" />
 
+    <LinearLayout
+        android:id="@+id/debugControls"
+        android:layout_width="280dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="16dp"
+        android:background="#CCFFFFFF"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/forwardGainLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/black"
+            tools:text="Forward gain: 0.85" />
+
+        <SeekBar
+            android:id="@+id/forwardGainSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="200" />
+
+        <TextView
+            android:id="@+id/turnGainLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@android:color/black"
+            tools:text="Turn gain: 0.20" />
+
+        <SeekBar
+            android:id="@+id/turnGainSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/viewToggleButton"
         android:layout_width="wrap_content"
