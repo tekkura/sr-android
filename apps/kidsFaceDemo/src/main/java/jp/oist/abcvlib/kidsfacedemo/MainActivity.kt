@@ -21,6 +21,7 @@ import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.framework.image.MediaImageBuilder
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizer
 import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
@@ -182,9 +183,12 @@ class MainActivity : AbcvlibActivity() {
         }
 
         val mpImage = MediaImageBuilder(image).build()
+        val options = ImageProcessingOptions.builder()
+            .setRotationDegrees(imageProxy.imageInfo.rotationDegrees)
+            .build()
         val timestampMs = SystemClock.uptimeMillis()
-        poseLandmarker?.detectAsync(mpImage, timestampMs)
-        gestureRecognizer?.recognizeAsync(mpImage, timestampMs)
+        poseLandmarker?.detectAsync(mpImage, options, timestampMs)
+        gestureRecognizer?.recognizeAsync(mpImage, options, timestampMs)
         imageProxy.close()
     }
 
@@ -196,7 +200,7 @@ class MainActivity : AbcvlibActivity() {
         latestMetrics = metrics
         latestPoseAtMs = if (metrics.person) SystemClock.uptimeMillis() else 0L
         logMetrics(metrics)
-        runOnUiThread { binding.poseOverlay.updatePose(overlayPose, input.height, input.width) }
+        runOnUiThread { binding.poseOverlay.updatePose(overlayPose, input.width, input.height) }
     }
 
     private fun onGestureResult(
@@ -326,10 +330,9 @@ class MainActivity : AbcvlibActivity() {
     }
 
     private fun NormalizedLandmark.toPosePoint(): PosePoint {
-        val visibleX = 1f - y()
         return PosePoint(
-            x = visibleX * 2f - 1f,
-            y = x(),
+            x = x() * 2f - 1f,
+            y = 1f - y(),
             isVisible = visibility().orElse(1f) >= MIN_VISIBILITY
         )
     }
