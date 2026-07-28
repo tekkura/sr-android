@@ -200,7 +200,7 @@ class MainActivity : AbcvlibActivity() {
         latestMetrics = metrics
         latestPoseAtMs = if (metrics.person) SystemClock.uptimeMillis() else 0L
         logMetrics(metrics)
-        runOnUiThread { binding.poseOverlay.updatePose(overlayPose, input.width, input.height) }
+        runOnUiThread { binding.poseOverlay.updatePose(overlayPose, input.height, input.width) }
     }
 
     private fun onGestureResult(
@@ -330,9 +330,10 @@ class MainActivity : AbcvlibActivity() {
     }
 
     private fun NormalizedLandmark.toPosePoint(): PosePoint {
+        val visibleX = 1f - y()
         return PosePoint(
-            x = x() * 2f - 1f,
-            y = 1f - y(),
+            x = visibleX * 2f - 1f,
+            y = x(),
             isVisible = visibility().orElse(1f) >= MIN_VISIBILITY
         )
     }
