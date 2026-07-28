@@ -83,8 +83,10 @@ class PoseOverlayView @JvmOverloads constructor(
         )
 
         canvas.drawText(
-            "score=${"%.2f".format(pose.metrics.score)} " +
-                "motion=${"%.2f".format(pose.metrics.normalizedMotion)}",
+            "target=${"%.2f".format(pose.metrics.targetX)}, " +
+                "${"%.2f".format(pose.metrics.targetY)} " +
+                "wheels=${"%.2f".format(pose.metrics.leftWheel)}, " +
+                "${"%.2f".format(pose.metrics.rightWheel)}",
             32f,
             64f,
             textPaint
@@ -93,7 +95,7 @@ class PoseOverlayView @JvmOverloads constructor(
 
     private fun NormalizedPoint.toViewPoint(): ViewPoint {
         return ViewPoint(
-            imageDest.left + x * imageDest.width(),
+            imageDest.left + ((x + 1f) / 2f) * imageDest.width(),
             imageDest.top + (1f - y) * imageDest.height()
         )
     }
@@ -124,7 +126,7 @@ data class OverlayPose(
     val rightShoulder: NormalizedPoint,
     val leftWrist: NormalizedPoint,
     val rightWrist: NormalizedPoint,
-    val metrics: WaveMetrics
+    val metrics: PoseMetrics
 )
 
 data class NormalizedPoint(

@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
@@ -24,19 +23,24 @@ import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
+import jp.oist.abcvlib.core.AbcvlibActivity
+import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
+import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.kidsfacedemo.databinding.ActivityMainBinding
-import java.util.ArrayDeque
+import jp.oist.abcvlib.util.SerialCommManager
+import jp.oist.abcvlib.util.UsbSerial
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.math.max
-import kotlin.math.min
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AbcvlibActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageExecutor: ExecutorService
+    private lateinit var publisherManager: PublisherManager
     private var poseLandmarker: PoseLandmarker? = null
-    private val wristHistory = ArrayDeque<WristFrame>()
     private var lastMetricsLogAtMs = 0L
+    @Volatile private var latestMetrics = PoseMetrics.EMPTY
+    @Volatile private var latestPoseAtMs = 0L
 
     private val cameraPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -47,9 +51,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        super.onCreate(savedInstanceState)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).let { controller ->
@@ -83,6 +87,29 @@ class MainActivity : AppCompatActivity() {
         } else {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
+    }
+
+    override fun onSerialReady(usbSerial: UsbSerial) {
+        publisherManager = PublisherManager()
+        val batteryData = BatteryData.Builder(this, publisherManager).build()
+        val wheelData = WheelData.Builder(this, publisherManager).build()
+        setSerialCommManager(SerialCommManager(usbSerial, batteryData, wheelData))
+        super.onSerialReady(usbSerial)
+    }
+
+    public override fun onOutputsReady() {
+        publisherManager.initializePublishers()
+        publisherManager.startPublishers()
+    }
+
+    override fun abcvlibMainLoop() {
+        val metrics = latestMetrics
+        val poseIsFresh = SystemClock.uptimeMillis() - latestPoseAtMs <= POSE_TIMEOUT_MS
+        if (!poseIsFresh || metrics.stopped) {
+            outputs.setWheelOutput(0f, 0f, false, false)
+            return
+        }
+        outputs.setWheelOutput(metrics.leftWheel, metrics.rightWheel, false, false)
     }
 
     private fun startPoseAnalysis() {
@@ -130,15 +157,17 @@ class MainActivity : AppCompatActivity() {
     private fun onPoseResult(result: PoseLandmarkerResult, input: MPImage) {
         val landmarks = result.landmarks().firstOrNull()
         val posePoints = landmarks?.toPosePoints()
-        val metrics = if (posePoints == null) WaveMetrics.EMPTY else waveMetrics(posePoints)
+        val metrics = if (posePoints == null) PoseMetrics.EMPTY else poseMetrics(posePoints)
         val overlayPose = posePoints?.let { toOverlayPose(it, metrics) }
+        latestMetrics = metrics
+        latestPoseAtMs = if (metrics.person) SystemClock.uptimeMillis() else 0L
         logMetrics(metrics)
         runOnUiThread { binding.poseOverlay.updatePose(overlayPose, input.height, input.width) }
     }
 
     private fun toOverlayPose(
         posePoints: PosePoints,
-        metrics: WaveMetrics
+        metrics: PoseMetrics
     ): OverlayPose {
         return OverlayPose(
             leftShoulder = posePoints.leftShoulder.toNormalizedPoint(),
@@ -149,45 +178,33 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun waveMetrics(posePoints: PosePoints): WaveMetrics {
-        val now = SystemClock.uptimeMillis()
+    private fun poseMetrics(posePoints: PosePoints): PoseMetrics {
         val leftShoulder = posePoints.leftShoulder
         val rightShoulder = posePoints.rightShoulder
         val leftWrist = posePoints.leftWrist
         val rightWrist = posePoints.rightWrist
-        val shoulderWidth = (rightShoulder.x - leftShoulder.x).coerceAtLeast(MIN_SHOULDER_WIDTH)
         val leftRaised = leftWrist.isVisible && leftWrist.y > leftShoulder.y + RAISED_MARGIN
         val rightRaised = rightWrist.isVisible && rightWrist.y > rightShoulder.y + RAISED_MARGIN
+        val stopped = rightRaised || !leftWrist.isVisible
+        val turn = leftWrist.x.deadband(CENTER_DEADBAND) * TURN_GAIN
+        val forward = ((leftWrist.y - TARGET_HAND_Y) * FORWARD_GAIN)
+            .coerceIn(0f, MAX_FORWARD_SPEED)
+        val leftWheel = if (stopped) 0f else (forward + turn).coerceIn(-MAX_WHEEL_SPEED, MAX_WHEEL_SPEED)
+        val rightWheel = if (stopped) 0f else (forward - turn).coerceIn(-MAX_WHEEL_SPEED, MAX_WHEEL_SPEED)
 
-        wristHistory.addLast(
-            WristFrame(
-                timeMs = now,
-                leftX = leftWrist.x.takeIf { leftRaised },
-                rightX = rightWrist.x.takeIf { rightRaised }
-            )
-        )
-        while (wristHistory.isNotEmpty() && now - wristHistory.first.timeMs > HISTORY_MS) {
-            wristHistory.removeFirst()
-        }
-
-        val leftMotion = horizontalMotion { it.leftX }
-        val rightMotion = horizontalMotion { it.rightX }
-        val shoulderNormalizedMotion = max(leftMotion, rightMotion) / shoulderWidth
-        val score = (shoulderNormalizedMotion / WAVE_RANGE_SHOULDER_UNITS).coerceIn(0f, 1f)
-        return WaveMetrics(
+        return PoseMetrics(
             person = true,
             leftRaised = leftRaised,
             rightRaised = rightRaised,
-            leftMotion = leftMotion,
-            rightMotion = rightMotion,
-            shoulderWidth = shoulderWidth,
-            normalizedMotion = shoulderNormalizedMotion,
-            score = score,
-            samples = wristHistory.size
+            targetX = leftWrist.x,
+            targetY = leftWrist.y,
+            leftWheel = leftWheel,
+            rightWheel = rightWheel,
+            stopped = stopped
         )
     }
 
-    private fun logMetrics(metrics: WaveMetrics) {
+    private fun logMetrics(metrics: PoseMetrics) {
         val now = SystemClock.uptimeMillis()
         if (now - lastMetricsLogAtMs < METRICS_LOG_INTERVAL_MS) {
             return
@@ -195,25 +212,26 @@ class MainActivity : AppCompatActivity() {
         lastMetricsLogAtMs = now
         Log.i(
             TAG,
-            "waveMetrics " +
+            "poseMetrics " +
                 "person=${metrics.person} " +
                 "leftRaised=${metrics.leftRaised} " +
                 "rightRaised=${metrics.rightRaised} " +
-                "leftMotion=${"%.4f".format(metrics.leftMotion)} " +
-                "rightMotion=${"%.4f".format(metrics.rightMotion)} " +
-                "shoulderWidth=${"%.4f".format(metrics.shoulderWidth)} " +
-                "normalizedMotion=${"%.4f".format(metrics.normalizedMotion)} " +
-                "score=${"%.4f".format(metrics.score)} " +
-                "samples=${metrics.samples}"
+                "targetX=${"%.4f".format(metrics.targetX)} " +
+                "targetY=${"%.4f".format(metrics.targetY)} " +
+                "leftWheel=${"%.4f".format(metrics.leftWheel)} " +
+                "rightWheel=${"%.4f".format(metrics.rightWheel)} " +
+                "stopped=${metrics.stopped}"
         )
     }
 
-    private fun horizontalMotion(selector: (WristFrame) -> Float?): Float {
-        val values = wristHistory.mapNotNull(selector)
-        if (values.size < MIN_WAVE_SAMPLES) {
-            return 0f
+    private fun Float.deadband(deadband: Float): Float {
+        if (this > deadband) {
+            return this - deadband
         }
-        return values.max() - values.min()
+        if (this < -deadband) {
+            return this + deadband
+        }
+        return 0f
     }
 
     private fun List<NormalizedLandmark>.toPosePoints(): PosePoints {
@@ -226,8 +244,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun NormalizedLandmark.toPosePoint(): PosePoint {
+        val visibleX = 1f - y()
         return PosePoint(
-            x = 1f - y(),
+            x = visibleX * 2f - 1f,
             y = x(),
             isVisible = visibility().orElse(1f) >= MIN_VISIBILITY
         )
@@ -242,12 +261,6 @@ class MainActivity : AppCompatActivity() {
         imageExecutor.shutdown()
         super.onDestroy()
     }
-
-    private data class WristFrame(
-        val timeMs: Long,
-        val leftX: Float?,
-        val rightX: Float?
-    )
 
     private data class PosePoints(
         val leftShoulder: PosePoint,
@@ -265,13 +278,16 @@ class MainActivity : AppCompatActivity() {
     private companion object {
         const val TAG = "KidsFaceDemo"
         const val POSE_MODEL_ASSET = "pose_landmarker_lite.task"
-        const val HISTORY_MS = 900L
+        const val POSE_TIMEOUT_MS = 500L
         const val METRICS_LOG_INTERVAL_MS = 100L
-        const val WAVE_RANGE_SHOULDER_UNITS = 0.8f
-        const val MIN_SHOULDER_WIDTH = 0.05f
         const val RAISED_MARGIN = 0.03f
         const val MIN_VISIBILITY = 0.4f
-        const val MIN_WAVE_SAMPLES = 3
+        const val TARGET_HAND_Y = 0.1f
+        const val CENTER_DEADBAND = 0.08f
+        const val FORWARD_GAIN = 0.85f
+        const val TURN_GAIN = 0.30f
+        const val MAX_FORWARD_SPEED = 0.75f
+        const val MAX_WHEEL_SPEED = 1.0f
         const val LEFT_SHOULDER = 11
         const val RIGHT_SHOULDER = 12
         const val LEFT_WRIST = 15
