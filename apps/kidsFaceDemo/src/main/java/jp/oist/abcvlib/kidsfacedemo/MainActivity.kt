@@ -45,6 +45,7 @@ class MainActivity : AbcvlibActivity() {
     private var gestureRecognizer: GestureRecognizer? = null
     private var lastMetricsLogAtMs = 0L
     private var debugViewVisible = false
+    private var cameraStarted = false
     private var currentGestureFace: String? = null
     @Volatile private var stopGestureActive = false
     @Volatile private var latestMetrics = PoseMetrics.EMPTY
@@ -121,6 +122,9 @@ class MainActivity : AbcvlibActivity() {
         binding.poseOverlay.visibility = if (visible) View.VISIBLE else View.GONE
         binding.faceView.visibility = if (visible) View.GONE else View.VISIBLE
         binding.viewToggleButton.text = if (visible) "Face" else "Debug"
+        if (cameraStarted) {
+            startPoseAnalysis()
+        }
     }
 
     override fun onSerialReady(usbSerial: UsbSerial) {
@@ -147,6 +151,7 @@ class MainActivity : AbcvlibActivity() {
     }
 
     private fun startPoseAnalysis() {
+        cameraStarted = true
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
@@ -166,12 +171,20 @@ class MainActivity : AbcvlibActivity() {
             }
 
             cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
-                this,
-                CameraSelector.DEFAULT_FRONT_CAMERA,
-                preview,
-                imageAnalysis
-            )
+            if (debugViewVisible) {
+                cameraProvider.bindToLifecycle(
+                    this,
+                    CameraSelector.DEFAULT_FRONT_CAMERA,
+                    preview,
+                    imageAnalysis
+                )
+            } else {
+                cameraProvider.bindToLifecycle(
+                    this,
+                    CameraSelector.DEFAULT_FRONT_CAMERA,
+                    imageAnalysis
+                )
+            }
         }, ContextCompat.getMainExecutor(this))
     }
 
