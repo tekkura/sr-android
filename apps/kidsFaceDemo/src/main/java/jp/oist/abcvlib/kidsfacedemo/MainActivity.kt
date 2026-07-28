@@ -34,7 +34,6 @@ import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.kidsfacedemo.databinding.ActivityMainBinding
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.UsbSerial
-import java.util.ArrayDeque
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -43,12 +42,10 @@ class MainActivity : AbcvlibActivity() {
     private lateinit var imageExecutor: ExecutorService
     private lateinit var publisherManager: PublisherManager
     private var poseLandmarker: PoseLandmarker? = null
-    private val gestureSamples = ArrayDeque<String>()
     private var gestureRecognizer: GestureRecognizer? = null
     private var lastMetricsLogAtMs = 0L
     private var debugViewVisible = false
     private var currentGestureFace: String? = null
-    @Volatile private var stableGestureState: String? = null
     @Volatile private var stopGestureActive = false
     @Volatile private var latestMetrics = PoseMetrics.EMPTY
     @Volatile private var latestPoseAtMs = 0L
@@ -232,30 +229,11 @@ class MainActivity : AbcvlibActivity() {
             ?.takeIf { it.score() >= GESTURE_SCORE_THRESHOLD }
             ?.categoryName()
             ?.takeIf { it in KNOWN_GESTURES }
-        val stableGesture = stableGesture(detectedKnownGesture)
-        stopGestureActive = stableGesture == STOP_GESTURE
+        stopGestureActive = detectedKnownGesture == STOP_GESTURE
         runOnUiThread {
-            updateGestureFace(stableGesture)
+            updateGestureFace(detectedKnownGesture)
             binding.poseOverlay.updateGesture(overlayGesture)
         }
-    }
-
-    private fun stableGesture(gesture: String?): String? {
-        gestureSamples.addLast(gesture ?: NO_GESTURE)
-        while (gestureSamples.size > GESTURE_SAMPLE_COUNT) {
-            gestureSamples.removeFirst()
-        }
-        val stableKnownGesture = KNOWN_GESTURES.firstOrNull { knownGesture ->
-            gestureSamples.count { it == knownGesture } >= GESTURE_REQUIRED_SAMPLES
-        }
-        if (stableKnownGesture != null) {
-            stableGestureState = stableKnownGesture
-            return stableKnownGesture
-        }
-        if (gestureSamples.count { it == NO_GESTURE } >= GESTURE_REQUIRED_SAMPLES) {
-            stableGestureState = null
-        }
-        return stableGestureState
     }
 
     private fun updateGestureFace(gesture: String?) {
@@ -380,12 +358,9 @@ class MainActivity : AbcvlibActivity() {
         const val TAG = "KidsFaceDemo"
         const val POSE_MODEL_ASSET = "pose_landmarker_lite.task"
         const val GESTURE_MODEL_ASSET = "gesture_recognizer.task"
-        const val NO_GESTURE = "None"
         const val LOVE_GESTURE = "ILoveYou"
         const val STOP_GESTURE = "Open_Palm"
         const val GESTURE_SCORE_THRESHOLD = 0.6f
-        const val GESTURE_SAMPLE_COUNT = 3
-        const val GESTURE_REQUIRED_SAMPLES = 2
         const val DEBUG_GESTURE_COUNT = 3
         const val POSE_TIMEOUT_MS = 500L
         const val METRICS_LOG_INTERVAL_MS = 100L
