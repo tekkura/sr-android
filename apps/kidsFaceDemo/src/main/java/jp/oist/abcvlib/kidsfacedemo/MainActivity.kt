@@ -43,11 +43,13 @@ class MainActivity : AbcvlibActivity() {
     private lateinit var imageExecutor: ExecutorService
     private lateinit var publisherManager: PublisherManager
     private var poseLandmarker: PoseLandmarker? = null
-    private val gestureSamples = ArrayDeque<String?>()
+    private val gestureSamples = ArrayDeque<String>()
     private var gestureRecognizer: GestureRecognizer? = null
     private var lastMetricsLogAtMs = 0L
     private var debugViewVisible = false
     private var currentGestureFace: String? = null
+    @Volatile private var stableGestureState: String? = null
+    @Volatile private var stopGestureActive = false
     @Volatile private var latestMetrics = PoseMetrics.EMPTY
     @Volatile private var latestPoseAtMs = 0L
 
@@ -226,12 +228,12 @@ class MainActivity : AbcvlibActivity() {
                     ?: emptyList()
             )
         }
-        val loveDetected = result.gestures().any { gestures ->
-            gestures.any { gesture ->
-                gesture.categoryName() == LOVE_GESTURE && gesture.score() >= LOVE_GESTURE_SCORE
-            }
-        }
-        val stableGesture = stableGesture(if (loveDetected) LOVE_GESTURE else null)
+        val detectedKnownGesture = topGesture
+            ?.takeIf { it.score() >= GESTURE_SCORE_THRESHOLD }
+            ?.categoryName()
+            ?.takeIf { it in KNOWN_GESTURES }
+        val stableGesture = stableGesture(detectedKnownGesture)
+        stopGestureActive = stableGesture == STOP_GESTURE
         runOnUiThread {
             updateGestureFace(stableGesture)
             binding.poseOverlay.updateGesture(overlayGesture)
@@ -239,23 +241,35 @@ class MainActivity : AbcvlibActivity() {
     }
 
     private fun stableGesture(gesture: String?): String? {
-        gestureSamples.addLast(gesture)
+        gestureSamples.addLast(gesture ?: NO_GESTURE)
         while (gestureSamples.size > GESTURE_SAMPLE_COUNT) {
             gestureSamples.removeFirst()
         }
-        val knownGestures = gestureSamples.filterNotNull().distinct()
-        return knownGestures.firstOrNull { knownGesture ->
+        val stableKnownGesture = KNOWN_GESTURES.firstOrNull { knownGesture ->
             gestureSamples.count { it == knownGesture } >= GESTURE_REQUIRED_SAMPLES
         }
+        if (stableKnownGesture != null) {
+            stableGestureState = stableKnownGesture
+            return stableKnownGesture
+        }
+        if (gestureSamples.count { it == NO_GESTURE } >= GESTURE_REQUIRED_SAMPLES) {
+            stableGestureState = null
+        }
+        return stableGestureState
     }
 
     private fun updateGestureFace(gesture: String?) {
-        if (gesture == currentGestureFace) {
+        val faceGesture = gesture?.takeIf { it in FACE_GESTURES }
+        if (faceGesture == currentGestureFace) {
             return
         }
-        currentGestureFace = gesture
+        currentGestureFace = faceGesture
         binding.faceView.setImageResource(
-            if (gesture == LOVE_GESTURE) R.drawable.face_love else R.drawable.face_default
+            when (faceGesture) {
+                LOVE_GESTURE -> R.drawable.face_love
+                STOP_GESTURE -> R.drawable.face_stop
+                else -> R.drawable.face_default
+            }
         )
     }
 
@@ -264,10 +278,6 @@ class MainActivity : AbcvlibActivity() {
         metrics: PoseMetrics
     ): OverlayPose {
         return OverlayPose(
-            leftShoulder = posePoints.leftShoulder.toNormalizedPoint(),
-            rightShoulder = posePoints.rightShoulder.toNormalizedPoint(),
-            leftWrist = posePoints.leftWrist.toNormalizedPoint(),
-            rightWrist = posePoints.rightWrist.toNormalizedPoint(),
             leftFoot = posePoints.leftFoot.toNormalizedPoint(),
             rightFoot = posePoints.rightFoot.toNormalizedPoint(),
             metrics = metrics
@@ -275,18 +285,12 @@ class MainActivity : AbcvlibActivity() {
     }
 
     private fun poseMetrics(posePoints: PosePoints): PoseMetrics {
-        val leftShoulder = posePoints.leftShoulder
-        val rightShoulder = posePoints.rightShoulder
-        val leftWrist = posePoints.leftWrist
-        val rightWrist = posePoints.rightWrist
         val leftFoot = posePoints.leftFoot
         val rightFoot = posePoints.rightFoot
-        val leftRaised = leftWrist.isVisible && leftWrist.y > leftShoulder.y + RAISED_MARGIN
-        val rightRaised = rightWrist.isVisible && rightWrist.y > rightShoulder.y + RAISED_MARGIN
         val targetVisible = leftFoot.isVisible && rightFoot.isVisible
         val targetX = (leftFoot.x + rightFoot.x) / 2f
         val targetY = (leftFoot.y + rightFoot.y) / 2f
-        val stopped = rightRaised || !targetVisible
+        val stopped = stopGestureActive || !targetVisible
         val turn = targetX.deadband(CENTER_DEADBAND) * TURN_GAIN
         val forward = ((targetY - TARGET_FOOT_Y) * FORWARD_GAIN)
             .coerceIn(0f, MAX_FORWARD_SPEED)
@@ -295,8 +299,6 @@ class MainActivity : AbcvlibActivity() {
 
         return PoseMetrics(
             person = true,
-            leftRaised = leftRaised,
-            rightRaised = rightRaised,
             targetVisible = targetVisible,
             targetX = targetX,
             targetY = targetY,
@@ -316,13 +318,12 @@ class MainActivity : AbcvlibActivity() {
             TAG,
             "poseMetrics " +
                 "person=${metrics.person} " +
-                "leftRaised=${metrics.leftRaised} " +
-                "rightRaised=${metrics.rightRaised} " +
                 "targetVisible=${metrics.targetVisible} " +
                 "targetX=${"%.4f".format(metrics.targetX)} " +
                 "targetY=${"%.4f".format(metrics.targetY)} " +
                 "leftWheel=${"%.4f".format(metrics.leftWheel)} " +
                 "rightWheel=${"%.4f".format(metrics.rightWheel)} " +
+                "stopGestureActive=$stopGestureActive " +
                 "stopped=${metrics.stopped}"
         )
     }
@@ -339,10 +340,6 @@ class MainActivity : AbcvlibActivity() {
 
     private fun List<NormalizedLandmark>.toPosePoints(): PosePoints {
         return PosePoints(
-            leftShoulder = this[LEFT_SHOULDER].toPosePoint(),
-            rightShoulder = this[RIGHT_SHOULDER].toPosePoint(),
-            leftWrist = this[LEFT_WRIST].toPosePoint(),
-            rightWrist = this[RIGHT_WRIST].toPosePoint(),
             leftFoot = this[LEFT_FOOT_INDEX].toPosePoint(),
             rightFoot = this[RIGHT_FOOT_INDEX].toPosePoint()
         )
@@ -369,10 +366,6 @@ class MainActivity : AbcvlibActivity() {
     }
 
     private data class PosePoints(
-        val leftShoulder: PosePoint,
-        val rightShoulder: PosePoint,
-        val leftWrist: PosePoint,
-        val rightWrist: PosePoint,
         val leftFoot: PosePoint,
         val rightFoot: PosePoint
     )
@@ -387,14 +380,15 @@ class MainActivity : AbcvlibActivity() {
         const val TAG = "KidsFaceDemo"
         const val POSE_MODEL_ASSET = "pose_landmarker_lite.task"
         const val GESTURE_MODEL_ASSET = "gesture_recognizer.task"
+        const val NO_GESTURE = "None"
         const val LOVE_GESTURE = "ILoveYou"
-        const val LOVE_GESTURE_SCORE = 0.6f
-        const val GESTURE_SAMPLE_COUNT = 10
-        const val GESTURE_REQUIRED_SAMPLES = 8
+        const val STOP_GESTURE = "Open_Palm"
+        const val GESTURE_SCORE_THRESHOLD = 0.6f
+        const val GESTURE_SAMPLE_COUNT = 3
+        const val GESTURE_REQUIRED_SAMPLES = 2
         const val DEBUG_GESTURE_COUNT = 3
         const val POSE_TIMEOUT_MS = 500L
         const val METRICS_LOG_INTERVAL_MS = 100L
-        const val RAISED_MARGIN = 0.03f
         const val MIN_VISIBILITY = 0.4f
         const val TARGET_FOOT_Y = 0.1f
         const val CENTER_DEADBAND = 0.08f
@@ -402,10 +396,8 @@ class MainActivity : AbcvlibActivity() {
         const val TURN_GAIN = 0.35f
         const val MAX_FORWARD_SPEED = 0.75f
         const val MAX_WHEEL_SPEED = 1.0f
-        const val LEFT_SHOULDER = 11
-        const val RIGHT_SHOULDER = 12
-        const val LEFT_WRIST = 15
-        const val RIGHT_WRIST = 16
+        val KNOWN_GESTURES = setOf(LOVE_GESTURE, STOP_GESTURE)
+        val FACE_GESTURES = setOf(LOVE_GESTURE, STOP_GESTURE)
         const val LEFT_FOOT_INDEX = 31
         const val RIGHT_FOOT_INDEX = 32
     }

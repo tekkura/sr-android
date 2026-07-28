@@ -2,8 +2,6 @@ package jp.oist.abcvlib.kidsfacedemo
 
 data class PoseMetrics(
     val person: Boolean,
-    val leftRaised: Boolean,
-    val rightRaised: Boolean,
     val targetVisible: Boolean,
     val targetX: Float,
     val targetY: Float,
@@ -14,8 +12,6 @@ data class PoseMetrics(
     companion object {
         val EMPTY = PoseMetrics(
             person = false,
-            leftRaised = false,
-            rightRaised = false,
             targetVisible = false,
             targetX = 0f,
             targetY = 0f,

@@ -27,10 +27,6 @@ class PoseOverlayView @JvmOverloads constructor(
         color = Color.rgb(3, 169, 244)
         style = Paint.Style.FILL
     }
-    private val raisedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(76, 175, 80)
-        style = Paint.Style.FILL
-    }
     private val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(233, 30, 99)
         style = Paint.Style.FILL
@@ -72,34 +68,13 @@ class PoseOverlayView @JvmOverloads constructor(
     }
 
     private fun drawPose(canvas: Canvas, pose: OverlayPose) {
-        val leftShoulder = pose.leftShoulder.toViewPoint()
-        val rightShoulder = pose.rightShoulder.toViewPoint()
-        val leftWrist = pose.leftWrist.toViewPoint()
-        val rightWrist = pose.rightWrist.toViewPoint()
         val leftFoot = pose.leftFoot.toViewPoint()
         val rightFoot = pose.rightFoot.toViewPoint()
 
-        canvas.drawLine(leftShoulder.x, leftShoulder.y, rightShoulder.x, rightShoulder.y, linePaint)
-        canvas.drawLine(leftShoulder.x, leftShoulder.y, leftWrist.x, leftWrist.y, linePaint)
-        canvas.drawLine(rightShoulder.x, rightShoulder.y, rightWrist.x, rightWrist.y, linePaint)
         canvas.drawLine(leftFoot.x, leftFoot.y, rightFoot.x, rightFoot.y, linePaint)
 
-        canvas.drawCircle(leftShoulder.x, leftShoulder.y, POINT_RADIUS, leftPaint)
-        canvas.drawCircle(rightShoulder.x, rightShoulder.y, POINT_RADIUS, rightPaint)
         canvas.drawCircle(leftFoot.x, leftFoot.y, POINT_RADIUS, leftPaint)
         canvas.drawCircle(rightFoot.x, rightFoot.y, POINT_RADIUS, rightPaint)
-        canvas.drawCircle(
-            leftWrist.x,
-            leftWrist.y,
-            POINT_RADIUS,
-            if (pose.metrics.leftRaised) raisedPaint else leftPaint
-        )
-        canvas.drawCircle(
-            rightWrist.x,
-            rightWrist.y,
-            POINT_RADIUS,
-            if (pose.metrics.rightRaised) raisedPaint else rightPaint
-        )
 
         canvas.drawText(
             "target=${"%.2f".format(pose.metrics.targetX)}, " +
@@ -160,10 +135,6 @@ class PoseOverlayView @JvmOverloads constructor(
 }
 
 data class OverlayPose(
-    val leftShoulder: NormalizedPoint,
-    val rightShoulder: NormalizedPoint,
-    val leftWrist: NormalizedPoint,
-    val rightWrist: NormalizedPoint,
     val leftFoot: NormalizedPoint,
     val rightFoot: NormalizedPoint,
     val metrics: PoseMetrics
