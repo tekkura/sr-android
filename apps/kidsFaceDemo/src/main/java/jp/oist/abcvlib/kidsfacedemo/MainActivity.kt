@@ -29,13 +29,14 @@ import jp.oist.abcvlib.core.AbcvlibActivity
 import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
+import jp.oist.abcvlib.core.inputs.microcontroller.WheelDataSubscriber
 import jp.oist.abcvlib.kidsfacedemo.databinding.ActivityMainBinding
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.UsbSerial
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AbcvlibActivity() {
+class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageExecutor: ExecutorService
     private lateinit var publisherManager: PublisherManager
@@ -45,8 +46,14 @@ class MainActivity : AbcvlibActivity() {
     private var cameraStarted = false
     private var currentGestureFace: String? = null
     @Volatile private var currentKnownGesture: String? = null
-    @Volatile private var thumbsUpMotionActive = false
-    @Volatile private var thumbsUpMotionStep = 0
+    @Volatile private var forcedGestureFace: String? = null
+    @Volatile private var forcedGestureFaceUntilMs = 0L
+    @Volatile private var thumbsUpSpinActive = false
+    @Volatile private var thumbsUpSpinCompleted = false
+    @Volatile private var latestWheelDistanceL = 0.0
+    @Volatile private var latestWheelDistanceR = 0.0
+    @Volatile private var thumbsUpSpinStartDistanceL = 0.0
+    @Volatile private var thumbsUpSpinStartDistanceR = 0.0
     @Volatile private var stopGestureActive = false
     @Volatile private var latestMetrics = PoseMetrics.EMPTY
     @Volatile private var latestTargetAtMs = 0L
@@ -115,8 +122,26 @@ class MainActivity : AbcvlibActivity() {
         publisherManager = PublisherManager()
         val batteryData = BatteryData.Builder(this, publisherManager).build()
         val wheelData = WheelData.Builder(this, publisherManager).build()
+        wheelData.addSubscriber(this)
         setSerialCommManager(SerialCommManager(usbSerial, batteryData, wheelData))
         super.onSerialReady(usbSerial)
+    }
+
+    override fun onWheelDataUpdate(
+        timestamp: Long,
+        wheelCountL: Int,
+        wheelCountR: Int,
+        wheelDistanceL: Double,
+        wheelDistanceR: Double,
+        wheelSpeedInstantL: Double,
+        wheelSpeedInstantR: Double,
+        wheelSpeedBufferedL: Double,
+        wheelSpeedBufferedR: Double,
+        wheelSpeedExpAvgL: Double,
+        wheelSpeedExpAvgR: Double
+    ) {
+        latestWheelDistanceL = wheelDistanceL
+        latestWheelDistanceR = wheelDistanceR
     }
 
     public override fun onOutputsReady() {
@@ -125,21 +150,20 @@ class MainActivity : AbcvlibActivity() {
     }
 
     override fun abcvlibMainLoop() {
-        if (thumbsUpMotionActive) {
-            if (thumbsUpMotionStep < THUMBS_UP_BACKWARD_LOOPS) {
-                thumbsUpMotionStep += 1
-                outputs.setWheelOutput(-MAX_WHEEL_SPEED, -MAX_WHEEL_SPEED, false, false)
-            } else if (thumbsUpMotionStep < THUMBS_UP_TOTAL_MOTION_LOOPS) {
-                thumbsUpMotionStep += 1
-                outputs.setWheelOutput(MAX_WHEEL_SPEED, MAX_WHEEL_SPEED, false, false)
-            } else {
-                thumbsUpMotionActive = false
+        if (thumbsUpSpinActive) {
+            if (thumbsUpSpinTargetReached()) {
+                thumbsUpSpinActive = false
+                thumbsUpSpinCompleted = true
+                forcedGestureFace = THUMBS_UP_GESTURE
+                forcedGestureFaceUntilMs = SystemClock.uptimeMillis() + THUMBS_UP_DIZZY_FACE_MS
                 outputs.setWheelOutput(0f, 0f, false, false)
+            } else {
+                outputs.setWheelOutput(MAX_WHEEL_SPEED, -MAX_WHEEL_SPEED, false, false)
             }
             return
         }
 
-        if (currentKnownGesture == THUMBS_UP_GESTURE) {
+        if (currentKnownGesture == THUMBS_UP_GESTURE && thumbsUpSpinCompleted) {
             outputs.setWheelOutput(0f, 0f, false, false)
             return
         }
@@ -225,8 +249,12 @@ class MainActivity : AbcvlibActivity() {
         if (detectedKnownGesture == THUMBS_UP_GESTURE &&
             currentKnownGesture != THUMBS_UP_GESTURE
         ) {
-            thumbsUpMotionActive = true
-            thumbsUpMotionStep = 0
+            thumbsUpSpinActive = true
+            thumbsUpSpinCompleted = false
+            thumbsUpSpinStartDistanceL = latestWheelDistanceL
+            thumbsUpSpinStartDistanceR = latestWheelDistanceR
+        } else if (detectedKnownGesture != THUMBS_UP_GESTURE) {
+            thumbsUpSpinCompleted = false
         }
         currentKnownGesture = detectedKnownGesture
         stopGestureActive = detectedKnownGesture == STOP_GESTURE
@@ -251,10 +279,19 @@ class MainActivity : AbcvlibActivity() {
             null
         }
         runOnUiThread {
-            updateGestureFace(detectedKnownGesture)
+            updateGestureFace(currentFaceGesture(detectedKnownGesture))
             binding.poseOverlay.updatePose(null, input.height, input.width)
             binding.poseOverlay.updateGesture(overlayGesture)
         }
+    }
+
+    private fun currentFaceGesture(detectedKnownGesture: String?): String? {
+        if (SystemClock.uptimeMillis() < forcedGestureFaceUntilMs) {
+            return forcedGestureFace
+        }
+        forcedGestureFace = null
+        forcedGestureFaceUntilMs = 0L
+        return detectedKnownGesture
     }
 
     private fun updateGestureFace(gesture: String?) {
@@ -294,6 +331,13 @@ class MainActivity : AbcvlibActivity() {
             rightWheel = rightWheel,
             stopped = stopped
         )
+    }
+
+    private fun thumbsUpSpinTargetReached(): Boolean {
+        val leftDistance = kotlin.math.abs(latestWheelDistanceL - thumbsUpSpinStartDistanceL)
+        val rightDistance = kotlin.math.abs(latestWheelDistanceR - thumbsUpSpinStartDistanceR)
+        return leftDistance >= THUMBS_UP_SPIN_DISTANCE_MM &&
+            rightDistance >= THUMBS_UP_SPIN_DISTANCE_MM
     }
 
     private fun logMetrics(metrics: PoseMetrics) {
@@ -359,8 +403,8 @@ class MainActivity : AbcvlibActivity() {
         const val VICTORY_GESTURE = "Victory"
         const val THUMBS_UP_GESTURE = "Thumb_Up"
         const val GESTURE_SCORE_THRESHOLD = 0.6f
-        const val THUMBS_UP_BACKWARD_LOOPS = 10
-        const val THUMBS_UP_TOTAL_MOTION_LOOPS = 20
+        const val THUMBS_UP_SPIN_DISTANCE_MM = 800.0
+        const val THUMBS_UP_DIZZY_FACE_MS = 3_000L
         const val DEBUG_GESTURE_COUNT = 3
         const val TARGET_TIMEOUT_MS = 500L
         const val METRICS_LOG_INTERVAL_MS = 100L
