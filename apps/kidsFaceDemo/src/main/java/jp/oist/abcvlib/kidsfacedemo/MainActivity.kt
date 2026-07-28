@@ -259,6 +259,7 @@ class MainActivity : AbcvlibActivity() {
             when (faceGesture) {
                 LOVE_GESTURE -> R.drawable.face_love
                 STOP_GESTURE -> R.drawable.face_stop
+                VICTORY_GESTURE -> R.drawable.face_victory
                 else -> R.drawable.face_default
             }
         )
@@ -373,6 +374,7 @@ class MainActivity : AbcvlibActivity() {
         const val GESTURE_MODEL_ASSET = "gesture_recognizer.task"
         const val LOVE_GESTURE = "ILoveYou"
         const val STOP_GESTURE = "Open_Palm"
+        const val VICTORY_GESTURE = "Victory"
         const val GESTURE_SCORE_THRESHOLD = 0.6f
         const val DEBUG_GESTURE_COUNT = 3
         const val POSE_TIMEOUT_MS = 500L
@@ -384,8 +386,8 @@ class MainActivity : AbcvlibActivity() {
         const val TURN_GAIN = 0.35f
         const val MAX_FORWARD_SPEED = 0.75f
         const val MAX_WHEEL_SPEED = 1.0f
-        val KNOWN_GESTURES = setOf(LOVE_GESTURE, STOP_GESTURE)
-        val FACE_GESTURES = setOf(LOVE_GESTURE, STOP_GESTURE)
+        val KNOWN_GESTURES = setOf(LOVE_GESTURE, STOP_GESTURE, VICTORY_GESTURE)
+        val FACE_GESTURES = setOf(LOVE_GESTURE, STOP_GESTURE, VICTORY_GESTURE)
         const val LEFT_FOOT_INDEX = 31
         const val RIGHT_FOOT_INDEX = 32
     }
