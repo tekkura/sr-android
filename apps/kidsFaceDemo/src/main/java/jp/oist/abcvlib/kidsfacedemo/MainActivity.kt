@@ -21,6 +21,7 @@ import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.framework.image.MediaImageBuilder
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.core.Delegate
 import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizer
@@ -85,6 +86,7 @@ class MainActivity : AbcvlibActivity() {
                 .setBaseOptions(
                     BaseOptions.builder()
                         .setModelAssetPath(POSE_MODEL_ASSET)
+                        .setDelegate(Delegate.GPU)
                         .build()
                 )
                 .setRunningMode(RunningMode.LIVE_STREAM)
@@ -95,20 +97,22 @@ class MainActivity : AbcvlibActivity() {
                 .setErrorListener { error -> Log.e(TAG, "PoseLandmarker error", error) }
                 .build()
         )
-        gestureRecognizer = GestureRecognizer.createFromOptions(
-            this,
-            GestureRecognizer.GestureRecognizerOptions.builder()
-                .setBaseOptions(
-                    BaseOptions.builder()
-                        .setModelAssetPath(GESTURE_MODEL_ASSET)
-                        .build()
-                )
-                .setRunningMode(RunningMode.LIVE_STREAM)
-                .setNumHands(1)
-                .setResultListener(::onGestureResult)
-                .setErrorListener { error -> Log.e(TAG, "GestureRecognizer error", error) }
-                .build()
-        )
+        if (ENABLE_GESTURE_RECOGNITION) {
+            gestureRecognizer = GestureRecognizer.createFromOptions(
+                this,
+                GestureRecognizer.GestureRecognizerOptions.builder()
+                    .setBaseOptions(
+                        BaseOptions.builder()
+                            .setModelAssetPath(GESTURE_MODEL_ASSET)
+                            .build()
+                    )
+                    .setRunningMode(RunningMode.LIVE_STREAM)
+                    .setNumHands(1)
+                    .setResultListener(::onGestureResult)
+                    .setErrorListener { error -> Log.e(TAG, "GestureRecognizer error", error) }
+                    .build()
+            )
+        }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED
@@ -224,7 +228,9 @@ class MainActivity : AbcvlibActivity() {
             .build()
         val timestampMs = SystemClock.uptimeMillis()
         poseLandmarker?.detectAsync(mpImage, options, timestampMs)
-        gestureRecognizer?.recognizeAsync(mpImage, options, timestampMs)
+        if (ENABLE_GESTURE_RECOGNITION) {
+            gestureRecognizer?.recognizeAsync(mpImage, options, timestampMs)
+        }
         imageProxy.close()
     }
 
@@ -232,7 +238,7 @@ class MainActivity : AbcvlibActivity() {
         val landmarks = result.landmarks().firstOrNull()
         val posePoints = landmarks?.toPosePoints()
         val metrics = if (posePoints == null) PoseMetrics.EMPTY else poseMetrics(posePoints)
-        val overlayPose = posePoints?.let { toOverlayPose(it, metrics) }
+        val overlayPose = posePoints?.let { toOverlayPose(it, landmarks, metrics) }
         latestMetrics = metrics
         latestPoseAtMs = if (metrics.person) SystemClock.uptimeMillis() else 0L
         logMetrics(metrics)
@@ -297,9 +303,11 @@ class MainActivity : AbcvlibActivity() {
 
     private fun toOverlayPose(
         posePoints: PosePoints,
+        landmarks: List<NormalizedLandmark>,
         metrics: PoseMetrics
     ): OverlayPose {
         return OverlayPose(
+            landmarks = landmarks.map { it.toPosePoint().toNormalizedPoint() },
             leftFoot = posePoints.leftFoot.toNormalizedPoint(),
             rightFoot = posePoints.rightFoot.toNormalizedPoint(),
             metrics = metrics
@@ -400,7 +408,8 @@ class MainActivity : AbcvlibActivity() {
 
     private companion object {
         const val TAG = "KidsFaceDemo"
-        const val POSE_MODEL_ASSET = "pose_landmarker_lite.task"
+        const val ENABLE_GESTURE_RECOGNITION = false
+        const val POSE_MODEL_ASSET = "pose_landmarker_full.task"
         const val GESTURE_MODEL_ASSET = "gesture_recognizer.task"
         const val LOVE_GESTURE = "ILoveYou"
         const val STOP_GESTURE = "Open_Palm"

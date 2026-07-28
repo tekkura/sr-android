@@ -27,6 +27,10 @@ class PoseOverlayView @JvmOverloads constructor(
         color = Color.rgb(3, 169, 244)
         style = Paint.Style.FILL
     }
+    private val posePointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
+    }
     private val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(233, 30, 99)
         style = Paint.Style.FILL
@@ -68,6 +72,19 @@ class PoseOverlayView @JvmOverloads constructor(
     }
 
     private fun drawPose(canvas: Canvas, pose: OverlayPose) {
+        POSE_CONNECTIONS.forEach { connection ->
+            val start = pose.landmarks.getOrNull(connection.first)?.toViewPoint()
+            val end = pose.landmarks.getOrNull(connection.second)?.toViewPoint()
+            if (start != null && end != null) {
+                canvas.drawLine(start.x, start.y, end.x, end.y, linePaint)
+            }
+        }
+
+        pose.landmarks.forEach { landmark ->
+            val point = landmark.toViewPoint()
+            canvas.drawCircle(point.x, point.y, POSE_POINT_RADIUS, posePointPaint)
+        }
+
         val leftFoot = pose.leftFoot.toViewPoint()
         val rightFoot = pose.rightFoot.toViewPoint()
 
@@ -130,11 +147,49 @@ class PoseOverlayView @JvmOverloads constructor(
 
     companion object {
         private const val POINT_RADIUS = 18f
+        private const val POSE_POINT_RADIUS = 8f
         private const val HAND_POINT_RADIUS = 10f
+        private val POSE_CONNECTIONS = listOf(
+            0 to 1,
+            0 to 4,
+            1 to 2,
+            2 to 3,
+            3 to 7,
+            4 to 5,
+            5 to 6,
+            6 to 8,
+            9 to 10,
+            11 to 12,
+            11 to 13,
+            12 to 14,
+            13 to 15,
+            14 to 16,
+            15 to 17,
+            15 to 19,
+            15 to 21,
+            16 to 18,
+            16 to 20,
+            16 to 22,
+            17 to 19,
+            18 to 20,
+            23 to 24,
+            23 to 25,
+            24 to 26,
+            25 to 27,
+            26 to 28,
+            27 to 29,
+            28 to 30,
+            28 to 32,
+            29 to 31,
+            30 to 32,
+            11 to 23,
+            12 to 24
+        )
     }
 }
 
 data class OverlayPose(
+    val landmarks: List<NormalizedPoint>,
     val leftFoot: NormalizedPoint,
     val rightFoot: NormalizedPoint,
     val metrics: PoseMetrics
