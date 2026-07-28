@@ -35,6 +35,10 @@ class PoseOverlayView @JvmOverloads constructor(
         color = Color.rgb(233, 30, 99)
         style = Paint.Style.FILL
     }
+    private val targetPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.rgb(255, 193, 7)
+        style = Paint.Style.FILL
+    }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textSize = 44f
@@ -63,9 +67,9 @@ class PoseOverlayView @JvmOverloads constructor(
         super.onDraw(canvas)
         updateImageDest()
         val pose = this.pose
-        if (pose == null) {
-            canvas.drawText("No pose", 32f, 64f, textPaint)
-        } else {
+        if (pose == null && gesture == null) {
+            canvas.drawText("No target", 32f, 64f, textPaint)
+        } else if (pose != null) {
             drawPose(canvas, pose)
         }
         drawGesture(canvas)
@@ -114,10 +118,26 @@ class PoseOverlayView @JvmOverloads constructor(
             val point = landmark.toViewPoint()
             canvas.drawCircle(point.x, point.y, HAND_POINT_RADIUS, handPaint)
         }
+        if (gesture.metrics.targetVisible) {
+            val target = NormalizedPoint(
+                gesture.metrics.targetX,
+                gesture.metrics.targetY
+            ).toViewPoint()
+            canvas.drawCircle(target.x, target.y, POINT_RADIUS, targetPaint)
+        }
         canvas.drawText(
             "gesture=${gesture.label}",
             32f,
             120f,
+            textPaint
+        )
+        canvas.drawText(
+            "target=${"%.2f".format(gesture.metrics.targetX)}, " +
+                "${"%.2f".format(gesture.metrics.targetY)} " +
+                "wheels=${"%.2f".format(gesture.metrics.leftWheel)}, " +
+                "${"%.2f".format(gesture.metrics.rightWheel)}",
+            32f,
+            176f,
             textPaint
         )
     }
@@ -202,7 +222,8 @@ data class NormalizedPoint(
 
 data class OverlayGesture(
     val label: String,
-    val landmarks: List<NormalizedPoint>
+    val landmarks: List<NormalizedPoint>,
+    val metrics: PoseMetrics
 )
 
 private data class ViewPoint(
