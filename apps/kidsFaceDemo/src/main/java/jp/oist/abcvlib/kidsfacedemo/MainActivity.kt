@@ -34,6 +34,7 @@ import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.kidsfacedemo.databinding.ActivityMainBinding
 import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.UsbSerial
+import java.util.ArrayDeque
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -42,10 +43,11 @@ class MainActivity : AbcvlibActivity() {
     private lateinit var imageExecutor: ExecutorService
     private lateinit var publisherManager: PublisherManager
     private var poseLandmarker: PoseLandmarker? = null
+    private val gestureSamples = ArrayDeque<String?>()
     private var gestureRecognizer: GestureRecognizer? = null
     private var lastMetricsLogAtMs = 0L
     private var debugViewVisible = false
-    private var loveFaceVisible = false
+    private var currentGestureFace: String? = null
     @Volatile private var latestMetrics = PoseMetrics.EMPTY
     @Volatile private var latestPoseAtMs = 0L
 
@@ -229,15 +231,32 @@ class MainActivity : AbcvlibActivity() {
                 gesture.categoryName() == LOVE_GESTURE && gesture.score() >= LOVE_GESTURE_SCORE
             }
         }
-        if (loveDetected && !loveFaceVisible) {
-            loveFaceVisible = true
-            runOnUiThread {
-                binding.faceView.setImageResource(R.drawable.face_love)
-                binding.poseOverlay.updateGesture(overlayGesture)
-            }
-        } else {
-            runOnUiThread { binding.poseOverlay.updateGesture(overlayGesture) }
+        val stableGesture = stableGesture(if (loveDetected) LOVE_GESTURE else null)
+        runOnUiThread {
+            updateGestureFace(stableGesture)
+            binding.poseOverlay.updateGesture(overlayGesture)
         }
+    }
+
+    private fun stableGesture(gesture: String?): String? {
+        gestureSamples.addLast(gesture)
+        while (gestureSamples.size > GESTURE_SAMPLE_COUNT) {
+            gestureSamples.removeFirst()
+        }
+        val knownGestures = gestureSamples.filterNotNull().distinct()
+        return knownGestures.firstOrNull { knownGesture ->
+            gestureSamples.count { it == knownGesture } >= GESTURE_REQUIRED_SAMPLES
+        }
+    }
+
+    private fun updateGestureFace(gesture: String?) {
+        if (gesture == currentGestureFace) {
+            return
+        }
+        currentGestureFace = gesture
+        binding.faceView.setImageResource(
+            if (gesture == LOVE_GESTURE) R.drawable.face_love else R.drawable.face_default
+        )
     }
 
     private fun toOverlayPose(
@@ -370,6 +389,8 @@ class MainActivity : AbcvlibActivity() {
         const val GESTURE_MODEL_ASSET = "gesture_recognizer.task"
         const val LOVE_GESTURE = "ILoveYou"
         const val LOVE_GESTURE_SCORE = 0.6f
+        const val GESTURE_SAMPLE_COUNT = 10
+        const val GESTURE_REQUIRED_SAMPLES = 8
         const val DEBUG_GESTURE_COUNT = 3
         const val POSE_TIMEOUT_MS = 500L
         const val METRICS_LOG_INTERVAL_MS = 100L
