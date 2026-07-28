@@ -367,8 +367,8 @@ class MainActivity : AbcvlibActivity() {
         const val MIN_VISIBILITY = 0.4f
         const val TARGET_GESTURE_Y = 0.1f
         const val CENTER_DEADBAND = 0.08f
-        const val FORWARD_GAIN = 1.35f
-        const val TURN_GAIN = 0.35f
+        const val FORWARD_GAIN = 0.85f
+        const val TURN_GAIN = 0.20f
         const val MAX_FORWARD_SPEED = 0.75f
         const val MAX_WHEEL_SPEED = 1.0f
         val KNOWN_GESTURES = setOf(
