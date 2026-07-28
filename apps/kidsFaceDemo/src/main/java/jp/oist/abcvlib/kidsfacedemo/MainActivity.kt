@@ -174,6 +174,8 @@ class MainActivity : AbcvlibActivity() {
             rightShoulder = posePoints.rightShoulder.toNormalizedPoint(),
             leftWrist = posePoints.leftWrist.toNormalizedPoint(),
             rightWrist = posePoints.rightWrist.toNormalizedPoint(),
+            leftAnkle = posePoints.leftAnkle.toNormalizedPoint(),
+            rightAnkle = posePoints.rightAnkle.toNormalizedPoint(),
             metrics = metrics
         )
     }
@@ -183,11 +185,16 @@ class MainActivity : AbcvlibActivity() {
         val rightShoulder = posePoints.rightShoulder
         val leftWrist = posePoints.leftWrist
         val rightWrist = posePoints.rightWrist
+        val leftAnkle = posePoints.leftAnkle
+        val rightAnkle = posePoints.rightAnkle
         val leftRaised = leftWrist.isVisible && leftWrist.y > leftShoulder.y + RAISED_MARGIN
         val rightRaised = rightWrist.isVisible && rightWrist.y > rightShoulder.y + RAISED_MARGIN
-        val stopped = rightRaised || !leftWrist.isVisible
-        val turn = leftWrist.x.deadband(CENTER_DEADBAND) * TURN_GAIN
-        val forward = ((leftWrist.y - TARGET_HAND_Y) * FORWARD_GAIN)
+        val targetVisible = leftAnkle.isVisible && rightAnkle.isVisible
+        val targetX = (leftAnkle.x + rightAnkle.x) / 2f
+        val targetY = (leftAnkle.y + rightAnkle.y) / 2f
+        val stopped = rightRaised || !targetVisible
+        val turn = targetX.deadband(CENTER_DEADBAND) * TURN_GAIN
+        val forward = ((targetY - TARGET_ANKLE_Y) * FORWARD_GAIN)
             .coerceIn(0f, MAX_FORWARD_SPEED)
         val leftWheel = if (stopped) 0f else (forward + turn).coerceIn(-MAX_WHEEL_SPEED, MAX_WHEEL_SPEED)
         val rightWheel = if (stopped) 0f else (forward - turn).coerceIn(-MAX_WHEEL_SPEED, MAX_WHEEL_SPEED)
@@ -196,8 +203,8 @@ class MainActivity : AbcvlibActivity() {
             person = true,
             leftRaised = leftRaised,
             rightRaised = rightRaised,
-            targetX = leftWrist.x,
-            targetY = leftWrist.y,
+            targetX = targetX,
+            targetY = targetY,
             leftWheel = leftWheel,
             rightWheel = rightWheel,
             stopped = stopped
@@ -239,7 +246,9 @@ class MainActivity : AbcvlibActivity() {
             leftShoulder = this[LEFT_SHOULDER].toPosePoint(),
             rightShoulder = this[RIGHT_SHOULDER].toPosePoint(),
             leftWrist = this[LEFT_WRIST].toPosePoint(),
-            rightWrist = this[RIGHT_WRIST].toPosePoint()
+            rightWrist = this[RIGHT_WRIST].toPosePoint(),
+            leftAnkle = this[LEFT_ANKLE].toPosePoint(),
+            rightAnkle = this[RIGHT_ANKLE].toPosePoint()
         )
     }
 
@@ -266,7 +275,9 @@ class MainActivity : AbcvlibActivity() {
         val leftShoulder: PosePoint,
         val rightShoulder: PosePoint,
         val leftWrist: PosePoint,
-        val rightWrist: PosePoint
+        val rightWrist: PosePoint,
+        val leftAnkle: PosePoint,
+        val rightAnkle: PosePoint
     )
 
     private data class PosePoint(
@@ -282,15 +293,17 @@ class MainActivity : AbcvlibActivity() {
         const val METRICS_LOG_INTERVAL_MS = 100L
         const val RAISED_MARGIN = 0.03f
         const val MIN_VISIBILITY = 0.4f
-        const val TARGET_HAND_Y = 0.1f
+        const val TARGET_ANKLE_Y = 0.1f
         const val CENTER_DEADBAND = 0.08f
-        const val FORWARD_GAIN = 0.85f
-        const val TURN_GAIN = 0.30f
+        const val FORWARD_GAIN = 1.35f
+        const val TURN_GAIN = 0.35f
         const val MAX_FORWARD_SPEED = 0.75f
         const val MAX_WHEEL_SPEED = 1.0f
         const val LEFT_SHOULDER = 11
         const val RIGHT_SHOULDER = 12
         const val LEFT_WRIST = 15
         const val RIGHT_WRIST = 16
+        const val LEFT_ANKLE = 27
+        const val RIGHT_ANKLE = 28
     }
 }
