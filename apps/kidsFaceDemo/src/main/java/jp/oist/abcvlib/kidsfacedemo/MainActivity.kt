@@ -1,5 +1,7 @@
 package jp.oist.abcvlib.kidsfacedemo
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -40,6 +42,7 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageExecutor: ExecutorService
     private lateinit var publisherManager: PublisherManager
+    private var dizzyFaceAnimator: AnimatorSet? = null
     private var gestureRecognizer: GestureRecognizer? = null
     private var lastMetricsLogAtMs = 0L
     private var debugViewVisible = false
@@ -156,6 +159,7 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
                 thumbsUpSpinCompleted = true
                 forcedGestureFace = THUMBS_UP_GESTURE
                 forcedGestureFaceUntilMs = SystemClock.uptimeMillis() + THUMBS_UP_DIZZY_FACE_MS
+                runOnUiThread { startDizzyFaceAnimation() }
                 outputs.setWheelOutput(0f, 0f, false, false)
             } else {
                 outputs.setWheelOutput(MAX_WHEEL_SPEED, -MAX_WHEEL_SPEED, false, false)
@@ -300,6 +304,9 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
             return
         }
         currentGestureFace = faceGesture
+        if (faceGesture != THUMBS_UP_GESTURE && dizzyFaceAnimator?.isRunning == true) {
+            stopDizzyFaceAnimation()
+        }
         binding.faceView.setImageResource(
             when (faceGesture) {
                 LOVE_GESTURE -> R.drawable.face_love
@@ -309,6 +316,59 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
                 else -> R.drawable.face_default
             }
         )
+    }
+
+    private fun startDizzyFaceAnimation() {
+        dizzyFaceAnimator?.cancel()
+        binding.faceView.rotation = 0f
+        binding.faceView.scaleX = 1f
+        binding.faceView.scaleY = 1f
+
+        val rotation = ObjectAnimator.ofFloat(
+            binding.faceView,
+            View.ROTATION,
+            0f,
+            -8f,
+            8f,
+            -6f,
+            6f,
+            -4f,
+            4f,
+            -2f,
+            2f,
+            0f
+        )
+        val scaleX = ObjectAnimator.ofFloat(
+            binding.faceView,
+            View.SCALE_X,
+            1f,
+            1.06f,
+            0.98f,
+            1.04f,
+            1f
+        )
+        val scaleY = ObjectAnimator.ofFloat(
+            binding.faceView,
+            View.SCALE_Y,
+            1f,
+            1.06f,
+            0.98f,
+            1.04f,
+            1f
+        )
+        dizzyFaceAnimator = AnimatorSet().apply {
+            duration = THUMBS_UP_DIZZY_FACE_MS
+            playTogether(rotation, scaleX, scaleY)
+            start()
+        }
+    }
+
+    private fun stopDizzyFaceAnimation() {
+        dizzyFaceAnimator?.cancel()
+        dizzyFaceAnimator = null
+        binding.faceView.rotation = 0f
+        binding.faceView.scaleX = 1f
+        binding.faceView.scaleY = 1f
     }
 
     private fun gestureMetrics(gesturePoints: List<NormalizedPoint>): PoseMetrics {
@@ -384,6 +444,7 @@ class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
     }
 
     override fun onDestroy() {
+        stopDizzyFaceAnimation()
         gestureRecognizer?.close()
         imageExecutor.shutdown()
         super.onDestroy()
