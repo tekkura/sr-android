@@ -8,6 +8,13 @@
     <string name="rightWheelHeader">Right Wheel Count: </string>
     <string name="soundDataHeader">Sound Data: </string>
     <string name="frameRateHeader">Frame Rate: </string>
+    <string name="tiltGaugeLabel">Tilt</string>
+    <string name="tiltGaugeUnit">deg</string>
+    <string name="angularVelocityGaugeLabel">Angular velocity</string>
+    <string name="angularVelocityGaugeUnit">deg/s</string>
+    <string name="leftWheelGaugeLabel">Left wheel</string>
+    <string name="rightWheelGaugeLabel">Right wheel</string>
+    <string name="wheelGaugeUnit">mm/s</string>
     <string name="leftWheelHeaderText">Left Wheel</string>
     <string name="rightWheelHeaderText">Right Wheel</string>
     <string name="coilVoltageTextValue">0.00</string>

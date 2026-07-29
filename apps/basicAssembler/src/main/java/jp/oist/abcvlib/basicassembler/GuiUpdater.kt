@@ -79,10 +79,31 @@ class GuiUpdater(
     var frameRateString: String = ""
 
     init {
-        binding.tiltGauge.configure("Tilt", "deg", -45.0, 45.0)
-        binding.angularVelocityGauge.configure("Angular velocity", "deg/s", -360.0, 360.0)
-        binding.leftWheelGauge.configure("Left wheel", "mm/s", -2000.0, 2000.0)
-        binding.rightWheelGauge.configure("Right wheel", "mm/s", -2000.0, 2000.0)
+        val context = binding.root.context
+        binding.tiltGauge.configure(
+            context.getString(R.string.tiltGaugeLabel),
+            context.getString(R.string.tiltGaugeUnit),
+            -45.0,
+            45.0
+        )
+        binding.angularVelocityGauge.configure(
+            context.getString(R.string.angularVelocityGaugeLabel),
+            context.getString(R.string.angularVelocityGaugeUnit),
+            -360.0,
+            360.0
+        )
+        binding.leftWheelGauge.configure(
+            context.getString(R.string.leftWheelGaugeLabel),
+            context.getString(R.string.wheelGaugeUnit),
+            -2000.0,
+            2000.0
+        )
+        binding.rightWheelGauge.configure(
+            context.getString(R.string.rightWheelGaugeLabel),
+            context.getString(R.string.wheelGaugeUnit),
+            -2000.0,
+            2000.0
+        )
     }
 
     fun displayGUIValues() {
@@ -154,24 +175,33 @@ class GuiUpdater(
                     "Skipping wheel dashboard update because a wheel data series is empty"
                 )
             } else {
+                val leftSamples = mutableListOf<LineGraphView.Sample>()
                 for (i in 0 until leftSampleCount) {
-                    binding.leftWheelGraph.addSample(
-                        leftCounts[i],
-                        leftDistances[i],
-                        leftSpeedsInstant[i],
-                        leftSpeedsBuffered[i],
-                        leftSpeedsExpAvg[i]
+                    leftSamples.add(
+                        LineGraphView.Sample(
+                            leftCounts[i],
+                            leftDistances[i],
+                            leftSpeedsInstant[i],
+                            leftSpeedsBuffered[i],
+                            leftSpeedsExpAvg[i]
+                        )
                     )
                 }
+                binding.leftWheelGraph.addSamples(leftSamples)
+
+                val rightSamples = mutableListOf<LineGraphView.Sample>()
                 for (i in 0 until rightSampleCount) {
-                    binding.rightWheelGraph.addSample(
-                        rightCounts[i],
-                        rightDistances[i],
-                        rightSpeedsInstant[i],
-                        rightSpeedsBuffered[i],
-                        rightSpeedsExpAvg[i]
+                    rightSamples.add(
+                        LineGraphView.Sample(
+                            rightCounts[i],
+                            rightDistances[i],
+                            rightSpeedsInstant[i],
+                            rightSpeedsBuffered[i],
+                            rightSpeedsExpAvg[i]
+                        )
                     )
                 }
+                binding.rightWheelGraph.addSamples(rightSamples)
 
                 val latestLeft = leftSampleCount - 1
                 val latestRight = rightSampleCount - 1

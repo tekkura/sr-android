@@ -15,6 +15,14 @@ class LineGraphView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
+    data class Sample(
+        val count: Int,
+        val distance: Double,
+        val speedInstant: Double,
+        val speedBuffered: Double,
+        val speedExpAvg: Double
+    )
+
     private val samples = ArrayDeque<FloatArray>()
     private val seriesLabels = listOf(
         "Count",
@@ -50,17 +58,36 @@ class LineGraphView @JvmOverloads constructor(
         speedBuffered: Double,
         speedExpAvg: Double
     ) {
-        samples.addLast(
-            floatArrayOf(
-                count.toFloat(),
-                distance.toFloat(),
-                speedInstant.toFloat(),
-                speedBuffered.toFloat(),
-                speedExpAvg.toFloat()
+        addSamples(
+            listOf(
+                Sample(
+                    count,
+                    distance,
+                    speedInstant,
+                    speedBuffered,
+                    speedExpAvg
+                )
             )
         )
-        while (samples.size > MAX_SAMPLES) {
-            samples.removeFirst()
+    }
+
+    fun addSamples(newSamples: List<Sample>) {
+        if (newSamples.isEmpty()) {
+            return
+        }
+        for (sample in newSamples) {
+            samples.addLast(
+                floatArrayOf(
+                    sample.count.toFloat(),
+                    sample.distance.toFloat(),
+                    sample.speedInstant.toFloat(),
+                    sample.speedBuffered.toFloat(),
+                    sample.speedExpAvg.toFloat()
+                )
+            )
+            while (samples.size > MAX_SAMPLES) {
+                samples.removeFirst()
+            }
         }
         invalidate()
     }
