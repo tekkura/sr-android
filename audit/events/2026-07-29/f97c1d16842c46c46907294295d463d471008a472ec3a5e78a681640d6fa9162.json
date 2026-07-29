@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-29T11:13:27Z",
+  "event_ts": "2026-07-29T11:13:11Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "30446711908",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 281,
+    "title": "Keep existing model assets during preBuild",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/281",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3673619800,
+    "html_url": "https://github.com/tekkura/sr-android/pull/281#discussion_r3673619800",
+    "created_at": "2026-07-29T11:13:10Z",
+    "updated_at": "2026-07-29T11:13:11Z",
+    "body": "Fixed in 1cbd447286ab73ef9189ce37b3892790904cb27a.\n\nI removed the `MicrophoneData` startup-handling changes from this PR, so this review concern no longer applies to the current diff. The PR is now scoped to the model-download overwrite behavior only.\n\nWe moved the broader startup-failure design to #319 so microphone, camera, and other publisher failures can be handled at the publisher-manager level instead of as a microphone-only special case.\n"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/281#discussion_r3673619800",
+  "event_id": "f97c1d16842c46c46907294295d463d471008a472ec3a5e78a681640d6fa9162"
+}
