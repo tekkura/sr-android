@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-07-29T10:24:21Z",
+  "event_ts": "2026-07-29T10:24:02Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issue_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "30443521012",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 263,
+    "title": "Add smoke test for unavailable microphone during publisher startup",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/263",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": {
+    "id": 5116456848,
+    "html_url": "https://github.com/tekkura/sr-android/issues/263#issuecomment-5116456848",
+    "created_at": "2026-07-29T10:24:02Z",
+    "updated_at": "2026-07-29T10:24:02Z",
+    "body": "Superseded by #319.\n\nThe microphone unavailable case described here is still important, but it should be handled as one acceptance test of a generalized publisher startup failure policy rather than as a microphone-only patch.\n"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/263#issuecomment-5116456848",
+  "event_id": "242e9d70658d89f00168c846a5197a977c02189a6d23c5aa86bfc2e536663672"
+}
