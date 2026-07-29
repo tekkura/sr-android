@@ -79,7 +79,7 @@ class CircularGaugeView @JvmOverloads constructor(
         trackPaint.strokeWidth = strokeWidth
         valuePaint.strokeWidth = strokeWidth
         tickPaint.strokeWidth = strokeWidth * 0.18f
-        textPaint.textSize = size * 0.16f
+        textPaint.textSize = size * 0.1f
         labelPaint.textSize = size * 0.07f
 
         arcBounds.set(
