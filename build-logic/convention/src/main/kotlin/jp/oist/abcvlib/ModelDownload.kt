@@ -22,7 +22,7 @@ object ModelDownload {
                 tasks.register<Download>("download_${name.replace(".", "_")}") {
                     src(url)
                     dest("$assetDir/$name")
-                    overwrite(name == "model.tflite")
+                    overwrite(false)
                 }
             }
 
