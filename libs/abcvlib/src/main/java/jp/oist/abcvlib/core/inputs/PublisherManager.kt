@@ -5,6 +5,7 @@ import android.os.Looper
 import jp.oist.abcvlib.util.Logger
 import java.util.concurrent.Executors
 import java.util.concurrent.Phaser
+import java.util.concurrent.TimeUnit
 
 /**
  * Manages the permission lifecycle of a group of publishers
@@ -14,20 +15,32 @@ import java.util.concurrent.Phaser
  * phase 1 = initialization of publisher object streams/threads
  * phase 2 = initialize publisher objects (i.e. initialize recording data)
  */
-class PublisherManager {
+class PublisherManager(
+    private val permissionTimeoutMillis: Long = DEFAULT_PERMISSION_TIMEOUT_MILLIS
+) {
     private val registrations = LinkedHashMap<Publisher<*>, PublisherRegistration>()
     val publishers: ArrayList<Publisher<*>>
         get() = synchronized(this) { ArrayList(registrations.keys) }
 
     private val phaser = Phaser(1)
     private val initializingPublisher = ThreadLocal<Publisher<*>>()
+    private val permissionTimeoutExecutor = Executors.newSingleThreadScheduledExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val startupListeners = ArrayList<PublisherManagerStartupListener>()
     private val TAG: String = javaClass.name
     private var registrationsLocked = false
+    private var initializationStarted = false
+    private var startupStarted = false
 
     @Volatile
     var startupResult: PublisherManagerStartupResult? = null
         private set
+
+    init {
+        require(permissionTimeoutMillis > 0) {
+            "permissionTimeoutMillis must be positive"
+        }
+    }
 
     //========================================Phase 0===============================================
     @Synchronized
@@ -67,8 +80,31 @@ class PublisherManager {
         }.requirement
     }
 
-    fun onPublisherPermissionsGranted(grantedPublisher: Publisher<*>) { // Accept the publisher
+    @Synchronized
+    fun onPublisherPermissionsGranted(grantedPublisher: Publisher<*>) {
+        val registration = registrations[grantedPublisher]
+        requireNotNull(registration) {
+            "Publisher is not registered with this manager"
+        }
+        if (registration.permissionResolved) return
+
+        registration.permissionResolved = true
         Logger.i(TAG, "Publisher permissions granted for: " + grantedPublisher.javaClass.name)
+        phaser.arriveAndDeregister()
+    }
+
+    @Synchronized
+    internal fun onPublisherPermissionsDenied(failure: PublisherStartupFailure) {
+        val registration = registrations[failure.publisher]
+        requireNotNull(registration) {
+            "Publisher is not registered with this manager"
+        }
+
+        if (registration.permissionResolved) return
+
+        registration.permissionResolved = true
+        registration.failure = failure
+        failure.publisher.markFailed()
         phaser.arriveAndDeregister()
     }
 
@@ -125,17 +161,44 @@ class PublisherManager {
     fun initializePublishers() {
         synchronized(this) {
             registrationsLocked = true
+            if (initializationStarted) return
+
+            initializationStarted = true
         }
+
+        val permissionTimeout = permissionTimeoutExecutor.schedule(
+            ::failPendingPermissions,
+            permissionTimeoutMillis,
+            TimeUnit.MILLISECONDS
+        )
 
         phaser.arrive()
         Logger.i(TAG, "Starting initializePublishers with " + publishers.size + " publishers")
         Logger.i(TAG, "Waiting on all publishers to initialize before starting")
         phaser.awaitAdvance(0) // Waits to initialize if not finished with initPhase
+        permissionTimeout.cancel(false)
+        permissionTimeoutExecutor.shutdown()
         Logger.i(TAG, "Phase 0 complete, starting publisher initialization")
-        for (publisher in publishers) {
+        for (publisher in registrations.filterValues { it.failure == null }.keys) {
             Logger.i(TAG, "Initializing publisher: " + publisher.javaClass.name)
             initialize(publisher)
         }
+    }
+
+    @Synchronized
+    private fun failPendingPermissions() {
+        registrations
+            .filterValues { !it.permissionResolved }
+            .forEach { (publisher, registration) ->
+                val failure = PublisherStartupFailure(
+                    publisher,
+                    "Timed out waiting for publisher permissions"
+                )
+                registration.permissionResolved = true
+                registration.failure = failure
+                publisher.markFailed()
+                phaser.arriveAndDeregister()
+            }
     }
 
     //========================================Phase 2===============================================
@@ -148,6 +211,22 @@ class PublisherManager {
     }
 
     private fun startPublishersInternal(listener: PublisherManagerStartupListener?) {
+        val shouldStart = synchronized(this) {
+            val result = startupResult
+            if (result != null) {
+                listener?.let { mainHandler.post { it.onStartupResult(result) } }
+                false
+            } else {
+                listener?.let(startupListeners::add)
+                val prev = startupStarted
+                startupStarted = true
+
+                !prev
+            }
+        }
+
+        if (!shouldStart) return
+
         phaser.arrive()
         val executor = Executors.newSingleThreadExecutor()
         executor.submit {
@@ -173,10 +252,12 @@ class PublisherManager {
                 PublisherManagerStartupResult.Failure(requiredFailures, optionalFailures)
             }
 
-            startupResult = result
-            listener?.let {
-                mainHandler.post { it.onStartupResult(result) }
+            val listeners = synchronized(this) {
+                startupResult = result
+                startupListeners.toList().also { startupListeners.clear() }
             }
+
+            listeners.forEach { mainHandler.post { it.onStartupResult(result) } }
 
             executor.shutdown() // Shut down the executor after the task is completed
         }
@@ -203,7 +284,12 @@ class PublisherManager {
 
     private data class PublisherRegistration(
         var requirement: PublisherRequirement = PublisherRequirement.REQUIRED,
+        var permissionResolved: Boolean = false,
         var completed: Boolean = false,
         var failure: PublisherStartupFailure? = null
     )
+
+    private companion object {
+        const val DEFAULT_PERMISSION_TIMEOUT_MILLIS = 30_000L
+    }
 }
