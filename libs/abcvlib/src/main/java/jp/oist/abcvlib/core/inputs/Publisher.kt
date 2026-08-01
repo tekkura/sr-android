@@ -110,6 +110,13 @@ abstract class Publisher<T : Subscriber>(
             TAG,
             "Permission Error: Unable to get the following permissions: $deniedPermissions"
         )
+
+        publisherManager.onPublisherPermissionsDenied(
+            PublisherStartupFailure(
+                this,
+                "Unable to get the following permissions: $deniedPermissions"
+            )
+        )
     }
 
     /**
@@ -150,5 +157,9 @@ abstract class Publisher<T : Subscriber>(
 
     internal fun beginInitialization() {
         state = PublisherState.INITIALIZING
+    }
+
+    internal fun markFailed() {
+        state = PublisherState.FAILED
     }
 }

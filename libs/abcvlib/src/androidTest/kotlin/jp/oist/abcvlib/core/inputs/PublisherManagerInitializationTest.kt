@@ -14,13 +14,25 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PublisherManagerInitializationTest {
     @Test
+    fun initializePublishersCanBeCalledTwice() {
+        val manager = PublisherManager()
+        val publisher = TestPublisher(context, manager, shouldFail = false)
+
+        manager.initializePublishers()
+        manager.initializePublishers()
+        val result = startAndAwait(manager)
+
+        assertTrue(result is PublisherManagerStartupResult.Success)
+        assertEquals(1, publisher.initializationCount)
+    }
+
+    @Test
     fun capturedInitializationCallbackWorksAsynchronously() {
         val manager = PublisherManager()
         AsyncPublisher(context, manager)
 
         manager.initializePublishers()
-        manager.startPublishers()
-        val result = awaitStartupResult(manager)
+        val result = startAndAwait(manager)
 
         assertTrue(result is PublisherManagerStartupResult.Success)
     }
@@ -40,18 +52,47 @@ class PublisherManagerInitializationTest {
     }
 
     @Test
+    fun startPublishersCanBeCalledTwiceWhileInitializationIsPending() {
+        val manager = PublisherManager()
+        val publisher = ControlledAsyncPublisher(context, manager)
+        val firstResult = CountDownLatch(1)
+        val secondResult = CountDownLatch(1)
+
+        manager.initializePublishers()
+        manager.startPublishers(PublisherManagerStartupListener { firstResult.countDown() })
+        manager.startPublishers(PublisherManagerStartupListener { secondResult.countDown() })
+
+        assertFalse(firstResult.await(200, TimeUnit.MILLISECONDS))
+        assertFalse(secondResult.await(200, TimeUnit.MILLISECONDS))
+        publisher.completeInitialization.countDown()
+        assertTrue(firstResult.await(3, TimeUnit.SECONDS))
+        assertTrue(secondResult.await(3, TimeUnit.SECONDS))
+    }
+
+    @Test
     fun legacyCallbackSupportsPublishersOfTheSameClass() {
         val manager = PublisherManager()
         LegacyPublisher(context, manager, shouldFail = false)
         val failedPublisher = LegacyPublisher(context, manager, shouldFail = true)
 
         manager.initializePublishers()
-        manager.startPublishers()
-        val result = awaitStartupResult(manager)
+        val result = startAndAwait(manager)
 
         assertTrue(result is PublisherManagerStartupResult.Failure)
         val failure = (result as PublisherManagerStartupResult.Failure).requiredFailures.single()
         assertTrue(failure.publisher === failedPublisher)
+    }
+
+    @Test
+    fun permissionTimeoutBecomesRequiredFailure() {
+        val manager = PublisherManager(permissionTimeoutMillis = 100)
+        val publisher = PendingPermissionPublisher(context, manager)
+
+        manager.initializePublishers()
+        val result = startAndAwait(manager)
+
+        assertTrue(result is PublisherManagerStartupResult.Failure)
+        assertEquals(PublisherState.FAILED, publisher.getState())
     }
 
     @Test
@@ -111,9 +152,13 @@ class PublisherManagerInitializationTest {
         publisherManager: PublisherManager,
         private val shouldFail: Boolean
     ) : Publisher<Subscriber>(context, publisherManager) {
+        var initializationCount = 0
+            private set
+
         override fun getRequiredPermissions() = arrayListOf<String>()
 
         override fun start() {
+            initializationCount++
             if (shouldFail) {
                 reportInitializationFailed("Test failure")
                 return
@@ -154,6 +199,24 @@ class PublisherManagerInitializationTest {
         }
     }
 
+    private class ControlledAsyncPublisher(
+        context: Context,
+        publisherManager: PublisherManager
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        val completeInitialization = CountDownLatch(1)
+
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun start() {
+            val initializationSucceeded = initializationSucceededCallback()
+            super.start()
+            Thread {
+                completeInitialization.await()
+                initializationSucceeded()
+            }.start()
+        }
+    }
+
     @Suppress("DEPRECATION")
     private class LegacyPublisher(
         context: Context,
@@ -170,5 +233,14 @@ class PublisherManagerInitializationTest {
                 publisherManager.onPublisherInitialized()
             }
         }
+    }
+
+    private class PendingPermissionPublisher(
+        context: Context,
+        publisherManager: PublisherManager
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun onPermissionGranted() = Unit
     }
 }
