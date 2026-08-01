@@ -70,11 +70,20 @@ class CircularGaugeView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val size = min(width, height).toFloat()
+        val contentWidth = width - paddingLeft - paddingRight
+        val contentHeight = height - paddingTop - paddingBottom
+        val size = min(contentWidth, contentHeight).toFloat()
+        if (size <= 0f) {
+            return
+        }
         val strokeWidth = size * 0.075f
         val radiusPadding = strokeWidth * 1.4f
-        val centerX = width / 2f
-        val centerY = height / 2f
+        val squareLeft = paddingLeft + (contentWidth - size) / 2f
+        val squareTop = paddingTop + (contentHeight - size) / 2f
+        val squareRight = squareLeft + size
+        val squareBottom = squareTop + size
+        val centerX = squareLeft + size / 2f
+        val centerY = squareTop + size / 2f
 
         trackPaint.strokeWidth = strokeWidth
         valuePaint.strokeWidth = strokeWidth
@@ -83,10 +92,10 @@ class CircularGaugeView @JvmOverloads constructor(
         labelPaint.textSize = size * 0.07f
 
         arcBounds.set(
-            radiusPadding,
-            radiusPadding,
-            width - radiusPadding,
-            height - radiusPadding
+            squareLeft + radiusPadding,
+            squareTop + radiusPadding,
+            squareRight - radiusPadding,
+            squareBottom - radiusPadding
         )
 
         canvas.drawArc(arcBounds, ARC_START, ARC_SWEEP, false, trackPaint)
@@ -127,7 +136,7 @@ class CircularGaugeView @JvmOverloads constructor(
     }
 
     private fun valueToAngle(value: Double): Float {
-        val normalized = ((value - minValue) / (maxValue - minValue)).coerceIn(0.0, 1.0)
+        val normalized = value.normalizedIn(minValue, maxValue)
         return (ARC_START + ARC_SWEEP * normalized).toFloat()
     }
 

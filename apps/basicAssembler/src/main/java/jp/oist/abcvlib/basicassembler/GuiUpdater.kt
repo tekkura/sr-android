@@ -256,13 +256,13 @@ class GuiUpdater(
     }
 
     private fun scaledProgress(value: Double, min: Double, max: Double): Int {
-        val normalized = ((value - min) / (max - min)).coerceIn(0.0, 1.0)
+        val normalized = value.normalizedIn(min, max)
         return (normalized * 1000).toInt()
     }
 
     private fun scaledLogProgress(value: Double): Int {
         val clamped = value.coerceIn(1e-6, 1.0)
-        val normalized = ((log10(clamped) + 6.0) / 6.0).coerceIn(0.0, 1.0)
+        val normalized = (log10(clamped) + 6.0).normalizedIn(0.0, 6.0)
         return (normalized * 1000).toInt()
     }
 }

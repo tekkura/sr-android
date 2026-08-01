@@ -6,9 +6,10 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.View
-import kotlin.math.max
 import kotlin.math.abs
+import kotlin.math.max
 
 class LineGraphView @JvmOverloads constructor(
     context: Context,
@@ -40,15 +41,15 @@ class LineGraphView @JvmOverloads constructor(
     )
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(44, 58, 71)
-        strokeWidth = 1f
+        strokeWidth = 1f.dp()
     }
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 3f
+        strokeWidth = 3f.dp()
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.rgb(172, 184, 194)
-        textSize = 17f
+        textSize = 17f.sp()
     }
 
     fun addSample(
@@ -94,11 +95,22 @@ class LineGraphView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val left = paddingLeft.toFloat() + 8f
-        val top = paddingTop.toFloat() + 8f
-        val right = width - paddingRight.toFloat() - 8f
-        val legendTop = height - paddingBottom.toFloat() - 32f
-        val bottom = legendTop - 10f
+        val inset = 8f.dp()
+        val rowGap = 6f.dp()
+        val legendTopGap = 10f.dp()
+        val left = paddingLeft.toFloat() + inset
+        val top = paddingTop.toFloat() + inset
+        val right = width - paddingRight.toFloat() - inset
+        if (right <= left) {
+            return
+        }
+        val legendRows = legendRowCount(left, right)
+        val legendHeight = legendRows * textPaint.textSize + (legendRows - 1) * rowGap
+        val legendTop = height - paddingBottom.toFloat() - inset - legendHeight
+        val bottom = legendTop - legendTopGap
+        if (bottom <= top) {
+            return
+        }
 
         canvas.drawLine(left, bottom, right, bottom, gridPaint)
         canvas.drawLine(left, top, left, bottom, gridPaint)
@@ -106,7 +118,7 @@ class LineGraphView @JvmOverloads constructor(
             val y = top + (bottom - top) * i / 4f
             canvas.drawLine(left, y, right, y, gridPaint)
         }
-        drawLegend(canvas, left, legendTop, right)
+        drawLegend(canvas, left, legendTop, right, rowGap)
 
         if (samples.size < 2) return
 
@@ -130,19 +142,39 @@ class LineGraphView @JvmOverloads constructor(
         }
     }
 
-    private fun drawLegend(canvas: Canvas, startX: Float, startBaseline: Float, right: Float) {
+    private fun drawLegend(
+        canvas: Canvas,
+        startX: Float,
+        startBaseline: Float,
+        right: Float,
+        rowGap: Float
+    ) {
         var x = startX
         var baseline = startBaseline
         seriesLabels.forEachIndexed { index, label ->
             val labelWidth = textPaint.measureText(label)
             if (x > startX && x + labelWidth > right) {
                 x = startX
-                baseline += textPaint.textSize + 6f
+                baseline += textPaint.textSize + rowGap
             }
             textPaint.color = seriesColors[index]
             canvas.drawText(label, x, baseline, textPaint)
-            x += labelWidth + 18f
+            x += labelWidth + 18f.dp()
         }
+    }
+
+    private fun legendRowCount(startX: Float, right: Float): Int {
+        var rows = 1
+        var x = startX
+        seriesLabels.forEach { label ->
+            val labelWidth = textPaint.measureText(label)
+            if (x > startX && x + labelWidth > right) {
+                rows++
+                x = startX
+            }
+            x += labelWidth + 18f.dp()
+        }
+        return rows
     }
 
     private fun rangeFor(seriesIndex: Int): Pair<Float, Float> {
@@ -154,4 +186,10 @@ class LineGraphView @JvmOverloads constructor(
     companion object {
         private const val MAX_SAMPLES = 100
     }
+
+    private fun Float.dp(): Float =
+        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, this, resources.displayMetrics)
+
+    private fun Float.sp(): Float =
+        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, this, resources.displayMetrics)
 }
