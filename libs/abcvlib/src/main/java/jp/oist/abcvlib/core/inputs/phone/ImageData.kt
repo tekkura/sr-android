@@ -144,13 +144,14 @@ abstract class ImageData<S : Subscriber>(
             handler.post { previewView!!.setScaleType(PreviewView.ScaleType.FIT_CENTER) }
         }
         bindAll(lifecycleOwner)
+        val initializationSucceeded = initializationSucceededCallback()
         val executor = Executors.newSingleThreadExecutor()
         executor.submit {
             try {
                 Logger.i(TAG, "Waiting for preview and analysis to start")
                 countDownLatch.await()
                 Logger.i(TAG, "Preview and analysis started")
-                publisherManager.onPublisherInitialized()
+                initializationSucceeded()
             } catch (e: InterruptedException) {
                 e.printStackTrace()
             }
