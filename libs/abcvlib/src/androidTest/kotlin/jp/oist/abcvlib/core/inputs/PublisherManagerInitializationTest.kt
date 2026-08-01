@@ -3,10 +3,10 @@ package jp.oist.abcvlib.core.inputs
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,8 +61,7 @@ class PublisherManagerInitializationTest {
         val successfulPublisher = TestPublisher(context, manager, shouldFail = false)
 
         manager.initializePublishers()
-        manager.startPublishers()
-        val result = awaitStartupResult(manager)
+        val result = startAndAwait(manager)
 
         assertTrue(result is PublisherManagerStartupResult.Failure)
         assertEquals(PublisherState.FAILED, failedPublisher.getState())
@@ -79,8 +78,7 @@ class PublisherManagerInitializationTest {
         manager.setRequirement(successfulPublisher, PublisherRequirement.OPTIONAL)
 
         manager.initializePublishers()
-        manager.startPublishers()
-        val result = awaitStartupResult(manager)
+        val result = startAndAwait(manager)
 
         assertTrue(result is PublisherManagerStartupResult.Success)
         assertEquals(
@@ -93,13 +91,16 @@ class PublisherManagerInitializationTest {
         assertEquals(PublisherState.STARTED, successfulPublisher.getState())
     }
 
-    private fun awaitStartupResult(manager: PublisherManager): PublisherManagerStartupResult {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
-        while (manager.startupResult == null && System.nanoTime() < deadline) {
-            Thread.sleep(10)
-        }
-        assertNotNull("Timed out waiting for startup result", manager.startupResult)
-        return requireNotNull(manager.startupResult)
+    private fun startAndAwait(manager: PublisherManager): PublisherManagerStartupResult {
+        val latch = CountDownLatch(1)
+        var startupResult: PublisherManagerStartupResult? = null
+        manager.startPublishers(PublisherManagerStartupListener {
+            startupResult = it
+            latch.countDown()
+        })
+
+        assertTrue("Timed out waiting for startup result", latch.await(3, TimeUnit.SECONDS))
+        return requireNotNull(startupResult)
     }
 
     private val context: Context
