@@ -14,15 +14,46 @@ import java.util.concurrent.Phaser
  */
 class PublisherManager {
     val publishers: ArrayList<Publisher<*>> = ArrayList()
+    private val requirements = HashMap<Publisher<*>, PublisherRequirement>()
     private val phaser = Phaser(1)
     private val TAG: String = javaClass.name
+    private var registrationsLocked = false
 
     //========================================Phase 0===============================================
+    @Synchronized
     fun add(publisher: Publisher<*>): PublisherManager {
+        check(!registrationsLocked) {
+            "Publishers cannot be added after initialization has started"
+        }
+
         Logger.i(TAG, "Adding publisher: " + publisher.javaClass.name)
         publishers.add(publisher)
+        requirements[publisher] = PublisherRequirement.REQUIRED
         phaser.register()
         return this
+    }
+
+    @Synchronized
+    fun setRequirement(
+        publisher: Publisher<*>,
+        requirement: PublisherRequirement
+    ): PublisherManager {
+        check(!registrationsLocked) {
+            "Publisher requirements cannot change after initialization has started"
+        }
+        require(requirements.containsKey(publisher)) {
+            "Publisher is not registered with this manager"
+        }
+
+        requirements[publisher] = requirement
+        return this
+    }
+
+    @Synchronized
+    fun getRequirement(publisher: Publisher<*>): PublisherRequirement {
+        return requireNotNull(requirements[publisher]) {
+            "Publisher is not registered with this manager"
+        }
     }
 
     fun onPublisherPermissionsGranted(grantedPublisher: Publisher<*>) { // Accept the publisher
@@ -43,6 +74,10 @@ class PublisherManager {
     }
 
     fun initializePublishers() {
+        synchronized(this) {
+            registrationsLocked = true
+        }
+
         phaser.arrive()
         Logger.i(TAG, "Starting initializePublishers with " + publishers.size + " publishers")
         Logger.i(TAG, "Waiting on all publishers to initialize before starting")
