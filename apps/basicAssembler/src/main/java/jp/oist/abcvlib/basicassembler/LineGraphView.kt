@@ -105,8 +105,11 @@ class LineGraphView @JvmOverloads constructor(
             return
         }
         val legendRows = legendRowCount(left, right)
-        val legendHeight = legendRows * textPaint.textSize + (legendRows - 1) * rowGap
+        val fontMetrics = textPaint.fontMetrics
+        val legendRowHeight = fontMetrics.descent - fontMetrics.ascent
+        val legendHeight = legendRows * legendRowHeight + (legendRows - 1) * rowGap
         val legendTop = height - paddingBottom.toFloat() - inset - legendHeight
+        val legendFirstBaseline = legendTop - fontMetrics.ascent
         val bottom = legendTop - legendTopGap
         if (bottom <= top) {
             return
@@ -118,28 +121,29 @@ class LineGraphView @JvmOverloads constructor(
             val y = top + (bottom - top) * i / 4f
             canvas.drawLine(left, y, right, y, gridPaint)
         }
-        drawLegend(canvas, left, legendTop, right, rowGap)
 
-        if (samples.size < 2) return
+        if (samples.size >= 2) {
+            for (seriesIndex in seriesLabels.indices) {
+                val range = rangeFor(seriesIndex)
+                if (range.first == range.second) continue
 
-        for (seriesIndex in seriesLabels.indices) {
-            val range = rangeFor(seriesIndex)
-            if (range.first == range.second) continue
-
-            val path = Path()
-            samples.forEachIndexed { index, sample ->
-                val x = left + (right - left) * index / (samples.size - 1).coerceAtLeast(1)
-                val y = bottom - (bottom - top) *
-                        ((sample[seriesIndex] - range.first) / (range.second - range.first))
-                if (index == 0) {
-                    path.moveTo(x, y)
-                } else {
-                    path.lineTo(x, y)
+                val path = Path()
+                samples.forEachIndexed { index, sample ->
+                    val x = left + (right - left) * index / (samples.size - 1).coerceAtLeast(1)
+                    val y = bottom - (bottom - top) *
+                            ((sample[seriesIndex] - range.first) / (range.second - range.first))
+                    if (index == 0) {
+                        path.moveTo(x, y)
+                    } else {
+                        path.lineTo(x, y)
+                    }
                 }
+                linePaint.color = seriesColors[seriesIndex]
+                canvas.drawPath(path, linePaint)
             }
-            linePaint.color = seriesColors[seriesIndex]
-            canvas.drawPath(path, linePaint)
         }
+
+        drawLegend(canvas, left, legendFirstBaseline, right, legendRowHeight, rowGap)
     }
 
     private fun drawLegend(
@@ -147,6 +151,7 @@ class LineGraphView @JvmOverloads constructor(
         startX: Float,
         startBaseline: Float,
         right: Float,
+        rowHeight: Float,
         rowGap: Float
     ) {
         var x = startX
@@ -155,7 +160,7 @@ class LineGraphView @JvmOverloads constructor(
             val labelWidth = textPaint.measureText(label)
             if (x > startX && x + labelWidth > right) {
                 x = startX
-                baseline += textPaint.textSize + rowGap
+                baseline += rowHeight + rowGap
             }
             textPaint.color = seriesColors[index]
             canvas.drawText(label, x, baseline, textPaint)
