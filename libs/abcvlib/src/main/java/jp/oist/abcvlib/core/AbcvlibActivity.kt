@@ -1,13 +1,23 @@
 package jp.oist.abcvlib.core
 
+import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.hardware.usb.UsbManager
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import android.widget.Button
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupListener
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailureDialogAction
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailureDialogConfig
+import jp.oist.abcvlib.core.inputs.phone.MicrophoneData
+import jp.oist.abcvlib.core.inputs.publisher.showPublisherStartupFailureDialog
 import jp.oist.abcvlib.core.outputs.Outputs
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.ProcessPriorityThreadFactory
@@ -42,6 +52,8 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     private var alertDialog: AlertDialog? = null
     private var initialDelay: Long = 0
     private var serialReadyJob: Job? = null
+    private var publisherFailureDialog: AlertDialog? = null
+    private var publisherStartupCompletion: PublisherStartupCompletion? = null
 
     // Note anything less than 10ms will result in no GET_STATE commands being called and all
     // being overrides by whatever commands are sent in the main loop
@@ -93,18 +105,40 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         serialCommManager!!.start()
 
         initializeOutputs()
-        onOutputsReady()
-
-        if (mainLoopEnabled) {
-            // Needs to be > 5 in order for object detector not to overwhelm cpu
-            val priority = ProcessPriorityThreadFactory(
-                Thread.MAX_PRIORITY,
-                "AbcvlibActivityMainLoop"
-            )
-            Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
-                AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
-            )
+        if (publisherStartupCompletion == null) {
+            onOutputsReady()
+            runAfterPublisherStartup(::startMainLoop)
+        } else {
+            runAfterPublisherStartup {
+                onOutputsReady()
+                runAfterPublisherStartup(::startMainLoop)
+            }
         }
+    }
+
+    /**
+     * Runs [action] after the current publisher startup request succeeds, or immediately when no
+     * startup request has been registered.
+     */
+    private fun runAfterPublisherStartup(action: () -> Unit) {
+        publisherStartupCompletion
+            ?.whenComplete {
+                lifecycleScope.launch(Dispatchers.Default) { action() }
+            }
+            ?: action()
+    }
+
+    private fun startMainLoop() {
+        if (!mainLoopEnabled) return
+        // Needs to be > 5 in order for object detector not to overwhelm cpu
+        val priority = ProcessPriorityThreadFactory(
+            Thread.MAX_PRIORITY,
+            "AbcvlibActivityMainLoop"
+        )
+
+        Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
+            AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
+        )
     }
 
     private inner class AbcvlibActivityRunnable : Runnable {
@@ -119,6 +153,13 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         throw RuntimeException("runAbcvlibActivityMainLoop must be overridden")
     }
 
+    /**
+     * Called after outputs are initialized.
+     *
+     * If publisher startup was registered before [onSerialReady], this callback waits for startup
+     * success. Overrides that register startup here must put startup-dependent work in
+     * [startPublishersWithFailureHandling]'s success callback; only the main loop is deferred.
+     */
     @WorkerThread
     protected open fun onOutputsReady() {
         // Override this method in your MainActivity to do anything that requires the outputs
@@ -128,13 +169,67 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         )
     }
 
-
     private fun initializeOutputs() {
         outputs = Outputs(switches, serialCommManager!!)
     }
 
     protected fun setSerialCommManager(serialCommManager: SerialCommManager) {
         this.serialCommManager = serialCommManager
+    }
+
+    protected fun startPublishersWithFailureHandling(publisherManager: PublisherManager) {
+        startPublishersWithFailureHandling(publisherManager) {}
+    }
+
+    protected fun startPublishersWithFailureHandling(
+        publisherManager: PublisherManager,
+        onSuccess: () -> Unit
+    ) {
+        val completion = PublisherStartupCompletion()
+        publisherStartupCompletion = completion
+        publisherManager.startPublishers(
+            publisherStartupListener(publisherManager) {
+                completion.complete()
+                onSuccess()
+            }
+        )
+    }
+
+    internal fun publisherStartupCompletionCallback(): () -> Unit {
+        val completion = PublisherStartupCompletion()
+        publisherStartupCompletion = completion
+        return completion::complete
+    }
+
+    private fun publisherStartupListener(
+        publisherManager: PublisherManager,
+        onSuccess: () -> Unit
+    ): PublisherManagerStartupListener {
+        return PublisherManagerStartupListener { result ->
+            when (result) {
+                is PublisherManagerStartupResult.Success -> {
+                    publisherFailureDialog?.dismiss()
+                    publisherFailureDialog = null
+                    onSuccess()
+                }
+                is PublisherManagerStartupResult.Failure -> {
+                    serialCommManager?.setMotorLevels(0f, 0f, true, true)
+                    publisherFailureDialog?.dismiss()
+                    publisherFailureDialog = showPublisherStartupFailureDialog(
+                        this,
+                        publisherManager,
+                        publisherStartupFailureDialogConfig(this, result)
+                    ) {
+                        publisherFailureDialog = null
+                        lifecycleScope.launch(Dispatchers.Default) {
+                            publisherManager.retryFailedPublishers(
+                                publisherStartupListener(publisherManager, onSuccess)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     protected fun setInitialDelay(initialDelay: Long) {
@@ -169,6 +264,32 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
 
     protected fun setPi2AndroidReader(pi2AndroidReader: Runnable) {
         this.pi2AndroidReader = pi2AndroidReader
+    }
+
+    private class PublisherStartupCompletion {
+        private var completed = false
+        private var onComplete: (() -> Unit)? = null
+
+        fun complete() {
+            val callback = synchronized(this) {
+                if (completed) return
+                completed = true
+                onComplete.also { onComplete = null }
+            }
+            callback?.invoke()
+        }
+
+        fun whenComplete(callback: () -> Unit) {
+            val invokeNow = synchronized(this) {
+                if (completed) {
+                    true
+                } else {
+                    onComplete = callback
+                    false
+                }
+            }
+            if (invokeNow) callback()
+        }
     }
 
     private fun showCustomDialog() {
@@ -208,5 +329,37 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
 
     companion object {
         private const val TAG = "abcvlib"
+
+        internal fun publisherStartupFailureDialogConfig(
+            activity: Activity,
+            failure: PublisherManagerStartupResult.Failure
+        ): PublisherStartupFailureDialogConfig {
+            if (failure.requiredFailures.none { it.publisher is MicrophoneData }) {
+                return PublisherStartupFailureDialogConfig(
+                    R.string.publisher_startup_failure_message
+                )
+            }
+
+            return PublisherStartupFailureDialogConfig(
+                message = R.string.microphone_startup_failure_message,
+                additionalAction = PublisherStartupFailureDialogAction(
+                    label = R.string.privacy_settings,
+                    onClick = { openPrivacySettings(activity) }
+                )
+            )
+        }
+
+        private fun openPrivacySettings(activity: Activity) {
+            val privacySettingsOpened = runCatching {
+                activity.startActivity(Intent(Settings.ACTION_PRIVACY_SETTINGS))
+            }.isSuccess
+            if (!privacySettingsOpened) {
+                runCatching {
+                    activity.startActivity(Intent(Settings.ACTION_SETTINGS))
+                }.onFailure {
+                    Logger.e(TAG, "Unable to open Android settings")
+                }
+            }
+        }
     }
 }

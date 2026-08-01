@@ -147,7 +147,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
 
     public override fun onOutputsReady() {
         publisherManager.initializePublishers()
-        publisherManager.startPublishers()
+        startPublishersWithFailureHandling(publisherManager)
     }
 
     // Main loop for any application extending AbcvlibActivity. This is where you will put your main code
