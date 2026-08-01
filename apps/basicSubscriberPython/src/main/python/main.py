@@ -1,6 +1,5 @@
 from java import dynamic_proxy
 from jp.oist.abcvlib.util import SerialCommManager
-from jp.oist.abcvlib.core.inputs import PublisherManager
 from jp.oist.abcvlib.core.inputs.microcontroller import (
     BatteryData, WheelData,
     BatteryDataSubscriber,
@@ -71,7 +70,7 @@ class QRCodeSubscriber(dynamic_proxy(QRCodeDataSubscriber)):
         context.guiUpdater.setQrDataString(qr_data_decoded)
 
 def setup():
-    publisher_manager = PublisherManager()
+    publisher_manager = context.createPublisherManager()
 
     battery_data = BatteryData.Builder(context, publisher_manager).build()
     battery_data.addSubscriber(BatterySubscriber())
@@ -90,15 +89,15 @@ def setup():
 
     QRCodeData.Builder(context, publisher_manager, context).build().addSubscriber(QRCodeSubscriber())
 
-    publisher_manager.initializePublishers()
-    publisher_manager.startPublishers()
-
     serial_manager = SerialCommManager(context.usbSerial,battery_data, wheel_data)
     context.setSerialCommManager(serial_manager)
     context.onSetupReady()
 
 def loop():
     global speed, increment
+    if not context.arePublishersReady():
+        return
+
     context.outputs.setWheelOutput(speed, speed, False, False)
     if speed >= 1.0 or speed <= -1.0:
         increment = -increment

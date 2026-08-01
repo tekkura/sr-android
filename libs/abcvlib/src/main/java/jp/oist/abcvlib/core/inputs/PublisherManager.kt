@@ -54,6 +54,8 @@ class PublisherManager(
     private val TAG: String = javaClass.name
     private var initializationStarted = false
     private var startupStarted = false
+    private var retryInProgress = false
+    private var retryCandidates: List<Publisher<*>>? = null
 
     @Volatile
     var startupResult: PublisherManagerStartupResult? = null
@@ -235,20 +237,35 @@ class PublisherManager(
             checkNotNull(startupResult) {
                 "Publishers cannot be retried before startup finishes"
             }
+            check(!retryInProgress) {
+                "Publisher retry is already in progress"
+            }
 
-            prepareRetry().also {
-                startupResult = null
-                startupStarted = false
+            (retryCandidates ?: failedPublishers().also { retryCandidates = it }).also {
+                prepareRetry(it)
+                retryInProgress = true
                 repeat(it.size) { phaser.register() }
             }
         }
 
-        awaitRetryPermissions(failedPublishers)
-        initializationRunner.reset()
-        failedPublishers
-            .filter(::isAvailable)
-            .forEach(::initialize)
-        initializationRunner.finishLaunching()
+        try {
+            awaitRetryPermissions(failedPublishers)
+            initializationRunner.reset()
+            failedPublishers
+                .filter(::isAvailable)
+                .forEach(::initialize)
+            initializationRunner.finishLaunching()
+        } catch (failure: Exception) {
+            synchronized(this) { retryInProgress = false }
+            throw failure
+        }
+
+        synchronized(this) {
+            startupResult = null
+            startupStarted = false
+            retryInProgress = false
+            retryCandidates = null
+        }
         startPublishersInternal(listener)
     }
 
@@ -260,7 +277,19 @@ class PublisherManager(
             TimeUnit.MILLISECONDS
         )
 
-        publishers.forEach(Publisher<*>::requestPermissions)
+        publishers.forEach { publisher ->
+            try {
+                publisher.requestPermissions()
+            } catch (failure: Exception) {
+                onPublisherPermissionsDenied(
+                    PublisherStartupFailure(
+                        publisher,
+                        failure.message ?: "Unable to request publisher permissions",
+                        failure
+                    )
+                )
+            }
+        }
         val phase = phaser.arrive()
         phaser.awaitAdvance(phase)
         timeout.cancel(false)
@@ -389,11 +418,20 @@ class PublisherManager(
     }
 
     @Synchronized
-    private fun prepareRetry(): List<Publisher<*>> {
-        val failedPublishers = registrations
+    private fun failedPublishers(): List<Publisher<*>> {
+        return registrations
             .filterValues { it.failure != null }
             .keys
             .toList()
+            .also {
+                check(it.isNotEmpty()) {
+                    "There are no failed publishers to retry"
+                }
+            }
+    }
+
+    @Synchronized
+    private fun prepareRetry(failedPublishers: List<Publisher<*>>) {
         check(failedPublishers.isNotEmpty()) {
             "There are no failed publishers to retry"
         }
@@ -404,7 +442,6 @@ class PublisherManager(
                 failure = null
             }
         }
-        return failedPublishers
     }
 
     private fun registrationFor(publisher: Publisher<*>): PublisherRegistration {

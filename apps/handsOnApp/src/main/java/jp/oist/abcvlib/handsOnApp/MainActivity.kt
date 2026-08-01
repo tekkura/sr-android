@@ -8,7 +8,6 @@ import androidx.lifecycle.lifecycleScope
 import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryDataSubscriber
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
@@ -33,7 +32,6 @@ import kotlin.time.Duration.Companion.milliseconds
 class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListener,
     WheelDataSubscriber, ObjectDetectorDataSubscriber {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var publisherManager: PublisherManager
     private lateinit var debugInfo: DebugInfoViewer
     private var countL = 0
     private var countR = 0
@@ -57,7 +55,7 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
     }
 
     override fun onSerialReady(usbSerial: UsbSerial) {
-        publisherManager = PublisherManager()
+        initPublisherManager()
 
         val wheelData = WheelData.Builder(this, publisherManager)
             .setBufferLength(50)
@@ -71,11 +69,6 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
         detectorData.addSubscriber(this)
         setSerialCommManager(SerialCommManager(usbSerial, batteryData, wheelData))
         super.onSerialReady(usbSerial)
-    }
-
-    public override fun onOutputsReady() {
-        publisherManager.initializePublishers()
-        publisherManager.startPublishers()
     }
 
     override fun abcvlibMainLoop() {

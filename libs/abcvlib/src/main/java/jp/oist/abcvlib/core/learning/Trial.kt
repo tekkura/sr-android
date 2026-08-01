@@ -1,7 +1,14 @@
 package jp.oist.abcvlib.core.learning
 
+import android.app.Activity
 import android.content.Context
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailureHandler
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupHandler
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer
 import jp.oist.abcvlib.core.outputs.ActionSelector
 import jp.oist.abcvlib.core.outputs.Outputs
@@ -12,6 +19,8 @@ import jp.oist.abcvlib.util.ProcessPriorityThreadFactory
 import jp.oist.abcvlib.util.RecordingWithoutTimeStepBufferException
 import jp.oist.abcvlib.util.ScheduledExecutorServiceWithException
 import jp.oist.abcvlib.util.SocketListener
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
@@ -19,6 +28,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.BrokenBarrierException
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executor
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
@@ -66,6 +76,11 @@ open class Trial(
     private lateinit var timeStepDataAssemblerFuture: ScheduledFuture<*>
     private val executor: ScheduledExecutorServiceWithException
     private var flatBufferAssembler: FlatbufferAssembler
+    private var trialStarted = false
+    private var publisherFailureHandler: PublisherStartupFailureHandler? = null
+    private var retryPublisherStartupAction: (() -> Unit)? = null
+    private var onPublisherStartupSucceeded: () -> Unit = {}
+    private val publisherStartupHandler: PublisherStartupHandler
 
     private val TAG: String = javaClass.toString()
 
@@ -82,6 +97,29 @@ open class Trial(
             threads,
             ProcessPriorityThreadFactory(1, "trail")
         )
+
+        val lifecycleOwner = context as? LifecycleOwner
+        val publisherStartupExecutor = if (lifecycleOwner != null) {
+            Executor { command ->
+                lifecycleOwner.lifecycleScope.launch(Dispatchers.Default) { command.run() }
+            }
+        } else {
+            Executor { command ->
+                ProcessPriorityThreadFactory(1, "trialPublisherStartup")
+                    .newThread(command)
+                    .start()
+            }
+        }
+
+        publisherStartupHandler = PublisherStartupHandler(
+            publisherManager,
+            backgroundExecutor = publisherStartupExecutor,
+            presentFailure = failurePresenter@{ failure, retry ->
+                if (!isPublisherStartupActive()) return@failurePresenter
+                retryPublisherStartupAction = retry
+                onPublisherStartupFailed(failure)
+            }
+        )
     }
 
     fun setFlatBufferAssembler(flatBufferAssembler: FlatbufferAssembler) {
@@ -89,8 +127,63 @@ open class Trial(
     }
 
     protected open fun startTrail() {
-        publisherManager.initializePublishers()
-        publisherManager.startPublishers()
+        publisherStartupHandler.start startupSucceeded@{
+            if (!isPublisherStartupActive()) return@startupSucceeded
+            publisherFailureHandler?.dismiss()
+            onPublisherStartupSucceeded()
+            startTrialOnce()
+        }
+    }
+
+    private fun isPublisherStartupActive(): Boolean {
+        val lifecycleOwner = context as? LifecycleOwner
+        if (lifecycleOwner?.lifecycle?.currentState == Lifecycle.State.DESTROYED) return false
+
+        val activity = context as? Activity
+        return activity == null || (!activity.isDestroyed && !activity.isFinishing)
+    }
+
+    fun startTrail(onStartupSucceeded: () -> Unit) {
+        onPublisherStartupSucceeded = onStartupSucceeded
+        startTrail()
+    }
+
+    protected fun retryPublisherStartup() {
+        checkNotNull(retryPublisherStartupAction) {
+            "Publisher retry is unavailable before a startup failure"
+        }.invoke()
+    }
+
+    protected open fun onPublisherStartupFailed(
+        result: PublisherManagerStartupResult.Failure
+    ) {
+        outputs.turnOffWheels()
+        Logger.e(
+            TAG,
+            "Trial cannot start because ${result.requiredFailures.size} required publishers failed"
+        )
+        val activity = context as? Activity
+        if (activity == null) {
+            Logger.e(
+                TAG,
+                "Cannot show the publisher startup failure dialog without an Activity context. " +
+                    "Override onPublisherStartupFailed to provide custom failure handling."
+            )
+            return
+        }
+
+        val failureHandler = publisherFailureHandler
+            ?: PublisherStartupFailureHandler(activity, publisherManager).also {
+                publisherFailureHandler = it
+            }
+        failureHandler.show(result, ::retryPublisherStartup)
+    }
+
+    @Synchronized
+    private fun startTrialOnce() {
+        if (trialStarted) return
+        trialStarted = true
+        publisherFailureHandler?.dismiss()
         startEpisode()
         startPublishers()
     }

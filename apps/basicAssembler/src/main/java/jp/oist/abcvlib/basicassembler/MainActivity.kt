@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
 import jp.oist.abcvlib.basicassembler.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
@@ -105,7 +104,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
         --------------------------------------------------------------------------------
         */
 
-        val publisherManager = PublisherManager()
+        initPublisherManager()
         val wheelData = WheelData.Builder(this, publisherManager)
             .setBufferLength(10)
             .setExpWeight(0.1)
@@ -132,7 +131,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
     }
 
 
-    override fun onOutputsReady() {
+    override fun prepareApp(onReady: () -> Unit) {
         /*------------------------------------------------------------------------------
         ------------------------------ Set MetaParameters ------------------------------
         --------------------------------------------------------------------------------
@@ -148,6 +147,6 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
         --------------------------------------------------------------------------------
          */
         val myTrial = MyTrial(this, guiUpdater, metaParameters, actionSpace, stateSpace)
-        myTrial.startTrail()
+        myTrial.startTrail(onReady)
     }
 }

@@ -8,7 +8,6 @@ import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.basicsubscriber.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryDataSubscriber
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
@@ -57,7 +56,6 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     private var lastFrameTime = System.nanoTime()
     private var speed: Float = 0.35f
     private var increment: Float = 0.01f
-    private lateinit var publisherManager: PublisherManager
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,7 +89,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
          * The subscriber in this example is this (MainActivity) class. It can equally be any other class
          * that implements the appropriate listener interface.
          */
-        publisherManager = PublisherManager()
+        initPublisherManager()
 
         // Note how BatteryData and WheelData objects must have a reference such that they can
         // be passed to the SerialCommManager object.
@@ -111,11 +109,6 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
 
         setSerialCommManager(SerialCommManager(usbSerial, batteryData, wheelData))
         super.onSerialReady(usbSerial)
-    }
-
-    public override fun onOutputsReady() {
-        publisherManager.initializePublishers()
-        publisherManager.startPublishers()
     }
 
     // Main loop for any application extending AbcvlibActivity. This is where you will put your main code

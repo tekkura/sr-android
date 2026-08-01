@@ -13,7 +13,6 @@ import com.google.mediapipe.framework.image.MPImage
 import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.comprehensivedemo.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryDataSubscriber
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
@@ -51,7 +50,6 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     QRCodeDataSubscriber {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var publisherManager: PublisherManager
     private lateinit var boundingBoxView: BoundingBoxView
     private lateinit var previewView: PreviewView
     private lateinit var qrCode: QRCode
@@ -127,7 +125,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     }
 
     override fun onSerialReady(usbSerial: UsbSerial) {
-        publisherManager = PublisherManager()
+        initPublisherManager()
 
         val batteryData = BatteryData.Builder(this, publisherManager).build()
         batteryData.addSubscriber(this)
@@ -150,8 +148,6 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
     }
 
     public override fun onOutputsReady() {
-        publisherManager.initializePublishers()
-        publisherManager.startPublishers()
         outputsReadyCompleted = true
         updateHardwareReady()
     }
