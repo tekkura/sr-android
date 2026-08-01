@@ -99,8 +99,8 @@ class WheelData(
         mHandlerThread = HandlerThread("wheelDataThread")
         mHandlerThread.start()
         handler = Handler(mHandlerThread.looper)
-        publisherManager.onPublisherInitialized()
         super.start()
+        reportInitializationSucceeded()
     }
 
     override fun stop() {

@@ -145,6 +145,7 @@ abstract class ImageData<S : Subscriber>(
         }
         bindAll(lifecycleOwner)
         val initializationSucceeded = initializationSucceededCallback()
+        super.start()
         val executor = Executors.newSingleThreadExecutor()
         executor.submit {
             try {
@@ -157,7 +158,6 @@ abstract class ImageData<S : Subscriber>(
             }
         }
         executor.shutdown()
-        super.start()
     }
 
     override fun stop() {

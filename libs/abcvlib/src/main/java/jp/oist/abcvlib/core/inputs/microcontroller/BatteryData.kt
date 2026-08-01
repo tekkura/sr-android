@@ -44,8 +44,8 @@ class BatteryData(
         mHandlerThread = HandlerThread("batteryThread")
         mHandlerThread.start()
         handler = Handler(mHandlerThread.looper)
-        publisherManager.onPublisherInitialized()
         super.start()
+        reportInitializationSucceeded()
     }
 
     override fun stop() {

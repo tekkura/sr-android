@@ -271,8 +271,8 @@ class OrientationData(context: Context, publisherManager: PublisherManager) :
         mHandlerThread.start()
         handler = Handler(mHandlerThread.looper)
         register(handler)
-        publisherManager.onPublisherInitialized()
         super.start()
+        reportInitializationSucceeded()
     }
 
     override fun stop() {

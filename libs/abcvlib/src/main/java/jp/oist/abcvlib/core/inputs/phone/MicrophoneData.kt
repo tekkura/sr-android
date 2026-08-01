@@ -53,8 +53,8 @@ open class MicrophoneData(
             "microphone_start",
             "StartFrame:" + _startTime.framePosition + " NanoTime: " + _startTime.nanoTime
         )
-        publisherManager.onPublisherInitialized()
         super.start()
+        reportInitializationSucceeded()
     }
 
     override fun stop() {
