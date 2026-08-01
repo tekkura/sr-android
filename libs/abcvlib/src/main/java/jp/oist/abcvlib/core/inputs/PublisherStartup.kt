@@ -30,3 +30,7 @@ sealed class PublisherManagerStartupResult {
         val optionalFailures: List<PublisherStartupFailure>
     ) : PublisherManagerStartupResult()
 }
+
+fun interface PublisherManagerStartupListener {
+    fun onStartupResult(result: PublisherManagerStartupResult)
+}

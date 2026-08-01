@@ -1,5 +1,7 @@
 package jp.oist.abcvlib.core.inputs
 
+import android.os.Handler
+import android.os.Looper
 import jp.oist.abcvlib.util.Logger
 import java.util.concurrent.Executors
 import java.util.concurrent.Phaser
@@ -19,6 +21,7 @@ class PublisherManager {
 
     private val phaser = Phaser(1)
     private val initializingPublisher = ThreadLocal<Publisher<*>>()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val TAG: String = javaClass.name
     private var registrationsLocked = false
 
@@ -137,6 +140,14 @@ class PublisherManager {
 
     //========================================Phase 2===============================================
     fun startPublishers() {
+        startPublishersInternal(null)
+    }
+
+    fun startPublishers(listener: PublisherManagerStartupListener) {
+        startPublishersInternal(listener)
+    }
+
+    private fun startPublishersInternal(listener: PublisherManagerStartupListener?) {
         phaser.arrive()
         val executor = Executors.newSingleThreadExecutor()
         executor.submit {
@@ -150,7 +161,7 @@ class PublisherManager {
                 .filter { it.requirement == PublisherRequirement.OPTIONAL }
                 .mapNotNull { it.failure }
 
-            startupResult = if (requiredFailures.isEmpty()) {
+            val result = if (requiredFailures.isEmpty()) {
                 Logger.i(TAG, "Publisher initialization complete. Starting available publishers")
                 registrations
                     .filterValues { it.failure == null }
@@ -160,6 +171,11 @@ class PublisherManager {
             } else {
                 Logger.e(TAG, "Required publisher initialization failed")
                 PublisherManagerStartupResult.Failure(requiredFailures, optionalFailures)
+            }
+
+            startupResult = result
+            listener?.let {
+                mainHandler.post { it.onStartupResult(result) }
             }
 
             executor.shutdown() // Shut down the executor after the task is completed
