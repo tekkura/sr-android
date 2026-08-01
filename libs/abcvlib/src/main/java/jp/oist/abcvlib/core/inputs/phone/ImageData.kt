@@ -30,6 +30,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 abstract class ImageData<S : Subscriber>(
     context: Context,
@@ -43,10 +45,6 @@ abstract class ImageData<S : Subscriber>(
     private lateinit var mCameraProviderFuture: ListenableFuture<ProcessCameraProvider>
     private var yuvToRgbConverter: YuvToRgbConverter? = null
     private var cameraProvider: ProcessCameraProvider? = null
-
-    // Initialize countDownLatch with count of 1 if no preview view, 2 if preview view exists
-    // Waits for both analysis and preview to be running before sending a signal that it is ready
-    private val countDownLatch: CountDownLatch = CountDownLatch(if (previewView != null) 2 else 1)
 
     // We must specify T to define the extending subclass, S to specify the subscriber type used by the extending subclass, and B to reference the extending subclasses' builder class.
     abstract class Builder<T : ImageData<S>, S : Subscriber, B : Builder<T, S, B>>(
@@ -86,7 +84,6 @@ abstract class ImageData<S : Subscriber>(
 
     @ExperimentalGetImage
     override fun analyze(imageProxy: ImageProxy) {
-        countDownLatch.countDown()
         if (subscribers.isNotEmpty() && !paused) {
             val image = imageProxy.image
             val rotation = imageProxy.imageInfo.rotationDegrees
@@ -126,7 +123,11 @@ abstract class ImageData<S : Subscriber>(
             .build()
     }
 
+    @ExperimentalGetImage
     override fun start() {
+        val readinessLatch = CountDownLatch(if (previewView != null) 2 else 1)
+        val analysisReady = AtomicBoolean()
+        val initializationFailure = AtomicReference<Throwable>()
         if (imageAnalysis == null) {
             setDefaultImageAnalysis()
         }
@@ -137,27 +138,24 @@ abstract class ImageData<S : Subscriber>(
         }
         if (subscribers.isNotEmpty()) {
             yuvToRgbConverter = YuvToRgbConverter(context)
-            imageAnalysis!!.setAnalyzer(imageExecutor!!, this)
+            imageAnalysis!!.setAnalyzer(imageExecutor!!) { imageProxy ->
+                if (analysisReady.compareAndSet(false, true)) {
+                    readinessLatch.countDown()
+                }
+                analyze(imageProxy)
+            }
         }
         if (previewView != null) {
             val handler = Handler(context.mainLooper)
             handler.post { previewView!!.setScaleType(PreviewView.ScaleType.FIT_CENTER) }
         }
-        bindAll(lifecycleOwner)
-        val initializationSucceeded = initializationSucceededCallback()
+        bindAll(lifecycleOwner, readinessLatch, initializationFailure)
         super.start()
-        val executor = Executors.newSingleThreadExecutor()
-        executor.submit {
-            try {
-                Logger.i(TAG, "Waiting for preview and analysis to start")
-                countDownLatch.await()
-                Logger.i(TAG, "Preview and analysis started")
-                initializationSucceeded()
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
-            }
-        }
-        executor.shutdown()
+        Logger.i(TAG, "Waiting for preview and analysis to start")
+        readinessLatch.await()
+        initializationFailure.get()?.let { throw it }
+        Logger.i(TAG, "Preview and analysis started")
+        reportInitializationSucceeded()
     }
 
     override fun stop() {
@@ -172,7 +170,11 @@ abstract class ImageData<S : Subscriber>(
         super.stop()
     }
 
-    private fun bindAll(lifecycleOwner: LifecycleOwner) {
+    private fun bindAll(
+        lifecycleOwner: LifecycleOwner,
+        readinessLatch: CountDownLatch,
+        initializationFailure: AtomicReference<Throwable>
+    ) {
         val cameraSelector = CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
             .build()
@@ -195,20 +197,27 @@ abstract class ImageData<S : Subscriber>(
 
                     preview.surfaceProvider = previewView.getSurfaceProvider()
 
+                    val previewReady = AtomicBoolean()
                     val previewViewObserver = Observer<PreviewView.StreamState> { streamState ->
                         Logger.i("previewView", "PreviewState: $streamState")
-                        if (streamState.name == "STREAMING") {
-                            countDownLatch.countDown()
+                        if (
+                            streamState.name == "STREAMING" &&
+                            previewReady.compareAndSet(false, true)
+                        ) {
+                            readinessLatch.countDown()
                         }
                     }
                     previewView.previewStreamState.observe(lifecycleOwner, previewViewObserver)
                 } else {
                     cameraProvider!!.bindToLifecycle(lifecycleOwner, cameraSelector, imageAnalysis)
                 }
-            } catch (e: ExecutionException) {
-                e.printStackTrace()
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
+            } catch (failure: Exception) {
+                initializationFailure.set(
+                    (failure as? ExecutionException)?.cause ?: failure
+                )
+                while (readinessLatch.count > 0) {
+                    readinessLatch.countDown()
+                }
             }
         }, ContextCompat.getMainExecutor(context))
     }
