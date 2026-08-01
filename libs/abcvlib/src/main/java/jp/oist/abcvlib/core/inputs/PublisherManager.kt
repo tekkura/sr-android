@@ -13,11 +13,18 @@ import java.util.concurrent.Phaser
  * phase 2 = initialize publisher objects (i.e. initialize recording data)
  */
 class PublisherManager {
-    val publishers: ArrayList<Publisher<*>> = ArrayList()
-    private val requirements = HashMap<Publisher<*>, PublisherRequirement>()
+    private val registrations = LinkedHashMap<Publisher<*>, PublisherRegistration>()
+    val publishers: ArrayList<Publisher<*>>
+        get() = synchronized(this) { ArrayList(registrations.keys) }
+
     private val phaser = Phaser(1)
+    private val initializingPublisher = ThreadLocal<Publisher<*>>()
     private val TAG: String = javaClass.name
     private var registrationsLocked = false
+
+    @Volatile
+    var startupResult: PublisherManagerStartupResult? = null
+        private set
 
     //========================================Phase 0===============================================
     @Synchronized
@@ -27,8 +34,7 @@ class PublisherManager {
         }
 
         Logger.i(TAG, "Adding publisher: " + publisher.javaClass.name)
-        publishers.add(publisher)
-        requirements[publisher] = PublisherRequirement.REQUIRED
+        registrations[publisher] = PublisherRegistration()
         phaser.register()
         return this
     }
@@ -41,19 +47,21 @@ class PublisherManager {
         check(!registrationsLocked) {
             "Publisher requirements cannot change after initialization has started"
         }
-        require(requirements.containsKey(publisher)) {
+
+        val registration = registrations[publisher]
+        requireNotNull(registration) {
             "Publisher is not registered with this manager"
         }
 
-        requirements[publisher] = requirement
+        registration.requirement = requirement
         return this
     }
 
     @Synchronized
     fun getRequirement(publisher: Publisher<*>): PublisherRequirement {
-        return requireNotNull(requirements[publisher]) {
+        return requireNotNull(registrations[publisher]) {
             "Publisher is not registered with this manager"
-        }
+        }.requirement
     }
 
     fun onPublisherPermissionsGranted(grantedPublisher: Publisher<*>) { // Accept the publisher
@@ -65,11 +73,49 @@ class PublisherManager {
     private fun initialize(publisher: Publisher<*>) {
         Logger.i(TAG, "Registering publisher for phase 1: " + publisher.javaClass.name)
         phaser.register()
-        publisher.start()
+        publisher.beginInitialization()
+        initializingPublisher.set(publisher)
+        try {
+            publisher.start()
+        } finally {
+            initializingPublisher.remove()
+        }
     }
 
+    @Deprecated("Publishers should call reportInitializationSucceeded()")
     fun onPublisherInitialized() {
-        Logger.i(TAG, "Publisher deregistering: " + Thread.currentThread().stackTrace[2].className)
+        val publisher = checkNotNull(initializingPublisher.get()) {
+            "Asynchronous publishers must use initializationSucceededCallback()"
+        }
+        onPublisherInitializationSucceeded(publisher)
+    }
+
+    @Synchronized
+    internal fun onPublisherInitializationSucceeded(publisher: Publisher<*>) {
+        val registration = registrations[publisher]
+        requireNotNull(registration) {
+            "Publisher is not registered with this manager"
+        }
+
+        if (registration.completed) return
+
+        registration.completed = true
+        Logger.i(TAG, "Publisher initialized: " + publisher.javaClass.name)
+        phaser.arriveAndDeregister()
+    }
+
+    @Synchronized
+    internal fun onPublisherInitializationFailed(failure: PublisherStartupFailure) {
+        val registration = registrations[failure.publisher]
+        requireNotNull(registration) {
+            "Publisher is not registered with this manager"
+        }
+
+        if (registration.completed) return
+
+        registration.completed = true
+        registration.failure = failure
+        Logger.e(TAG, "Publisher initialization failed: " + failure.publisher.javaClass.name)
         phaser.arriveAndDeregister()
     }
 
@@ -96,10 +142,26 @@ class PublisherManager {
         executor.submit {
             Logger.i(TAG, "Waiting on phase 1 to finish before starting")
             phaser.awaitAdvance(1)
-            Logger.i(TAG, "All publishers initialized. Starting publishers")
-            for (publisher in publishers) {
-                publisher.resume()
+
+            val requiredFailures = registrations.values
+                .filter { it.requirement == PublisherRequirement.REQUIRED }
+                .mapNotNull { it.failure }
+            val optionalFailures = registrations.values
+                .filter { it.requirement == PublisherRequirement.OPTIONAL }
+                .mapNotNull { it.failure }
+
+            startupResult = if (requiredFailures.isEmpty()) {
+                Logger.i(TAG, "Publisher initialization complete. Starting available publishers")
+                registrations
+                    .filterValues { it.failure == null }
+                    .keys
+                    .forEach(Publisher<*>::resume)
+                PublisherManagerStartupResult.Success(optionalFailures)
+            } else {
+                Logger.e(TAG, "Required publisher initialization failed")
+                PublisherManagerStartupResult.Failure(requiredFailures, optionalFailures)
             }
+
             executor.shutdown() // Shut down the executor after the task is completed
         }
     }
@@ -122,4 +184,10 @@ class PublisherManager {
             publisher.stop()
         }
     }
+
+    private data class PublisherRegistration(
+        var requirement: PublisherRequirement = PublisherRequirement.REQUIRED,
+        var completed: Boolean = false,
+        var failure: PublisherStartupFailure? = null
+    )
 }
