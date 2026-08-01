@@ -96,15 +96,20 @@ class WheelData(
     }
 
     override fun start() {
-        mHandlerThread = HandlerThread("wheelDataThread")
-        mHandlerThread.start()
-        handler = Handler(mHandlerThread.looper)
-        super.start()
-        reportInitializationSucceeded()
+        try {
+            mHandlerThread = HandlerThread("wheelDataThread")
+            mHandlerThread.start()
+            handler = Handler(mHandlerThread.looper)
+            super.start()
+            reportInitializationSucceeded()
+        } catch (failure: Exception) {
+            stopHandlerThread()
+            throw failure
+        }
     }
 
     override fun stop() {
-        mHandlerThread.quitSafely()
+        stopHandlerThread()
         super.stop()
     }
 

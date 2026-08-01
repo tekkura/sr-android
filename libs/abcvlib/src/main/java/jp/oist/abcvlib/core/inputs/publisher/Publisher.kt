@@ -197,4 +197,10 @@ abstract class Publisher<T : Subscriber>(
     internal fun initializationFailed() {
         state = PublisherState.FAILED
     }
+
+    protected fun stopHandlerThread() {
+        if (::mHandlerThread.isInitialized) {
+            mHandlerThread.quitSafely()
+        }
+    }
 }
