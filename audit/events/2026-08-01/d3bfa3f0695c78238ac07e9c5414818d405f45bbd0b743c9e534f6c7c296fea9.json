@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-08-01T14:07:02Z",
+  "event_ts": "2026-08-01T14:06:45Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "opened",
+  "actor": "GeorgeChernyshov",
+  "run_id": "30703097573",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": {
+    "number": 320,
+    "title": "[Issue]: Migrate PublisherManager to coroutines",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/issues/320",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/320",
+  "event_id": "d3bfa3f0695c78238ac07e9c5414818d405f45bbd0b743c9e534f6c7c296fea9"
+}
