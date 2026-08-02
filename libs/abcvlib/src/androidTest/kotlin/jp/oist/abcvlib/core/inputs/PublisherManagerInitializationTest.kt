@@ -1,6 +1,7 @@
 package jp.oist.abcvlib.core.inputs
 
 import android.content.Context
+import android.media.AudioRecord
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import jp.oist.abcvlib.core.inputs.publisher.Publisher
@@ -8,7 +9,9 @@ import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupListener
 import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
 import jp.oist.abcvlib.core.inputs.publisher.PublisherRequirement
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailure
 import jp.oist.abcvlib.core.inputs.publisher.PublisherState
+import jp.oist.abcvlib.core.inputs.phone.MicrophoneData
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
@@ -101,6 +104,81 @@ class PublisherManagerInitializationTest {
         assertTrue(result is PublisherManagerStartupResult.Failure)
         val failure = (result as PublisherManagerStartupResult.Failure).requiredFailures.single()
         assertTrue(failure.publisher === publisher)
+    }
+
+    @Test
+    fun successfulStartupBehaviorIsPreserved() {
+        val manager = PublisherManager()
+        val publisher = TestPublisher(context, manager, shouldFail = false)
+
+        assertEquals(PublisherRequirement.REQUIRED, manager.getRequirement(publisher))
+        manager.initializePublishers()
+        val result = startAndAwait(manager)
+
+        assertTrue(result is PublisherManagerStartupResult.Success)
+        assertTrue((result as PublisherManagerStartupResult.Success).optionalFailures.isEmpty())
+        assertEquals(PublisherState.STARTED, publisher.getState())
+        assertFalse(publisher.isPaused())
+    }
+
+    @Test
+    fun thrownStartupExceptionBecomesRequiredFailure() {
+        val manager = PublisherManager()
+        val expectedFailure = IllegalStateException("Test startup exception")
+        val publisher = ThrowingPublisher(context, manager, expectedFailure)
+
+        manager.initializePublishers()
+        val result = startAndAwait(manager)
+
+        assertTrue(result is PublisherManagerStartupResult.Failure)
+        val failure = (result as PublisherManagerStartupResult.Failure).requiredFailures.single()
+        assertTrue(failure.publisher === publisher)
+        assertTrue(failure.cause === expectedFailure)
+        assertEquals(PublisherState.FAILED, publisher.getState())
+    }
+
+    @Test(timeout = 10_000)
+    fun unavailableMicrophoneBecomesRequiredFailure() {
+        val manager = PublisherManager(initializationTimeoutMillis = 1_000)
+        val expectedFailure = IllegalStateException("Test microphone unavailable")
+        val publisher = UnavailableMicrophoneData(context, manager, expectedFailure)
+        manager.onPublisherPermissionsGranted(publisher)
+
+        try {
+            manager.initializePublishers()
+            val result = startAndAwait(manager)
+
+            assertTrue(result is PublisherManagerStartupResult.Failure)
+            val failure = (result as PublisherManagerStartupResult.Failure)
+                .requiredFailures
+                .single()
+            assertTrue(failure.publisher === publisher)
+            assertTrue(failure.cause === expectedFailure)
+            assertEquals(expectedFailure.message, failure.message)
+            assertEquals(PublisherState.FAILED, publisher.getState())
+        } finally {
+            manager.stopPublishers()
+        }
+    }
+
+    @Test(timeout = 10_000)
+    fun unavailableMicrophoneTimestampTimesOut() {
+        val publisher = TimestampPollingMicrophoneData(context, PublisherManager())
+        var timestampReadCount = 0
+
+        val failure = runCatching {
+            publisher.waitForUsableTimestamp {
+                timestampReadCount++
+                AudioRecord.ERROR_INVALID_OPERATION
+            }
+        }.exceptionOrNull()
+
+        assertTrue(failure is IllegalStateException)
+        assertEquals(
+            "Timed out waiting for a usable microphone timestamp",
+            failure?.message
+        )
+        assertTrue(timestampReadCount > 1)
     }
 
     @Test
@@ -204,6 +282,25 @@ class PublisherManagerInitializationTest {
     }
 
     @Test
+    fun permissionDenialBecomesRequiredFailure() {
+        val manager = PublisherManager()
+        val publisher = PendingPermissionPublisher(context, manager)
+        val expectedFailure = PublisherStartupFailure(
+            publisher,
+            "Test permission denial"
+        )
+        manager.onPublisherPermissionsDenied(expectedFailure)
+
+        manager.initializePublishers()
+        val result = startAndAwait(manager)
+
+        assertTrue(result is PublisherManagerStartupResult.Failure)
+        val failure = (result as PublisherManagerStartupResult.Failure).requiredFailures.single()
+        assertTrue(failure === expectedFailure)
+        assertEquals(PublisherState.FAILED, publisher.getState())
+    }
+
+    @Test
     fun requiredFailureKeepsSuccessfulPublisherPaused() {
         val manager = PublisherManager()
         val failedPublisher = TestPublisher(context, manager, shouldFail = true)
@@ -224,7 +321,7 @@ class PublisherManagerInitializationTest {
         val failedPublisher = TestPublisher(context, manager, shouldFail = true)
         val successfulPublisher = TestPublisher(context, manager, shouldFail = false)
         manager.setRequirement(failedPublisher, PublisherRequirement.OPTIONAL)
-        manager.setRequirement(successfulPublisher, PublisherRequirement.OPTIONAL)
+        assertEquals(PublisherRequirement.REQUIRED, manager.getRequirement(successfulPublisher))
 
         manager.initializePublishers()
         val result = startAndAwait(manager)
@@ -303,6 +400,25 @@ class PublisherManagerInitializationTest {
                 initializationSucceeded()
             }.start()
         }
+    }
+
+    private class UnavailableMicrophoneData(
+        context: Context,
+        publisherManager: PublisherManager,
+        private val failure: RuntimeException
+    ) : MicrophoneData(context, publisherManager) {
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun createRecorder(bufferSize: Int): AudioRecord {
+            throw failure
+        }
+    }
+
+    private class TimestampPollingMicrophoneData(
+        context: Context,
+        publisherManager: PublisherManager
+    ) : MicrophoneData(context, publisherManager) {
+        override fun getRequiredPermissions() = arrayListOf<String>()
     }
 
     private class AsyncFailurePublisher(
@@ -400,6 +516,18 @@ class PublisherManagerInitializationTest {
                 super.start()
                 reportInitializationSucceeded()
             }
+        }
+    }
+
+    private class ThrowingPublisher(
+        context: Context,
+        publisherManager: PublisherManager,
+        private val failure: RuntimeException
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun start() {
+            throw failure
         }
     }
 
