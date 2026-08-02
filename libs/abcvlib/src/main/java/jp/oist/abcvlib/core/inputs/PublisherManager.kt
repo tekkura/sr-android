@@ -2,9 +2,12 @@ package jp.oist.abcvlib.core.inputs
 
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.WorkerThread
 import jp.oist.abcvlib.util.Logger
 import java.util.concurrent.Executors
 import java.util.concurrent.Phaser
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
@@ -16,7 +19,8 @@ import java.util.concurrent.TimeUnit
  * phase 2 = initialize publisher objects (i.e. initialize recording data)
  */
 class PublisherManager(
-    private val permissionTimeoutMillis: Long = DEFAULT_PERMISSION_TIMEOUT_MILLIS
+    private val permissionTimeoutMillis: Long = DEFAULT_PERMISSION_TIMEOUT_MILLIS,
+    private val initializationTimeoutMillis: Long = DEFAULT_INITIALIZATION_TIMEOUT_MILLIS
 ) {
     private val registrations = LinkedHashMap<Publisher<*>, PublisherRegistration>()
     val publishers: ArrayList<Publisher<*>>
@@ -25,12 +29,14 @@ class PublisherManager(
     private val phaser = Phaser(1)
     private val initializingPublisher = ThreadLocal<Publisher<*>>()
     private val permissionTimeoutExecutor = Executors.newSingleThreadScheduledExecutor()
+    private val initializationTimeoutExecutor = Executors.newSingleThreadScheduledExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val startupListeners = ArrayList<PublisherManagerStartupListener>()
     private val TAG: String = javaClass.name
     private var registrationsLocked = false
     private var initializationStarted = false
     private var startupStarted = false
+    private var initializationLaunchComplete = false
 
     @Volatile
     var startupResult: PublisherManagerStartupResult? = null
@@ -39,6 +45,9 @@ class PublisherManager(
     init {
         require(permissionTimeoutMillis > 0) {
             "permissionTimeoutMillis must be positive"
+        }
+        require(initializationTimeoutMillis > 0) {
+            "initializationTimeoutMillis must be positive"
         }
     }
 
@@ -104,20 +113,75 @@ class PublisherManager(
 
         registration.permissionResolved = true
         registration.failure = failure
-        failure.publisher.markFailed()
+        failure.publisher.initializationFailed()
         phaser.arriveAndDeregister()
     }
 
     //========================================Phase 1===============================================
-    private fun initialize(publisher: Publisher<*>) {
+    private fun initialize(
+        publisher: Publisher<*>,
+        executor: java.util.concurrent.ExecutorService
+    ) {
         Logger.i(TAG, "Registering publisher for phase 1: " + publisher.javaClass.name)
+        val registration = requireNotNull(registrations[publisher])
+        registration.initializationStarted = true
         phaser.register()
         publisher.beginInitialization()
-        initializingPublisher.set(publisher)
+        val initialization = try {
+            executor.submit {
+                initializingPublisher.set(publisher)
+                try {
+                    publisher.start()
+                } catch (failure: Throwable) {
+                    onPublisherInitializationFailed(
+                        PublisherStartupFailure(
+                            publisher,
+                            failure.message,
+                            failure
+                        )
+                    )
+                } finally {
+                    initializingPublisher.remove()
+                }
+            }
+        } catch (failure: RejectedExecutionException) {
+            onPublisherInitializationFailed(
+                PublisherStartupFailure(
+                    publisher,
+                    "Could not submit publisher initialization",
+                    failure
+                )
+            )
+            return
+        }
+
         try {
-            publisher.start()
-        } finally {
-            initializingPublisher.remove()
+            val timeout = initializationTimeoutExecutor.schedule(
+                {
+                    onPublisherInitializationFailed(
+                        PublisherStartupFailure(
+                            publisher,
+                            "Timed out waiting for publisher initialization"
+                        )
+                    )
+                    initialization.cancel(true)
+                },
+                initializationTimeoutMillis,
+                TimeUnit.MILLISECONDS
+            )
+            synchronized(this) {
+                registration.initializationTimeout = timeout
+                if (registration.completed) timeout.cancel(false)
+            }
+        } catch (failure: RejectedExecutionException) {
+            initialization.cancel(true)
+            onPublisherInitializationFailed(
+                PublisherStartupFailure(
+                    publisher,
+                    "Could not schedule publisher initialization timeout",
+                    failure
+                )
+            )
         }
     }
 
@@ -139,8 +203,11 @@ class PublisherManager(
         if (registration.completed) return
 
         registration.completed = true
+        registration.initializationTimeout?.cancel(false)
+        publisher.initializationSucceeded()
         Logger.i(TAG, "Publisher initialized: " + publisher.javaClass.name)
         phaser.arriveAndDeregister()
+        shutdownInitializationTimeoutIfComplete()
     }
 
     @Synchronized
@@ -153,11 +220,21 @@ class PublisherManager(
         if (registration.completed) return
 
         registration.completed = true
+        registration.initializationTimeout?.cancel(false)
         registration.failure = failure
+        failure.publisher.initializationFailed()
         Logger.e(TAG, "Publisher initialization failed: " + failure.publisher.javaClass.name)
         phaser.arriveAndDeregister()
+        shutdownInitializationTimeoutIfComplete()
     }
 
+    /**
+     * Initializes registered publishers and waits for their start calls to return or time out.
+     *
+     * This must not run on the main thread because a publisher may need main-thread callbacks to
+     * finish its start call.
+     */
+    @WorkerThread
     fun initializePublishers() {
         synchronized(this) {
             registrationsLocked = true
@@ -179,9 +256,29 @@ class PublisherManager(
         permissionTimeout.cancel(false)
         permissionTimeoutExecutor.shutdown()
         Logger.i(TAG, "Phase 0 complete, starting publisher initialization")
+        val initializationExecutor = Executors.newCachedThreadPool()
         for (publisher in registrations.filterValues { it.failure == null }.keys) {
             Logger.i(TAG, "Initializing publisher: " + publisher.javaClass.name)
-            initialize(publisher)
+            initialize(publisher, initializationExecutor)
+        }
+        initializationExecutor.shutdown()
+
+        try {
+            if (!initializationExecutor.awaitTermination(
+                    initializationTimeoutMillis,
+                    TimeUnit.MILLISECONDS
+                )
+            ) {
+                initializationExecutor.shutdownNow()
+            }
+        } catch (_: InterruptedException) {
+            initializationExecutor.shutdownNow()
+            Thread.currentThread().interrupt()
+        }
+
+        synchronized(this) {
+            initializationLaunchComplete = true
+            shutdownInitializationTimeoutIfComplete()
         }
     }
 
@@ -196,9 +293,20 @@ class PublisherManager(
                 )
                 registration.permissionResolved = true
                 registration.failure = failure
-                publisher.markFailed()
+                publisher.initializationFailed()
                 phaser.arriveAndDeregister()
             }
+    }
+
+    @Synchronized
+    private fun shutdownInitializationTimeoutIfComplete() {
+        if (initializationLaunchComplete &&
+            registrations.values
+                .filter { it.initializationStarted }
+                .all { it.completed }
+        ) {
+            initializationTimeoutExecutor.shutdown()
+        }
     }
 
     //========================================Phase 2===============================================
@@ -285,11 +393,14 @@ class PublisherManager(
     private data class PublisherRegistration(
         var requirement: PublisherRequirement = PublisherRequirement.REQUIRED,
         var permissionResolved: Boolean = false,
+        var initializationStarted: Boolean = false,
         var completed: Boolean = false,
+        var initializationTimeout: ScheduledFuture<*>? = null,
         var failure: PublisherStartupFailure? = null
     )
 
     private companion object {
         const val DEFAULT_PERMISSION_TIMEOUT_MILLIS = 30_000L
+        const val DEFAULT_INITIALIZATION_TIMEOUT_MILLIS = 10_000L
     }
 }

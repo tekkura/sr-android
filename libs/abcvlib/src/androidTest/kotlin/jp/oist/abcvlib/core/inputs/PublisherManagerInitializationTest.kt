@@ -43,8 +43,7 @@ class PublisherManagerInitializationTest {
         AsyncFailurePublisher(context, manager)
 
         manager.initializePublishers()
-        manager.startPublishers()
-        val result = awaitStartupResult(manager)
+        val result = startAndAwait(manager)
 
         assertTrue(result is PublisherManagerStartupResult.Failure)
         val failure = (result as PublisherManagerStartupResult.Failure).requiredFailures.single()
@@ -81,6 +80,50 @@ class PublisherManagerInitializationTest {
         assertTrue(result is PublisherManagerStartupResult.Failure)
         val failure = (result as PublisherManagerStartupResult.Failure).requiredFailures.single()
         assertTrue(failure.publisher === failedPublisher)
+    }
+
+    @Test
+    fun initializationTimeoutBecomesRequiredFailure() {
+        val manager = PublisherManager(initializationTimeoutMillis = 100)
+        val publisher = BlockingInitializationPublisher(context, manager)
+
+        manager.initializePublishers()
+        val result = startAndAwait(manager)
+
+        assertTrue(result is PublisherManagerStartupResult.Failure)
+        assertEquals(PublisherState.FAILED, publisher.getState())
+    }
+
+    @Test
+    fun publishersInitializeConcurrently() {
+        val manager = PublisherManager(initializationTimeoutMillis = 2_000)
+        val publishersStarted = CountDownLatch(2)
+        ConcurrentInitializationPublisher(context, manager, publishersStarted)
+        ConcurrentInitializationPublisher(context, manager, publishersStarted)
+
+        manager.initializePublishers()
+        val result = startAndAwait(manager)
+
+        assertTrue(result is PublisherManagerStartupResult.Success)
+    }
+
+    @Test
+    fun initializePublishersWaitsForPublisherStartsToReturn() {
+        val manager = PublisherManager(initializationTimeoutMillis = 2_000)
+        val publisher = ReturningInitializationPublisher(context, manager)
+        val initializationReturned = CountDownLatch(1)
+        val initializationThread = Thread {
+            manager.initializePublishers()
+            initializationReturned.countDown()
+        }
+
+        initializationThread.start()
+        assertTrue(publisher.startEntered.await(3, TimeUnit.SECONDS))
+        assertFalse(initializationReturned.await(200, TimeUnit.MILLISECONDS))
+
+        publisher.allowStartToReturn.countDown()
+        assertTrue(initializationReturned.await(3, TimeUnit.SECONDS))
+        initializationThread.join(3_000)
     }
 
     @Test
@@ -242,5 +285,54 @@ class PublisherManagerInitializationTest {
         override fun getRequiredPermissions() = arrayListOf<String>()
 
         override fun onPermissionGranted() = Unit
+    }
+
+    private class BlockingInitializationPublisher(
+        context: Context,
+        publisherManager: PublisherManager
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun start() {
+            try {
+                CountDownLatch(1).await()
+            } catch (_: InterruptedException) {
+                // The manager is expected to interrupt this worker at the deadline.
+            }
+        }
+    }
+
+    private class ConcurrentInitializationPublisher(
+        context: Context,
+        publisherManager: PublisherManager,
+        private val publishersStarted: CountDownLatch
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun start() {
+            publishersStarted.countDown()
+            if (publishersStarted.await(1, TimeUnit.SECONDS)) {
+                reportInitializationSucceeded()
+            } else {
+                reportInitializationFailed("Publishers were initialized sequentially")
+            }
+        }
+    }
+
+    private class ReturningInitializationPublisher(
+        context: Context,
+        publisherManager: PublisherManager
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        val startEntered = CountDownLatch(1)
+        val allowStartToReturn = CountDownLatch(1)
+
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun start() {
+            super.start()
+            reportInitializationSucceeded()
+            startEntered.countDown()
+            allowStartToReturn.await()
+        }
     }
 }
