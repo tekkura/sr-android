@@ -1,7 +1,7 @@
 package jp.oist.abcvlib.core.learning
 
 import android.content.Context
-import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer
 import jp.oist.abcvlib.core.outputs.ActionSelector
 import jp.oist.abcvlib.core.outputs.Outputs

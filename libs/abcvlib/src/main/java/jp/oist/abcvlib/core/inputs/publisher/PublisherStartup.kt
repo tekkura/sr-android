@@ -1,4 +1,4 @@
-package jp.oist.abcvlib.core.inputs
+package jp.oist.abcvlib.core.inputs.publisher
 
 /**
  * Defines whether an application can operate without a publisher.

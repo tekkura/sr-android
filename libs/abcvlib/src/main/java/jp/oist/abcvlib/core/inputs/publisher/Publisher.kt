@@ -1,4 +1,4 @@
-package jp.oist.abcvlib.core.inputs
+package jp.oist.abcvlib.core.inputs.publisher
 
 import android.content.Context
 import android.os.Handler
@@ -6,6 +6,7 @@ import android.os.HandlerThread
 import com.intentfilter.androidpermissions.PermissionManager
 import com.intentfilter.androidpermissions.PermissionManager.PermissionRequestListener
 import com.intentfilter.androidpermissions.models.DeniedPermissions
+import jp.oist.abcvlib.core.inputs.Subscriber
 import jp.oist.abcvlib.util.Logger
 import kotlin.concurrent.Volatile
 
@@ -35,7 +36,7 @@ import kotlin.concurrent.Volatile
  * [initializationFailedCallback] during [start], then invoke the appropriate callback when
  * initialization finishes.
  *
- * @param T The [Subscriber] subclass that can accept the data published by your publisher.
+ * @param T The [jp.oist.abcvlib.core.inputs.Subscriber] subclass that can accept the data published by your publisher.
  *   e.g. the [ImageData][jp.oist.abcvlib.core.inputs.phone.ImageData] class extends Publisher<ImageDataRawSubscriber>
  *   where [ImageDataRawSubscriber] implements the
  *   [ImageDataRawSubscriber.onImageDataUpdate] method accepting the data from the last part of
@@ -48,6 +49,7 @@ abstract class Publisher<T : Subscriber>(
     protected var subscribers: ArrayList<T> = ArrayList()
 
     private var state: PublisherState = PublisherState.STOPPED
+    private val initializationAttempt = ThreadLocal<Long>()
     protected val permissionManager: PermissionManager
     protected lateinit var mHandlerThread: HandlerThread
     protected lateinit var handler: Handler
@@ -119,25 +121,35 @@ abstract class Publisher<T : Subscriber>(
         )
     }
 
+    internal fun requestPermissions() {
+        permissionManager.checkPermissions(getRequiredPermissions(), this)
+    }
+
     /**
      * Reports that this publisher has finished initialization.
      */
     protected fun reportInitializationSucceeded() {
-        publisherManager.onPublisherInitializationSucceeded(this)
+        reportInitializationSucceeded(currentInitializationAttempt())
+    }
+
+    private fun reportInitializationSucceeded(attemptId: Long) {
+        publisherManager.onPublisherInitializationSucceeded(this, attemptId)
     }
 
     /**
      * Captures a completion callback that may be invoked from another thread.
      */
     protected fun initializationSucceededCallback(): () -> Unit {
-        return { reportInitializationSucceeded() }
+        val attemptId = currentInitializationAttempt()
+        return { reportInitializationSucceeded(attemptId) }
     }
 
     /**
      * Captures a failure callback that may be invoked from another thread.
      */
     protected fun initializationFailedCallback(): (String?, Throwable?) -> Unit {
-        return { message, cause -> reportInitializationFailed(message, cause) }
+        val attemptId = currentInitializationAttempt()
+        return { message, cause -> reportInitializationFailed(attemptId, message, cause) }
     }
 
     /**
@@ -148,13 +160,34 @@ abstract class Publisher<T : Subscriber>(
         message: String? = null,
         cause: Throwable? = null
     ) {
+        reportInitializationFailed(currentInitializationAttempt(), message, cause)
+    }
+
+    private fun reportInitializationFailed(
+        attemptId: Long,
+        message: String? = null,
+        cause: Throwable? = null
+    ) {
         publisherManager.onPublisherInitializationFailed(
+            attemptId,
             PublisherStartupFailure(this, message, cause)
         )
     }
 
-    internal fun beginInitialization() {
+    private fun currentInitializationAttempt(): Long {
+        return checkNotNull(initializationAttempt.get()) {
+            "Publisher is not running an initialization attempt"
+        }
+    }
+
+    internal fun runInitialization(attemptId: Long) {
         state = PublisherState.INITIALIZING
+        initializationAttempt.set(attemptId)
+        try {
+            start()
+        } finally {
+            initializationAttempt.remove()
+        }
     }
 
     internal fun initializationSucceeded() {

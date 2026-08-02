@@ -13,7 +13,7 @@ import com.google.zxing.NotFoundException
 import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
-import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import jp.oist.abcvlib.util.Logger
 import java.util.concurrent.ExecutorService
 

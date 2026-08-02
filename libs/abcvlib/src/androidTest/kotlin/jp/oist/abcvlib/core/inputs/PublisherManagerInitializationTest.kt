@@ -3,6 +3,12 @@ package jp.oist.abcvlib.core.inputs
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import jp.oist.abcvlib.core.inputs.publisher.Publisher
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupListener
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
+import jp.oist.abcvlib.core.inputs.publisher.PublisherRequirement
+import jp.oist.abcvlib.core.inputs.publisher.PublisherState
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
@@ -83,7 +89,66 @@ class PublisherManagerInitializationTest {
     }
 
     @Test
-    fun initializationTimeoutBecomesRequiredFailure() {
+    fun asynchronousLegacyCallbackBecomesFailureWithoutThrowing() {
+        val manager = PublisherManager(initializationTimeoutMillis = 100)
+        val publisher = AsyncLegacyPublisher(context, manager)
+
+        manager.initializePublishers()
+        assertTrue(publisher.callbackReturned.await(3, TimeUnit.SECONDS))
+        assertTrue(publisher.callbackFailure == null)
+
+        val result = startAndAwait(manager)
+        assertTrue(result is PublisherManagerStartupResult.Failure)
+        val failure = (result as PublisherManagerStartupResult.Failure).requiredFailures.single()
+        assertTrue(failure.publisher === publisher)
+    }
+
+    @Test
+    fun staleResultDoesNotCompleteRetry() {
+        val manager = PublisherManager()
+        val publisher = StaleResultPublisher(context, manager)
+
+        manager.initializePublishers()
+        assertTrue(startAndAwait(manager) is PublisherManagerStartupResult.Failure)
+
+        val resultLatch = CountDownLatch(1)
+        var retryResult: PublisherManagerStartupResult? = null
+        val retryThread = Thread {
+            manager.retryFailedPublishers(PublisherManagerStartupListener {
+                retryResult = it
+                resultLatch.countDown()
+            })
+        }
+        retryThread.start()
+
+        assertTrue(publisher.staleResultReported.await(3, TimeUnit.SECONDS))
+        assertFalse(resultLatch.await(200, TimeUnit.MILLISECONDS))
+        publisher.allowRetrySuccess.countDown()
+        assertTrue(resultLatch.await(3, TimeUnit.SECONDS))
+        assertTrue(retryResult is PublisherManagerStartupResult.Success)
+        retryThread.join(3_000)
+    }
+
+    @Test
+    fun retryInitializesOnlyFailedPublisher() {
+        val manager = PublisherManager()
+        val retriedPublisher = RetryPublisher(context, manager, failuresRemaining = 1)
+        val successfulPublisher = RetryPublisher(context, manager)
+
+        manager.initializePublishers()
+        assertTrue(startAndAwait(manager) is PublisherManagerStartupResult.Failure)
+
+        val retryResult = retryAndAwait(manager)
+
+        assertTrue(retryResult is PublisherManagerStartupResult.Success)
+        assertEquals(2, retriedPublisher.initializationCount)
+        assertEquals(1, successfulPublisher.initializationCount)
+        assertEquals(PublisherState.STARTED, retriedPublisher.getState())
+        assertEquals(PublisherState.STARTED, successfulPublisher.getState())
+    }
+
+    @Test
+    fun lateInitializationSuccessDoesNotOverrideTimeout() {
         val manager = PublisherManager(initializationTimeoutMillis = 100)
         val publisher = BlockingInitializationPublisher(context, manager)
 
@@ -187,6 +252,18 @@ class PublisherManagerInitializationTest {
         return requireNotNull(startupResult)
     }
 
+    private fun retryAndAwait(manager: PublisherManager): PublisherManagerStartupResult {
+        val latch = CountDownLatch(1)
+        var startupResult: PublisherManagerStartupResult? = null
+        manager.retryFailedPublishers(PublisherManagerStartupListener {
+            startupResult = it
+            latch.countDown()
+        })
+
+        assertTrue("Timed out waiting for retry result", latch.await(3, TimeUnit.SECONDS))
+        return requireNotNull(startupResult)
+    }
+
     private val context: Context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -278,6 +355,85 @@ class PublisherManagerInitializationTest {
         }
     }
 
+    @Suppress("DEPRECATION")
+    private class AsyncLegacyPublisher(
+        context: Context,
+        publisherManager: PublisherManager
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        val callbackReturned = CountDownLatch(1)
+
+        @Volatile
+        var callbackFailure: Throwable? = null
+            private set
+
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun start() {
+            super.start()
+            Thread {
+                try {
+                    publisherManager.onPublisherInitialized()
+                } catch (failure: Throwable) {
+                    callbackFailure = failure
+                } finally {
+                    callbackReturned.countDown()
+                }
+            }.start()
+        }
+    }
+
+    private class RetryPublisher(
+        context: Context,
+        publisherManager: PublisherManager,
+        private var failuresRemaining: Int = 0
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        var initializationCount = 0
+            private set
+
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun start() {
+            initializationCount++
+            if (failuresRemaining-- > 0) {
+                reportInitializationFailed("Test failure")
+            } else {
+                super.start()
+                reportInitializationSucceeded()
+            }
+        }
+    }
+
+    private class StaleResultPublisher(
+        context: Context,
+        publisherManager: PublisherManager
+    ) : Publisher<Subscriber>(context, publisherManager) {
+        val staleResultReported = CountDownLatch(1)
+        val allowRetrySuccess = CountDownLatch(1)
+        private val retryStarted = CountDownLatch(1)
+        private var initializationCount = 0
+
+        override fun getRequiredPermissions() = arrayListOf<String>()
+
+        override fun start() {
+            initializationCount++
+            if (initializationCount == 1) {
+                val expiredAttemptSucceeded = initializationSucceededCallback()
+                reportInitializationFailed("Test failure")
+                Thread {
+                    retryStarted.await()
+                    expiredAttemptSucceeded()
+                    staleResultReported.countDown()
+                }.start()
+                return
+            }
+
+            retryStarted.countDown()
+            allowRetrySuccess.await()
+            super.start()
+            reportInitializationSucceeded()
+        }
+    }
+
     private class PendingPermissionPublisher(
         context: Context,
         publisherManager: PublisherManager
@@ -297,7 +453,7 @@ class PublisherManagerInitializationTest {
             try {
                 CountDownLatch(1).await()
             } catch (_: InterruptedException) {
-                // The manager is expected to interrupt this worker at the deadline.
+                reportInitializationSucceeded()
             }
         }
     }

@@ -11,8 +11,8 @@ import android.media.MediaRecorder
 import android.os.Handler
 import android.os.HandlerThread
 import com.intentfilter.androidpermissions.models.DeniedPermissions
-import jp.oist.abcvlib.core.inputs.Publisher
-import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.Publisher
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import jp.oist.abcvlib.util.ErrorHandler
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.ProcessPriorityThreadFactory

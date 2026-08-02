@@ -10,7 +10,7 @@ import com.google.mediapipe.tasks.components.containers.Category
 import com.google.mediapipe.tasks.components.containers.Detection
 import jp.oist.abcvlib.basiccharger.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryDataSubscriber
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData

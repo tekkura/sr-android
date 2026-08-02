@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
-import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import java.util.concurrent.ExecutorService
 
 /**

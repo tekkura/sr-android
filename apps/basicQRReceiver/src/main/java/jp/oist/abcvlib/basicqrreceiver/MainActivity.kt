@@ -3,7 +3,7 @@ package jp.oist.abcvlib.basicqrreceiver
 import android.os.Bundle
 import android.widget.TextView
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import jp.oist.abcvlib.core.inputs.phone.QRCodeData
 import jp.oist.abcvlib.core.inputs.phone.QRCodeDataSubscriber
 import jp.oist.abcvlib.util.SerialCommManager
