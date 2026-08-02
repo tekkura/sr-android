@@ -6,6 +6,7 @@ import android.os.HandlerThread
 import com.intentfilter.androidpermissions.PermissionManager
 import com.intentfilter.androidpermissions.PermissionManager.PermissionRequestListener
 import com.intentfilter.androidpermissions.models.DeniedPermissions
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailure
 import jp.oist.abcvlib.util.Logger
 import kotlin.concurrent.Volatile
 
@@ -119,26 +120,28 @@ abstract class Publisher<T : Subscriber>(
         )
     }
 
+    internal fun requestPermissions() = permissionManager.checkPermissions(
+        getRequiredPermissions(),
+        this
+    )
+
     /**
      * Reports that this publisher has finished initialization.
      */
-    protected fun reportInitializationSucceeded() {
-        publisherManager.onPublisherInitializationSucceeded(this)
-    }
+    protected fun reportInitializationSucceeded() =
+        publisherManager.onPublisherInitializationSucceeded()
 
     /**
      * Captures a completion callback that may be invoked from another thread.
      */
-    protected fun initializationSucceededCallback(): () -> Unit {
-        return { reportInitializationSucceeded() }
-    }
+    protected fun initializationSucceededCallback() =
+        publisherManager.publisherInitializationSucceededCallback()
 
     /**
      * Captures a failure callback that may be invoked from another thread.
      */
-    protected fun initializationFailedCallback(): (String?, Throwable?) -> Unit {
-        return { message, cause -> reportInitializationFailed(message, cause) }
-    }
+    protected fun initializationFailedCallback() =
+        publisherManager.publisherInitializationFailedCallback()
 
     /**
      * Reports that this publisher could not finish initialization.
@@ -147,14 +150,13 @@ abstract class Publisher<T : Subscriber>(
     protected fun reportInitializationFailed(
         message: String? = null,
         cause: Throwable? = null
-    ) {
-        publisherManager.onPublisherInitializationFailed(
-            PublisherStartupFailure(this, message, cause)
-        )
-    }
+    ) = publisherManager.onPublisherInitializationFailed(
+        PublisherStartupFailure(this, message, cause)
+    )
 
-    internal fun beginInitialization() {
+    internal fun runInitialization() {
         state = PublisherState.INITIALIZING
+        start()
     }
 
     internal fun initializationSucceeded() {

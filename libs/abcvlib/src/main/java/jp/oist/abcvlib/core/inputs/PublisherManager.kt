@@ -3,40 +3,57 @@ package jp.oist.abcvlib.core.inputs
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.WorkerThread
+import jp.oist.abcvlib.core.inputs.publisher.PublisherInitializationRunner
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupListener
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
+import jp.oist.abcvlib.core.inputs.publisher.PublisherRequirement
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailure
 import jp.oist.abcvlib.util.Logger
 import java.util.concurrent.Executors
 import java.util.concurrent.Phaser
-import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Manages the permission lifecycle of a group of publishers
- * In order to synchronize the lifecycle of all publishers, this creates a Phaser that waits for
- * each phase to finish for all publishers before allowing the next phase to start.
- * phase 0 = permissions of publisher objects
- * phase 1 = initialization of publisher object streams/threads
- * phase 2 = initialize publisher objects (i.e. initialize recording data)
+ * Coordinates startup and group lifecycle operations for a fixed set of [Publisher] instances.
+ *
+ * This manager owns:
+ * - publisher registration and required/optional policy;
+ * - permission-resolution bookkeeping and its deadline;
+ * - aggregation of publisher outcomes into one [PublisherManagerStartupResult]; and
+ * - group start, retry, pause, resume, and stop operations.
+ *
+ * Individual publishers own their hardware resources and cleanup. They report initialization
+ * completion to this manager, while [PublisherInitializationRunner] owns execution deadlines and
+ * rejects results from expired initialization attempts. Callers remain responsible for deciding
+ * how a startup result is presented to the user and whether application-specific work may begin.
+ *
+ * Startup progresses through permission resolution, publisher initialization, and activation.
+ * Activation resumes initialized publishers only when all required publishers initialized
+ * successfully. Optional failures are included in the aggregate result without blocking activation.
  */
 class PublisherManager(
     private val permissionTimeoutMillis: Long = DEFAULT_PERMISSION_TIMEOUT_MILLIS,
-    private val initializationTimeoutMillis: Long = DEFAULT_INITIALIZATION_TIMEOUT_MILLIS
+    initializationTimeoutMillis: Long = DEFAULT_INITIALIZATION_TIMEOUT_MILLIS
 ) {
     private val registrations = LinkedHashMap<Publisher<*>, PublisherRegistration>()
+    private var registrationsLocked = false
+
     val publishers: ArrayList<Publisher<*>>
         get() = synchronized(this) { ArrayList(registrations.keys) }
 
     private val phaser = Phaser(1)
-    private val initializingPublisher = ThreadLocal<Publisher<*>>()
     private val permissionTimeoutExecutor = Executors.newSingleThreadScheduledExecutor()
-    private val initializationTimeoutExecutor = Executors.newSingleThreadScheduledExecutor()
+    private val initializationRunner = PublisherInitializationRunner(
+        initializationTimeoutMillis,
+        ::completePublisherInitialization,
+        ::recordInitializationFailure
+    )
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val startupListeners = ArrayList<PublisherManagerStartupListener>()
     private val TAG: String = javaClass.name
-    private var registrationsLocked = false
     private var initializationStarted = false
     private var startupStarted = false
-    private var initializationLaunchComplete = false
 
     @Volatile
     var startupResult: PublisherManagerStartupResult? = null
@@ -54,11 +71,10 @@ class PublisherManager(
     //========================================Phase 0===============================================
     @Synchronized
     fun add(publisher: Publisher<*>): PublisherManager {
+        Logger.i(TAG, "Adding publisher: " + publisher.javaClass.name)
         check(!registrationsLocked) {
             "Publishers cannot be added after initialization has started"
         }
-
-        Logger.i(TAG, "Adding publisher: " + publisher.javaClass.name)
         registrations[publisher] = PublisherRegistration()
         phaser.register()
         return this
@@ -68,164 +84,78 @@ class PublisherManager(
     fun setRequirement(
         publisher: Publisher<*>,
         requirement: PublisherRequirement
-    ): PublisherManager {
+    ) {
         check(!registrationsLocked) {
             "Publisher requirements cannot change after initialization has started"
         }
-
-        val registration = registrations[publisher]
-        requireNotNull(registration) {
-            "Publisher is not registered with this manager"
-        }
-
-        registration.requirement = requirement
-        return this
+        registrationFor(publisher).requirement = requirement
     }
 
     @Synchronized
     fun getRequirement(publisher: Publisher<*>): PublisherRequirement {
-        return requireNotNull(registrations[publisher]) {
-            "Publisher is not registered with this manager"
-        }.requirement
+        return registrationFor(publisher).requirement
     }
 
     @Synchronized
     fun onPublisherPermissionsGranted(grantedPublisher: Publisher<*>) {
-        val registration = registrations[grantedPublisher]
-        requireNotNull(registration) {
-            "Publisher is not registered with this manager"
-        }
+        val registration = registrationFor(grantedPublisher)
         if (registration.permissionResolved) return
-
         registration.permissionResolved = true
+
         Logger.i(TAG, "Publisher permissions granted for: " + grantedPublisher.javaClass.name)
         phaser.arriveAndDeregister()
     }
 
     @Synchronized
     internal fun onPublisherPermissionsDenied(failure: PublisherStartupFailure) {
-        val registration = registrations[failure.publisher]
-        requireNotNull(registration) {
-            "Publisher is not registered with this manager"
-        }
-
+        val registration = registrationFor(failure.publisher)
         if (registration.permissionResolved) return
-
         registration.permissionResolved = true
         registration.failure = failure
+
         failure.publisher.initializationFailed()
         phaser.arriveAndDeregister()
     }
 
     //========================================Phase 1===============================================
-    private fun initialize(
-        publisher: Publisher<*>,
-        executor: java.util.concurrent.ExecutorService
-    ) {
+    private fun initialize(publisher: Publisher<*>) {
         Logger.i(TAG, "Registering publisher for phase 1: " + publisher.javaClass.name)
-        val registration = requireNotNull(registrations[publisher])
-        registration.initializationStarted = true
         phaser.register()
-        publisher.beginInitialization()
-        val initialization = try {
-            executor.submit {
-                initializingPublisher.set(publisher)
-                try {
-                    publisher.start()
-                } catch (failure: Throwable) {
-                    onPublisherInitializationFailed(
-                        PublisherStartupFailure(
-                            publisher,
-                            failure.message,
-                            failure
-                        )
-                    )
-                } finally {
-                    initializingPublisher.remove()
-                }
-            }
-        } catch (failure: RejectedExecutionException) {
-            onPublisherInitializationFailed(
-                PublisherStartupFailure(
-                    publisher,
-                    "Could not submit publisher initialization",
-                    failure
-                )
-            )
-            return
-        }
-
-        try {
-            val timeout = initializationTimeoutExecutor.schedule(
-                {
-                    onPublisherInitializationFailed(
-                        PublisherStartupFailure(
-                            publisher,
-                            "Timed out waiting for publisher initialization"
-                        )
-                    )
-                    initialization.cancel(true)
-                },
-                initializationTimeoutMillis,
-                TimeUnit.MILLISECONDS
-            )
-            synchronized(this) {
-                registration.initializationTimeout = timeout
-                if (registration.completed) timeout.cancel(false)
-            }
-        } catch (failure: RejectedExecutionException) {
-            initialization.cancel(true)
-            onPublisherInitializationFailed(
-                PublisherStartupFailure(
-                    publisher,
-                    "Could not schedule publisher initialization timeout",
-                    failure
-                )
-            )
-        }
+        initializationRunner.initialize(publisher)
     }
 
     @Deprecated("Publishers should call reportInitializationSucceeded()")
     fun onPublisherInitialized() {
-        val publisher = checkNotNull(initializingPublisher.get()) {
-            "Asynchronous publishers must use initializationSucceededCallback()"
-        }
-        onPublisherInitializationSucceeded(publisher)
+        initializationRunner.reportLegacyInitializationSucceeded()
     }
 
+    internal fun onPublisherInitializationSucceeded() =
+        initializationRunner.reportInitializationSucceeded()
+
+    internal fun onPublisherInitializationFailed(failure: PublisherStartupFailure) =
+        initializationRunner.reportInitializationFailed(failure)
+
+    internal fun publisherInitializationSucceededCallback() =
+        initializationRunner.initializationSucceededCallback()
+
+    internal fun publisherInitializationFailedCallback() =
+        initializationRunner.initializationFailedCallback()
+
     @Synchronized
-    internal fun onPublisherInitializationSucceeded(publisher: Publisher<*>) {
-        val registration = registrations[publisher]
-        requireNotNull(registration) {
-            "Publisher is not registered with this manager"
-        }
-
-        if (registration.completed) return
-
-        registration.completed = true
-        registration.initializationTimeout?.cancel(false)
+    private fun completePublisherInitialization(publisher: Publisher<*>) {
         publisher.initializationSucceeded()
         Logger.i(TAG, "Publisher initialized: " + publisher.javaClass.name)
         phaser.arriveAndDeregister()
-        shutdownInitializationTimeoutIfComplete()
     }
 
     @Synchronized
-    internal fun onPublisherInitializationFailed(failure: PublisherStartupFailure) {
-        val registration = registrations[failure.publisher]
-        requireNotNull(registration) {
-            "Publisher is not registered with this manager"
+    private fun recordInitializationFailure(failure: PublisherStartupFailure) {
+        registrationFor(failure.publisher).apply {
+            this.failure = failure
         }
-
-        if (registration.completed) return
-
-        registration.completed = true
-        registration.initializationTimeout?.cancel(false)
-        registration.failure = failure
         failure.publisher.initializationFailed()
         Logger.e(TAG, "Publisher initialization failed: " + failure.publisher.javaClass.name)
         phaser.arriveAndDeregister()
-        shutdownInitializationTimeoutIfComplete()
     }
 
     /**
@@ -256,57 +186,97 @@ class PublisherManager(
         permissionTimeout.cancel(false)
         permissionTimeoutExecutor.shutdown()
         Logger.i(TAG, "Phase 0 complete, starting publisher initialization")
-        val initializationExecutor = Executors.newCachedThreadPool()
-        for (publisher in registrations.filterValues { it.failure == null }.keys) {
+        for (publisher in availablePublishers()) {
             Logger.i(TAG, "Initializing publisher: " + publisher.javaClass.name)
-            initialize(publisher, initializationExecutor)
-        }
-        initializationExecutor.shutdown()
-
-        try {
-            if (!initializationExecutor.awaitTermination(
-                    initializationTimeoutMillis,
-                    TimeUnit.MILLISECONDS
-                )
-            ) {
-                initializationExecutor.shutdownNow()
-            }
-        } catch (_: InterruptedException) {
-            initializationExecutor.shutdownNow()
-            Thread.currentThread().interrupt()
+            initialize(publisher)
         }
 
-        synchronized(this) {
-            initializationLaunchComplete = true
-            shutdownInitializationTimeoutIfComplete()
-        }
+        initializationRunner.finishLaunching()
     }
 
-    @Synchronized
+    /**
+     * Retries the initialization process for publishers that failed during a previous startup attempt.
+     *
+     * This method resets the internal state for failed publishers, re-requests necessary permissions,
+     * and attempts to re-initialize them. It can only be called after an initial startup has
+     * completed (i.e., [startupResult] is not null).
+     *
+     * This method blocks while permissions are resolved and publishers are re-initialized. It must
+     * not be called from the main thread because permission results are delivered there.
+     *
+     * @throws IllegalStateException If called before the initial startup process has finished.
+     */
+    @WorkerThread
+    fun retryFailedPublishers() {
+        retryFailedPublishersInternal(null)
+    }
+
+    /**
+     * Retries the initialization process for publishers that failed during a previous startup attempt.
+     *
+     * This method resets the internal state for failed publishers, re-requests necessary permissions,
+     * and attempts to re-initialize them. It can only be called after an initial startup has
+     * completed (i.e., [startupResult] is not null).
+     *
+     * This method blocks while permissions are resolved and publishers are re-initialized. It must
+     * not be called from the main thread because permission results are delivered there.
+     *
+     * @param listener A [PublisherManagerStartupListener] to be notified of the
+     * results of the retry attempt.
+     * @throws IllegalStateException If called before the initial startup process has finished.
+     */
+    @WorkerThread
+    fun retryFailedPublishers(listener: PublisherManagerStartupListener) {
+        retryFailedPublishersInternal(listener)
+    }
+
+    private fun retryFailedPublishersInternal(listener: PublisherManagerStartupListener?) {
+        val failedPublishers = synchronized(this) {
+            checkNotNull(startupResult) {
+                "Publishers cannot be retried before startup finishes"
+            }
+
+            prepareRetry().also {
+                startupResult = null
+                startupStarted = false
+                repeat(it.size) { phaser.register() }
+            }
+        }
+
+        awaitRetryPermissions(failedPublishers)
+        initializationRunner.reset()
+        failedPublishers
+            .filter(::isAvailable)
+            .forEach(::initialize)
+        initializationRunner.finishLaunching()
+        startPublishersInternal(listener)
+    }
+
+    private fun awaitRetryPermissions(publishers: List<Publisher<*>>) {
+        val timeoutExecutor = Executors.newSingleThreadScheduledExecutor()
+        val timeout = timeoutExecutor.schedule(
+            ::failPendingPermissions,
+            permissionTimeoutMillis,
+            TimeUnit.MILLISECONDS
+        )
+
+        publishers.forEach(Publisher<*>::requestPermissions)
+        val phase = phaser.arrive()
+        phaser.awaitAdvance(phase)
+        timeout.cancel(false)
+        timeoutExecutor.shutdown()
+    }
+
     private fun failPendingPermissions() {
-        registrations
-            .filterValues { !it.permissionResolved }
-            .forEach { (publisher, registration) ->
-                val failure = PublisherStartupFailure(
-                    publisher,
-                    "Timed out waiting for publisher permissions"
+        pendingPermissionPublishers()
+            .forEach { publisher ->
+                onPublisherPermissionsDenied(
+                    PublisherStartupFailure(
+                        publisher,
+                        "Timed out waiting for publisher permissions"
+                    )
                 )
-                registration.permissionResolved = true
-                registration.failure = failure
-                publisher.initializationFailed()
-                phaser.arriveAndDeregister()
             }
-    }
-
-    @Synchronized
-    private fun shutdownInitializationTimeoutIfComplete() {
-        if (initializationLaunchComplete &&
-            registrations.values
-                .filter { it.initializationStarted }
-                .all { it.completed }
-        ) {
-            initializationTimeoutExecutor.shutdown()
-        }
     }
 
     //========================================Phase 2===============================================
@@ -335,29 +305,24 @@ class PublisherManager(
 
         if (!shouldStart) return
 
-        phaser.arrive()
+        val phase = phaser.arrive()
         val executor = Executors.newSingleThreadExecutor()
         executor.submit {
             Logger.i(TAG, "Waiting on phase 1 to finish before starting")
-            phaser.awaitAdvance(1)
+            phaser.awaitAdvance(phase)
 
-            val requiredFailures = registrations.values
-                .filter { it.requirement == PublisherRequirement.REQUIRED }
-                .mapNotNull { it.failure }
-            val optionalFailures = registrations.values
-                .filter { it.requirement == PublisherRequirement.OPTIONAL }
-                .mapNotNull { it.failure }
+            val snapshot = startupSnapshot()
 
-            val result = if (requiredFailures.isEmpty()) {
+            val result = if (snapshot.requiredFailures.isEmpty()) {
                 Logger.i(TAG, "Publisher initialization complete. Starting available publishers")
-                registrations
-                    .filterValues { it.failure == null }
-                    .keys
-                    .forEach(Publisher<*>::resume)
-                PublisherManagerStartupResult.Success(optionalFailures)
+                snapshot.availablePublishers.forEach(Publisher<*>::resume)
+                PublisherManagerStartupResult.Success(snapshot.optionalFailures)
             } else {
                 Logger.e(TAG, "Required publisher initialization failed")
-                PublisherManagerStartupResult.Failure(requiredFailures, optionalFailures)
+                PublisherManagerStartupResult.Failure(
+                    snapshot.requiredFailures,
+                    snapshot.optionalFailures
+                )
             }
 
             val listeners = synchronized(this) {
@@ -390,13 +355,74 @@ class PublisherManager(
         }
     }
 
+    @Synchronized
+    private fun availablePublishers(): List<Publisher<*>> {
+        return registrations.filterValues { it.failure == null }.keys.toList()
+    }
+
+    @Synchronized
+    private fun isAvailable(publisher: Publisher<*>): Boolean {
+        return registrationFor(publisher).failure == null
+    }
+
+    @Synchronized
+    private fun pendingPermissionPublishers(): List<Publisher<*>> {
+        return registrations.filterValues { !it.permissionResolved }.keys.toList()
+    }
+
+    @Synchronized
+    private fun startupSnapshot(): StartupSnapshot {
+        fun failures(requirement: PublisherRequirement): List<PublisherStartupFailure> {
+            return registrations.values
+                .filter { it.requirement == requirement }
+                .mapNotNull { it.failure }
+        }
+
+        return StartupSnapshot(
+            availablePublishers = registrations
+                .filterValues { it.failure == null }
+                .keys
+                .toList(),
+            requiredFailures = failures(PublisherRequirement.REQUIRED),
+            optionalFailures = failures(PublisherRequirement.OPTIONAL)
+        )
+    }
+
+    @Synchronized
+    private fun prepareRetry(): List<Publisher<*>> {
+        val failedPublishers = registrations
+            .filterValues { it.failure != null }
+            .keys
+            .toList()
+        check(failedPublishers.isNotEmpty()) {
+            "There are no failed publishers to retry"
+        }
+
+        failedPublishers.forEach { publisher ->
+            registrationFor(publisher).apply {
+                permissionResolved = false
+                failure = null
+            }
+        }
+        return failedPublishers
+    }
+
+    private fun registrationFor(publisher: Publisher<*>): PublisherRegistration {
+        return requireNotNull(registrations[publisher]) {
+            "Publisher is not registered with this manager"
+        }
+    }
+
     private data class PublisherRegistration(
         var requirement: PublisherRequirement = PublisherRequirement.REQUIRED,
         var permissionResolved: Boolean = false,
-        var initializationStarted: Boolean = false,
-        var completed: Boolean = false,
-        var initializationTimeout: ScheduledFuture<*>? = null,
         var failure: PublisherStartupFailure? = null
+    )
+
+    private data class StartupSnapshot(
+        val availablePublishers: List<Publisher<*>>,
+        val requiredFailures: List<PublisherStartupFailure>,
+        val optionalFailures: List<PublisherStartupFailure>
     )
 
     private companion object {
