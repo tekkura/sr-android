@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Bitmap.createBitmap
 import android.os.Handler
+import android.os.Looper
 import android.util.Size
 import android.view.Surface
 import androidx.camera.core.CameraSelector
@@ -42,9 +43,10 @@ abstract class ImageData<S : Subscriber>(
     protected var imageExecutor: ExecutorService?
 ) : Publisher<S>(context, publisherManager), ImageAnalysis.Analyzer {
 
-    private lateinit var mCameraProviderFuture: ListenableFuture<ProcessCameraProvider>
     private var yuvToRgbConverter: YuvToRgbConverter? = null
-    private var cameraProvider: ProcessCameraProvider? = null
+
+    @Volatile
+    private var cameraAttempt: CameraAttempt? = null
 
     // We must specify T to define the extending subclass, S to specify the subscriber type used by the extending subclass, and B to reference the extending subclasses' builder class.
     abstract class Builder<T : ImageData<S>, S : Subscriber, B : Builder<T, S, B>>(
@@ -125,52 +127,76 @@ abstract class ImageData<S : Subscriber>(
 
     @ExperimentalGetImage
     override fun start() {
-        val readinessLatch = CountDownLatch(if (previewView != null) 2 else 1)
+        cameraAttempt?.let { previousAttempt ->
+            check(previousAttempt.cleanupStarted) {
+                "Camera initialization is already active"
+            }
+            previousAttempt.cleanupComplete.await()
+        }
+
+        val waitsForAnalysis = subscribers.isNotEmpty()
+        var latchSize = 1
+        if (waitsForAnalysis) latchSize++
+        if (previewView != null) latchSize++
+
+        val readinessLatch = CountDownLatch(latchSize)
         val analysisReady = AtomicBoolean()
         val initializationFailure = AtomicReference<Throwable>()
+        val ownsImageAnalysis = imageAnalysis == null
         if (imageAnalysis == null) {
             setDefaultImageAnalysis()
         }
+        val ownsImageExecutor = imageExecutor == null
         if (imageExecutor == null) {
             imageExecutor = Executors.newCachedThreadPool(
                 ProcessPriorityThreadFactory(1, "imageAnalysis")
             )
         }
-        if (subscribers.isNotEmpty()) {
-            yuvToRgbConverter = YuvToRgbConverter(context)
-            imageAnalysis!!.setAnalyzer(imageExecutor!!) { imageProxy ->
-                if (analysisReady.compareAndSet(false, true)) {
-                    readinessLatch.countDown()
+        val attempt = CameraAttempt(
+            requireNotNull(imageAnalysis),
+            requireNotNull(imageExecutor),
+            ownsImageAnalysis,
+            ownsImageExecutor
+        )
+        cameraAttempt = attempt
+
+        try {
+            if (waitsForAnalysis) {
+                yuvToRgbConverter = YuvToRgbConverter(context)
+                attempt.imageAnalysis.setAnalyzer(attempt.imageExecutor) { imageProxy ->
+                    if (analysisReady.compareAndSet(false, true)) {
+                        readinessLatch.countDown()
+                    }
+                    analyze(imageProxy)
                 }
-                analyze(imageProxy)
             }
+
+            if (previewView != null) {
+                val handler = Handler(context.mainLooper)
+                handler.post { previewView!!.setScaleType(PreviewView.ScaleType.FIT_CENTER) }
+            }
+            bindAll(attempt, lifecycleOwner, readinessLatch, initializationFailure)
+            super.start()
+            Logger.i(TAG, "Waiting for preview and analysis to start")
+            readinessLatch.await()
+            initializationFailure.get()?.let { throw it }
+            Logger.i(TAG, "Preview and analysis started")
+            reportInitializationSucceeded()
+        } catch (failure: Exception) {
+            releaseCameraAttempt(attempt, preserveConfiguration = true)
+            throw failure
         }
-        if (previewView != null) {
-            val handler = Handler(context.mainLooper)
-            handler.post { previewView!!.setScaleType(PreviewView.ScaleType.FIT_CENTER) }
-        }
-        bindAll(lifecycleOwner, readinessLatch, initializationFailure)
-        super.start()
-        Logger.i(TAG, "Waiting for preview and analysis to start")
-        readinessLatch.await()
-        initializationFailure.get()?.let { throw it }
-        Logger.i(TAG, "Preview and analysis started")
-        reportInitializationSucceeded()
     }
 
     override fun stop() {
-        imageAnalysis!!.clearAnalyzer()
-        imageAnalysis = null
-        imageExecutor!!.shutdown()
-        yuvToRgbConverter = null
-        previewView = null
-        mCameraProviderFuture.cancel(false)
-        cameraProvider!!.unbindAll()
-        cameraProvider = null
+        cameraAttempt?.let {
+            releaseCameraAttempt(it, preserveConfiguration = false)
+        }
         super.stop()
     }
 
     private fun bindAll(
+        attempt: CameraAttempt,
         lifecycleOwner: LifecycleOwner,
         readinessLatch: CountDownLatch,
         initializationFailure: AtomicReference<Throwable>
@@ -179,20 +205,26 @@ abstract class ImageData<S : Subscriber>(
             .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
             .build()
 
-        mCameraProviderFuture = ProcessCameraProvider.getInstance(context)
-        mCameraProviderFuture.addListener({
+        val providerFuture = ProcessCameraProvider.getInstance(context)
+        attempt.providerFuture = providerFuture
+        providerFuture.addListener({
+            if (cameraAttempt !== attempt || attempt.cleanupStarted) {
+                return@addListener
+            }
             try {
-                cameraProvider = mCameraProviderFuture.get()
+                val cameraProvider = providerFuture.get()
+                attempt.cameraProvider = cameraProvider
                 val previewView = this.previewView
                 if (previewView != null) {
                     val preview = Preview.Builder()
                         .build()
+                    attempt.preview = preview
 
-                    cameraProvider!!.bindToLifecycle(
+                    cameraProvider.bindToLifecycle(
                         lifecycleOwner,
                         cameraSelector,
                         preview,
-                        imageAnalysis
+                        attempt.imageAnalysis
                     )
 
                     preview.surfaceProvider = previewView.getSurfaceProvider()
@@ -207,10 +239,17 @@ abstract class ImageData<S : Subscriber>(
                             readinessLatch.countDown()
                         }
                     }
+                    attempt.previewObserver = previewViewObserver
                     previewView.previewStreamState.observe(lifecycleOwner, previewViewObserver)
                 } else {
-                    cameraProvider!!.bindToLifecycle(lifecycleOwner, cameraSelector, imageAnalysis)
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        cameraSelector,
+                        attempt.imageAnalysis
+                    )
                 }
+
+                readinessLatch.countDown()
             } catch (failure: Exception) {
                 initializationFailure.set(
                     (failure as? ExecutionException)?.cause ?: failure
@@ -222,8 +261,71 @@ abstract class ImageData<S : Subscriber>(
         }, ContextCompat.getMainExecutor(context))
     }
 
+    private fun releaseCameraAttempt(
+        attempt: CameraAttempt,
+        preserveConfiguration: Boolean
+    ) {
+        synchronized(attempt) {
+            if (attempt.cleanupStarted) return
+            attempt.cleanupStarted = true
+        }
+        attempt.providerFuture?.cancel(false)
+
+        val cleanup = Runnable {
+            attempt.imageAnalysis.clearAnalyzer()
+            attempt.previewObserver?.let { observer ->
+                previewView?.previewStreamState?.removeObserver(observer)
+            }
+            attempt.cameraProvider?.let { provider ->
+                runCatching {
+                    attempt.preview?.let { preview ->
+                        provider.unbind(attempt.imageAnalysis, preview)
+                    } ?: provider.unbind(attempt.imageAnalysis)
+                }
+            }
+            if (attempt.ownsImageExecutor || !preserveConfiguration) {
+                attempt.imageExecutor.shutdownNow()
+            }
+            synchronized(this) {
+                if (cameraAttempt === attempt) {
+                    if (attempt.ownsImageAnalysis || !preserveConfiguration) {
+                        imageAnalysis = null
+                    }
+                    if (attempt.ownsImageExecutor || !preserveConfiguration) {
+                        imageExecutor = null
+                    }
+                    if (!preserveConfiguration) {
+                        previewView = null
+                    }
+                    yuvToRgbConverter = null
+                    cameraAttempt = null
+                }
+            }
+            attempt.cleanupComplete.countDown()
+        }
+
+        if (Looper.myLooper() == context.mainLooper) {
+            cleanup.run()
+        } else {
+            ContextCompat.getMainExecutor(context).execute(cleanup)
+        }
+    }
+
     @OnLifecycleEvent(Lifecycle.Event.ON_ANY)
     fun test() {
         Logger.v("lifecycle", "onAny")
     }
+
+    private data class CameraAttempt(
+        val imageAnalysis: ImageAnalysis,
+        val imageExecutor: ExecutorService,
+        val ownsImageAnalysis: Boolean,
+        val ownsImageExecutor: Boolean,
+        val cleanupComplete: CountDownLatch = CountDownLatch(1),
+        var providerFuture: ListenableFuture<ProcessCameraProvider>? = null,
+        var cameraProvider: ProcessCameraProvider? = null,
+        var preview: Preview? = null,
+        var previewObserver: Observer<PreviewView.StreamState>? = null,
+        @Volatile var cleanupStarted: Boolean = false
+    )
 }
