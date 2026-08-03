@@ -3,8 +3,6 @@ package jp.oist.abcvlib.core.inputs
 import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import jp.oist.abcvlib.core.inputs.publisher.Publisher
-import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import jp.oist.abcvlib.core.inputs.publisher.PublisherRequirement
 import org.junit.Assert.assertEquals
 import org.junit.Test

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import androidx.annotation.StringRes
 import jp.oist.abcvlib.core.R
+import jp.oist.abcvlib.core.inputs.PublisherManager
 
 internal data class PublisherStartupFailureDialogConfig(
     @StringRes val message: Int,

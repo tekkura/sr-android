@@ -1,4 +1,4 @@
-package jp.oist.abcvlib.core.inputs.publisher
+package jp.oist.abcvlib.core.inputs
 
 enum class PublisherState {
     STOPPED,

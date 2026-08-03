@@ -1,12 +1,11 @@
-package jp.oist.abcvlib.core.inputs.publisher
+package jp.oist.abcvlib.core.inputs
 
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
 import com.intentfilter.androidpermissions.PermissionManager
-import com.intentfilter.androidpermissions.PermissionManager.PermissionRequestListener
 import com.intentfilter.androidpermissions.models.DeniedPermissions
-import jp.oist.abcvlib.core.inputs.Subscriber
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailure
 import jp.oist.abcvlib.util.Logger
 import kotlin.concurrent.Volatile
 
@@ -15,7 +14,7 @@ import kotlin.concurrent.Volatile
  * [WheelData][jp.oist.abcvlib.core.inputs.microcontroller.WheelData], etc.
  *
  * A publisher is created via a default constructor or Builder subclass. When initialized it should
- * pass the [Context] and [PublisherManager] to this parent class via
+ * pass the [android.content.Context] and [PublisherManager] to this parent class via
  * super(context, publisherManager) within the onCreate method. After which point this class will
  * add the individual publisher to the PublisherManager instance and request the permissions
  * specific to that publisher.
@@ -36,7 +35,7 @@ import kotlin.concurrent.Volatile
  * [initializationFailedCallback] during [start], then invoke the appropriate callback when
  * initialization finishes.
  *
- * @param T The [jp.oist.abcvlib.core.inputs.Subscriber] subclass that can accept the data published by your publisher.
+ * @param T The [Subscriber] subclass that can accept the data published by your publisher.
  *   e.g. the [ImageData][jp.oist.abcvlib.core.inputs.phone.ImageData] class extends Publisher<ImageDataRawSubscriber>
  *   where [ImageDataRawSubscriber] implements the
  *   [ImageDataRawSubscriber.onImageDataUpdate] method accepting the data from the last part of
@@ -45,7 +44,7 @@ import kotlin.concurrent.Volatile
 abstract class Publisher<T : Subscriber>(
     protected val context: Context,
     protected var publisherManager: PublisherManager
-) : PermissionRequestListener {
+) : PermissionManager.PermissionRequestListener {
     protected var subscribers: ArrayList<T> = ArrayList()
 
     private var state: PublisherState = PublisherState.STOPPED

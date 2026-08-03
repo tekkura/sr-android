@@ -3,7 +3,7 @@ package jp.oist.abcvlib.core.learning
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
-import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
+import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
 import jp.oist.abcvlib.core.inputs.publisher.showPublisherStartupFailureDialog
 import jp.oist.abcvlib.core.AbcvlibActivity

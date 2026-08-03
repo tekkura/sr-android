@@ -1,6 +1,6 @@
 package jp.oist.abcvlib.util.rp2040
 
-import jp.oist.abcvlib.core.inputs.publisher.PublisherState
+import jp.oist.abcvlib.core.inputs.PublisherState
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 

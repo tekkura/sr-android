@@ -3,8 +3,8 @@ package jp.oist.abcvlib.core.inputs.microcontroller
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
-import jp.oist.abcvlib.core.inputs.publisher.Publisher
-import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
+import jp.oist.abcvlib.core.inputs.Publisher
+import jp.oist.abcvlib.core.inputs.PublisherManager
 
 class BatteryData(
     context: Context,

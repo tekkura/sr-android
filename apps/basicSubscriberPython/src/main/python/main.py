@@ -1,6 +1,6 @@
 from java import dynamic_proxy
 from jp.oist.abcvlib.util import SerialCommManager
-from jp.oist.abcvlib.core.inputs.publisher import PublisherManager
+from jp.oist.abcvlib.core.inputs import PublisherManager
 from jp.oist.abcvlib.core.inputs.microcontroller import (
     BatteryData, WheelData,
     BatteryDataSubscriber,

@@ -4,13 +4,10 @@ import android.content.Context
 import android.media.AudioRecord
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import jp.oist.abcvlib.core.inputs.publisher.Publisher
-import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
 import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupListener
 import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
 import jp.oist.abcvlib.core.inputs.publisher.PublisherRequirement
 import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailure
-import jp.oist.abcvlib.core.inputs.publisher.PublisherState
 import jp.oist.abcvlib.core.inputs.phone.MicrophoneData
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit

@@ -12,8 +12,8 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
 import androidx.annotation.RequiresPermission
-import jp.oist.abcvlib.core.inputs.publisher.Publisher
-import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
+import jp.oist.abcvlib.core.inputs.Publisher
+import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.util.ErrorHandler
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.ProcessPriorityThreadFactory

@@ -1,5 +1,7 @@
 package jp.oist.abcvlib.core.inputs.publisher
 
+import jp.oist.abcvlib.core.inputs.Publisher
+
 internal class PublisherRegistry {
     private val registrations = LinkedHashMap<Publisher<*>, PublisherRegistration>()
     private var locked = false

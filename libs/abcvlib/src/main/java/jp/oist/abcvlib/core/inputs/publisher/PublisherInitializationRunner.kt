@@ -1,5 +1,6 @@
 package jp.oist.abcvlib.core.inputs.publisher
 
+import jp.oist.abcvlib.core.inputs.Publisher
 import jp.oist.abcvlib.util.Logger
 import java.util.concurrent.Executors
 import java.util.concurrent.Future

@@ -11,7 +11,7 @@ import android.widget.Button
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import jp.oist.abcvlib.core.inputs.publisher.PublisherManager
+import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupListener
 import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
 import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupFailureDialogAction
