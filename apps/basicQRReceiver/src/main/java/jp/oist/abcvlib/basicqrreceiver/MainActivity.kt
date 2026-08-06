@@ -32,6 +32,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
 
     override fun onSerialReady(usbSerial: UsbSerial) {
         publisherManager = PublisherManager()
+        registerPublisherManager(publisherManager)
 
         val qrCodeData = QRCodeData.Builder(this, publisherManager, this).build()
         qrCodeData.addSubscriber(this)

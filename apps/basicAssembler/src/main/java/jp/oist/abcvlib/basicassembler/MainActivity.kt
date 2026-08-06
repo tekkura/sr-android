@@ -106,6 +106,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
         */
 
         val publisherManager = PublisherManager()
+        registerPublisherManager(publisherManager)
         val wheelData = WheelData.Builder(this, publisherManager)
             .setBufferLength(10)
             .setExpWeight(0.1)
