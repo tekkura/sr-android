@@ -5,9 +5,16 @@ import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040ToAndroidPacket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.Arrays
 
-class PacketBuffer(capacity: Int = (512 * 128) + 8) {
+class PacketBuffer @JvmOverloads constructor(
+    capacity: Int = (512 * 128) + 8,
+    private val payloadDecoder: ((AndroidToRP2040Command, ByteArray) -> PacketPayload)? = null
+) {
+
+    data class PacketPayload(
+        val commandData: ByteArray,
+        val additionalData: ByteArray? = null
+    )
 
     private var packetDataSize = RP2020_PACKET_SIZE_STATE
     private var packetType: AndroidToRP2040Command = AndroidToRP2040Command.NACK
@@ -71,6 +78,7 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                     }
 
                     packetType = parsedPacketType
+
                     packetDataSize = _buffer.getShort(startIdx + RP2040ToAndroidPacket.Offsets.DATA_SIZE)
                         .toInt() and 0xFFFF
 
@@ -108,10 +116,11 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                         packetDataSize
                     )
 
-                    val command = RP2040IncomingCommand.from(packetType, data)
+                    val payload = payloadDecoder?.invoke(packetType, data) ?: PacketPayload(data)
+                    val command = RP2040IncomingCommand.from(packetType, payload.commandData)
                     onResult(
                         command?.let {
-                            ParseResult.ReceivedPacket(it)
+                            ParseResult.ReceivedPacket(it, payload.additionalData)
                         } ?: ParseResult.ReceivedErrorPacket
                     )
 
@@ -189,7 +198,8 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
         object Overflow : ParseResult()
         object ReceivedErrorPacket : ParseResult()
         data class ReceivedPacket(
-            val command: RP2040IncomingCommand
+            val command: RP2040IncomingCommand,
+            val additionalData: ByteArray? = null
         ) : ParseResult()
     }
 
