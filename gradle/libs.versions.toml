@@ -41,6 +41,7 @@ commonsCollections = "4.5.0"
 usbSerial = "3.10.0"
 abcvlibFbclasses = "v0.0.3"
 okhttp = "4.12.0"
+glide = "4.16.0"
 
 # Test
 junit = "4.13.2"
@@ -82,6 +83,7 @@ android-permissions = { module = "io.github.nishkarsh:android-permissions", vers
 commons-collections4 = { module = "org.apache.commons:commons-collections4", version.ref = "commonsCollections" }
 abcvlib-fbclasses = { module = "com.github.oist:smartphone-robot-flatbuffers", version.ref = "abcvlibFbclasses" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 
 # Test
 junit = { module = "junit:junit", version.ref = "junit" }
