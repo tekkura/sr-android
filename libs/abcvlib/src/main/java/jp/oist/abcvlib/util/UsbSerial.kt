@@ -22,6 +22,16 @@ import jp.oist.abcvlib.util.ByteArrayExtensions.toHexString
 import jp.oist.abcvlib.util.ErrorHandler.eLog
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
 import org.apache.commons.collections4.queue.CircularFifoQueue
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -32,10 +42,18 @@ open class UsbSerial @Throws(IOException::class) constructor(
     private val context: Context,
     private val usbManager: UsbManager,
     private val serialReadyListener: SerialReadyListener,
-    port: RobotSerialPort? = null
+    port: RobotSerialPort? = null,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+    private val initialConnectionErrorListener: ((IOException) -> Unit)? = null
 ) : SerialInputOutputManager.Listener {
 
-    private lateinit var _port: RobotSerialPort
+    private var _port: RobotSerialPort? = null
+    private val stateLock = Any()
+    private var isOpening = false
+    private var usbReceiver: BroadcastReceiver? = null
+    private var connectJob: Job? = null
+    @Volatile
+    private var isClosed = false
 
     private val timeout: Int = 1000 //1s
     private var badPacketCount = 0
@@ -57,42 +75,64 @@ open class UsbSerial @Throws(IOException::class) constructor(
         if (port != null) {
             // If a port is provided (e.g. for testing), we assume it's already "found"
             // and we notify the listener immediately to ensure it's ready for the test.
-            _port = port
-            _port.startReading(this)
+            synchronized(stateLock) {
+                _port = port
+            }
+            port.startReading(this)
             serialReadyListener.onSerialReady(this)
         } else {
-            // Find all available drivers from attached devices.
-            val deviceList = usbManager.deviceList
-
-            if (deviceList.isEmpty()) {
-                throw IOException("No USB devices found")
-            }
-
-            for (d in deviceList.values) {
-                if (d.manufacturerName == "Seeed" && d.productName == "Seeeduino XIAO") {
-                    Logger.i(Thread.currentThread().name, "Found a XIAO. Connecting...")
-                    connect(d)
-                } else if (d.manufacturerName.equals("Raspberry Pi") && d.productName.equals("Pico Test Device")) {
-                    Logger.i(Thread.currentThread().name, "Found a Pico Test Device. Connecting...")
-                    connect(d)
-                } else if (d.manufacturerName == "Raspberry Pi" && d.productName == "Pico") {
-                    Logger.i(Thread.currentThread().name, "Found a Pi. Connecting...")
-                    connect(d)
-                }
-            }
+            // Registration is UI-safe. Preserve the constructor's automatic startup behavior,
+            // but perform enumeration and connection on the IO dispatcher.
             val filter = IntentFilter(ACTION_USB_PERMISSION).apply {
                 addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
             }
-            val usbReceiver: BroadcastReceiver = MyBroadcastReceiver()
-            ContextCompat.registerReceiver(context, usbReceiver, filter, RECEIVER_NOT_EXPORTED)
+            val receiver = MyBroadcastReceiver()
+            usbReceiver = receiver
+            ContextCompat.registerReceiver(context, receiver, filter, RECEIVER_NOT_EXPORTED)
+            connectJob = coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    connect()
+                } catch (e: IOException) {
+                    Logger.e(TAG, "Initial USB connection failed: ${e.localizedMessage}")
+                    initialConnectionErrorListener?.invoke(e)
+                }
+            }
         }
     }
 
+    /** Enumerates devices and opens the selected port. Call from a background dispatcher. */
     @Throws(IOException::class)
-    private fun connect(device: UsbDevice) {
+    suspend fun connect() = withContext(Dispatchers.IO) {
+        currentCoroutineContext().ensureActive()
+        if (isClosed) return@withContext
+
+        val deviceList = usbManager.deviceList
+        if (deviceList.isEmpty()) {
+            throw IOException("No USB devices found")
+        }
+
+        for (device in deviceList.values) {
+            if (isSupportedDevice(device)) {
+                Logger.i(Thread.currentThread().name, "Found a supported USB device. Connecting...")
+                connect(device)
+                return@withContext
+            }
+        }
+        throw IOException("No supported USB devices found")
+    }
+
+    private fun isSupportedDevice(device: UsbDevice): Boolean =
+        device.manufacturerName == "Seeed" && device.productName == "Seeeduino XIAO" ||
+            device.manufacturerName == "Raspberry Pi" &&
+            (device.productName == "Pico Test Device" || device.productName == "Pico")
+
+    @Throws(IOException::class)
+    private suspend fun connect(device: UsbDevice) {
+        currentCoroutineContext().ensureActive()
         if (usbManager.hasPermission(device)) {
             Logger.i(Thread.currentThread().name, "Has permission to connect to device")
-            val connection: UsbDeviceConnection = usbManager.openDevice(device)
+            val connection = usbManager.openDevice(device)
+                ?: throw IOException("Failed to open USB device connection")
             openPort(connection)
         } else {
             Logger.i(Thread.currentThread().name, "Requesting permission to connect to device")
@@ -112,26 +152,75 @@ open class UsbSerial @Throws(IOException::class) constructor(
         }
     }
 
-    private fun openPort(connection: UsbDeviceConnection) {
+    private suspend fun openPort(connection: UsbDeviceConnection) {
+        synchronized(stateLock) {
+            if (isClosed || _port != null || isOpening) {
+                connection.close()
+                return
+            }
+            isOpening = true
+        }
+
+        try {
+            openPortInternal(connection)
+        } finally {
+            synchronized(stateLock) {
+                isOpening = false
+            }
+        }
+    }
+
+    private suspend fun openPortInternal(connection: UsbDeviceConnection) {
         Logger.i(Thread.currentThread().name, "Opening port")
         val driver = getDriver()
         val usbSerialPort = driver.ports[0] // Most devices have just one port (port 0)
+        val realPort = RealRobotSerialPort(usbSerialPort)
         try {
-            val realPort = RealRobotSerialPort(usbSerialPort)
             realPort.open(connection)
             realPort.setParameters(115200, 8, 1, UsbSerialPort.PARITY_NONE)
             realPort.setDtr(true)
             
-            this._port = realPort
+            synchronized(stateLock) {
+                if (isClosed) {
+                    realPort.close()
+                    return
+                }
+                _port = realPort
+            }
             
             // Adding this as there doesn't appear to be any call back in the usbIoManager that
             // will call onSerialReady after initialization. As it stands, there were things occurring
             // in onSerialReady that were being executed before the usbIoManager was initialized.
-            Thread.sleep(100)
-            realPort.startReading(this)
+            delay(100)
+            synchronized(stateLock) {
+                if (isClosed || _port !== realPort) {
+                    if (_port === realPort) _port = null
+                    realPort.close()
+                    return
+                }
+                realPort.startReading(this)
+            }
             serialReadyListener.onSerialReady(this)
         } catch (e: IOException) {
+            synchronized(stateLock) {
+                if (_port === realPort) _port = null
+            }
+            try {
+                realPort.close()
+            } catch (_: IOException) {
+                // Preserve the original connection error.
+            }
             e.printStackTrace()
+        } catch (e: CancellationException) {
+            synchronized(stateLock) {
+                if (_port === realPort) _port = null
+            }
+            try {
+                realPort.close()
+            } catch (_: IOException) {
+                // Preserve cancellation while still attempting cleanup.
+            }
+            throw e
         } catch (e: InterruptedException) {
             throw RuntimeException(e)
         }
@@ -204,7 +293,9 @@ open class UsbSerial @Throws(IOException::class) constructor(
 
     @Throws(IOException::class)
     internal open fun send(packet: ByteArray, timeout: Int) {
-        _port.write(packet, timeout)
+        val port = synchronized(stateLock) { _port }
+            ?: throw IOException("Port is not open")
+        port.write(packet, timeout)
         Logger.i(Thread.currentThread().name, "send()")
     }
 
@@ -273,6 +364,27 @@ open class UsbSerial @Throws(IOException::class) constructor(
         e.printStackTrace()
     }
 
+    internal fun close() {
+        val port = synchronized(stateLock) {
+            isClosed = true
+            _port.also { _port = null }
+        }
+        connectJob?.cancel()
+        try {
+            port?.close()
+        } catch (e: IOException) {
+            Logger.e(TAG, "Failed to close USB port: ${e.localizedMessage}")
+        }
+        usbReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+            } catch (_: IllegalArgumentException) {
+                // Receiver was already unregistered.
+            }
+        }
+        usbReceiver = null
+    }
+
     private inner class MyBroadcastReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val device = IntentCompat.getParcelableExtra(
@@ -280,16 +392,23 @@ open class UsbSerial @Throws(IOException::class) constructor(
                 UsbManager.EXTRA_DEVICE,
                 UsbDevice::class.java
             )
-            if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                val action = intent.action
-                if (ACTION_USB_PERMISSION == action) {
-                    synchronized(this) {
+            val action = intent.action
+            if (device != null && isSupportedDevice(device) &&
+                (ACTION_USB_PERMISSION == action || UsbManager.ACTION_USB_DEVICE_ATTACHED == action)
+            ) {
+                if (ACTION_USB_PERMISSION != action ||
+                    intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                ) {
+                    connectJob?.cancel()
+                    connectJob = coroutineScope.launch(Dispatchers.IO) {
                         try {
-                            connect(device!!)
+                            connect(device)
                         } catch (e: IOException) {
-                            e.printStackTrace()
+                            Logger.e(TAG, "USB connection failed: ${e.localizedMessage}")
                         }
                     }
+                } else {
+                    Logger.d("serial", "permission denied for device $device")
                 }
             } else {
                 Logger.d("serial", "permission denied for device $device")
