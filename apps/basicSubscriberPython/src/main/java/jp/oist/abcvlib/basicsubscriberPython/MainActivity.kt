@@ -7,6 +7,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import jp.oist.abcvlib.basicsubscriberPython.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.AbcvlibActivity
+import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.SerialReadyListener
 import jp.oist.abcvlib.util.UsbSerial
@@ -17,6 +18,8 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
     // keep them public to be visible for python
     lateinit var binding: ActivityMainBinding
     lateinit var guiUpdater: GuiUpdater
+    @Volatile
+    private var publishersReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableMainLoop(false)
@@ -57,5 +60,14 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
     fun onSetupReady() {
         super.onSerialReady(usbSerial)
     }
+
+    fun startPublishers(publisherManager: PublisherManager) {
+        publishersReady = false
+        startPublishersWithFailureHandling(publisherManager) {
+            publishersReady = true
+        }
+    }
+
+    fun arePublishersReady(): Boolean = publishersReady
 }
 

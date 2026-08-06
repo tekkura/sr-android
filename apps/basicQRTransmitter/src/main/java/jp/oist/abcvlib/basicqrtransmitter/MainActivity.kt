@@ -54,7 +54,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
         qrCodeData.addSubscriber(this)
 
         publisherManager.initializePublishers()
-        publisherManager.startPublishers()
+        startPublishersWithFailureHandling(publisherManager)
 
         setSerialCommManager(SerialCommManager(usbSerial))
         super.onSerialReady(usbSerial)
@@ -62,9 +62,13 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
 
     public override fun onOutputsReady() {
         publisherManager.initializePublishers()
-        publisherManager.startPublishers()
-        val executor = ScheduledExecutorServiceWithException(1, ProcessPriorityThreadFactory(Thread.MIN_PRIORITY, "ActionSelector"))
-        executor.scheduleAtFixedRate(swapAction, 0, 10, TimeUnit.SECONDS)
+        startPublishersWithFailureHandling(publisherManager) {
+            val executor = ScheduledExecutorServiceWithException(
+                1,
+                ProcessPriorityThreadFactory(Thread.MIN_PRIORITY, "ActionSelector")
+            )
+            executor.scheduleAtFixedRate(swapAction, 0, 10, TimeUnit.SECONDS)
+        }
     }
 
     override fun onQRCodeDetected(qrDataDecoded: String) {

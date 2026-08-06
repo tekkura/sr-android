@@ -75,7 +75,7 @@ class MainActivity : AbcvlibActivity(), BatteryDataSubscriber, SerialReadyListen
 
     public override fun onOutputsReady() {
         publisherManager.initializePublishers()
-        publisherManager.startPublishers()
+        startPublishersWithFailureHandling(publisherManager)
     }
 
     override fun abcvlibMainLoop() {

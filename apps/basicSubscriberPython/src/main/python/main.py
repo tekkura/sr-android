@@ -91,7 +91,7 @@ def setup():
     QRCodeData.Builder(context, publisher_manager, context).build().addSubscriber(QRCodeSubscriber())
 
     publisher_manager.initializePublishers()
-    publisher_manager.startPublishers()
+    context.startPublishers(publisher_manager)
 
     serial_manager = SerialCommManager(context.usbSerial,battery_data, wheel_data)
     context.setSerialCommManager(serial_manager)
@@ -99,6 +99,9 @@ def setup():
 
 def loop():
     global speed, increment
+    if not context.arePublishersReady():
+        return
+
     context.outputs.setWheelOutput(speed, speed, False, False)
     if speed >= 1.0 or speed <= -1.0:
         increment = -increment

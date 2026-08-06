@@ -73,7 +73,7 @@ class MainActivity : AbcvlibActivity() {
         wheelData.addSubscriber(balancePIDController)
 
         // Start your publishers
-        publisherManager.startPublishers()
+        startPublishersWithFailureHandling(publisherManager)
 
         super.onSerialReady(usbSerial)
     }

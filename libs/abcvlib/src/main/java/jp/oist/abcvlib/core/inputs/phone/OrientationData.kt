@@ -267,16 +267,22 @@ class OrientationData(context: Context, publisherManager: PublisherManager) :
     }
 
     override fun start() {
-        mHandlerThread = HandlerThread("sensorThread")
-        mHandlerThread.start()
-        handler = Handler(mHandlerThread.looper)
-        register(handler)
-        publisherManager.onPublisherInitialized()
-        super.start()
+        try {
+            mHandlerThread = HandlerThread("sensorThread")
+            mHandlerThread.start()
+            handler = Handler(mHandlerThread.looper)
+            register(handler)
+            super.start()
+            reportInitializationSucceeded()
+        } catch (failure: Exception) {
+            unregister()
+            stopHandlerThread()
+            throw failure
+        }
     }
 
     override fun stop() {
-        mHandlerThread.quitSafely()
+        stopHandlerThread()
         unregister()
         super.stop()
     }

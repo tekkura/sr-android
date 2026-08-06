@@ -1,7 +1,12 @@
 package jp.oist.abcvlib.core.learning
 
+import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherManagerStartupResult
+import jp.oist.abcvlib.core.inputs.publisher.showPublisherStartupFailureDialog
+import jp.oist.abcvlib.core.AbcvlibActivity
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer
 import jp.oist.abcvlib.core.outputs.ActionSelector
 import jp.oist.abcvlib.core.outputs.Outputs
@@ -66,6 +71,9 @@ open class Trial(
     private lateinit var timeStepDataAssemblerFuture: ScheduledFuture<*>
     private val executor: ScheduledExecutorServiceWithException
     private var flatBufferAssembler: FlatbufferAssembler
+    private var trialStarted = false
+    private var publisherFailureDialog: AlertDialog? = null
+    private var completeActivityPublisherStartup: (() -> Unit)? = null
 
     private val TAG: String = javaClass.toString()
 
@@ -89,8 +97,67 @@ open class Trial(
     }
 
     protected open fun startTrail() {
+        if (completeActivityPublisherStartup == null) {
+            completeActivityPublisherStartup =
+                (context as? AbcvlibActivity)?.publisherStartupCompletionCallback()
+        }
+
         publisherManager.initializePublishers()
-        publisherManager.startPublishers()
+        publisherManager.startPublishers(::onPublisherStartupResult)
+    }
+
+    protected fun retryPublisherStartup() {
+        executor.execute {
+            publisherManager.retryFailedPublishers(::onPublisherStartupResult)
+        }
+    }
+
+    protected open fun onPublisherStartupFailed(
+        result: PublisherManagerStartupResult.Failure
+    ) {
+        outputs.turnOffWheels()
+        Logger.e(
+            TAG,
+            "Trial cannot start because ${result.requiredFailures.size} required publishers failed"
+        )
+        val activity = context as? Activity
+        if (activity == null) {
+            Logger.e(
+                TAG,
+                "Cannot show the publisher startup failure dialog without an Activity context. " +
+                    "Override onPublisherStartupFailed to provide custom failure handling."
+            )
+            return
+        }
+
+        publisherFailureDialog?.dismiss()
+        publisherFailureDialog = showPublisherStartupFailureDialog(
+            activity,
+            publisherManager,
+            AbcvlibActivity.publisherStartupFailureDialogConfig(activity, result)
+        ) {
+            publisherFailureDialog = null
+            retryPublisherStartup()
+        }
+    }
+
+    private fun onPublisherStartupResult(result: PublisherManagerStartupResult) {
+        when (result) {
+            is PublisherManagerStartupResult.Success -> {
+                completeActivityPublisherStartup?.invoke()
+                startTrialOnce()
+            }
+
+            is PublisherManagerStartupResult.Failure -> onPublisherStartupFailed(result)
+        }
+    }
+
+    @Synchronized
+    private fun startTrialOnce() {
+        if (trialStarted) return
+        trialStarted = true
+        publisherFailureDialog?.dismiss()
+        publisherFailureDialog = null
         startEpisode()
         startPublishers()
     }

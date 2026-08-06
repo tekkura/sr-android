@@ -37,7 +37,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
         qrCodeData.addSubscriber(this)
 
         publisherManager.initializePublishers()
-        publisherManager.startPublishers()
+        startPublishersWithFailureHandling(publisherManager)
 
         setSerialCommManager(SerialCommManager(usbSerial))
         super.onSerialReady(usbSerial)
@@ -45,7 +45,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
 
     public override fun onOutputsReady() {
         publisherManager.initializePublishers()
-        publisherManager.startPublishers()
+        startPublishersWithFailureHandling(publisherManager)
     }
 
     override fun onQRCodeDetected(qrDataDecoded: String) {
