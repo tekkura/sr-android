@@ -130,8 +130,11 @@ open class Trial(
         publisherStartupHandler.start startupSucceeded@{
             if (!isPublisherStartupActive()) return@startupSucceeded
             publisherFailureHandler?.dismiss()
-            onPublisherStartupSucceeded()
-            startTrialOnce()
+            try {
+                startTrialOnce()
+            } finally {
+                onPublisherStartupSucceeded()
+            }
         }
     }
 
