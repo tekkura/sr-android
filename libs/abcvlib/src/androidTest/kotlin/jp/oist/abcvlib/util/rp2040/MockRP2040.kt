@@ -97,7 +97,7 @@ internal class MockRP2040 {
                 if (payloadSize == 0) 0 else RP2040Command.TINYFRAME_CRC_SIZE
         if (packet.size != expectedSize) return false
 
-        if (packet.sliceArray(1 until 5).toCrc() !=
+        if (packet.sliceArray(0 until 5).toCrc() !=
             ByteBuffer.wrap(packet, 5, 2).short
         ) return false
 

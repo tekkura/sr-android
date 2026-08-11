@@ -23,7 +23,7 @@ class RP2040OutgoingCommandTest {
         val size = buffer.short
         assertEquals("Size mismatch", expectedPayload.size.toShort(), size)
         assertEquals("Command type mismatch", expectedType.hexValue, buffer.get())
-        val headerCrc = bytes.sliceArray(1 until 5).toCrc()
+        val headerCrc = bytes.sliceArray(0 until 5).toCrc()
         assertEquals("Header CRC mismatch", headerCrc, buffer.short)
         
         val actualPayload = ByteArray(size.toInt())
@@ -42,6 +42,24 @@ class RP2040OutgoingCommandTest {
         val bytes = command.toBytes()
         // No payload populated, so it should be zeros
         verifyPacketStructure(bytes, 0, AndroidToRP2040Command.GET_STATE, byteArrayOf())
+    }
+
+    @Test
+    fun `test GetState packet matches TinyFrame header crc golden vector`() {
+        val command = RP2040OutgoingCommand.GetState()
+
+        assertArrayEquals(
+            byteArrayOf(
+                0x01,
+                0x80.toByte(),
+                0x00,
+                0x00,
+                0x03,
+                0x01,
+                0x54
+            ),
+            command.toBytes()
+        )
     }
 
     @Test

@@ -89,7 +89,7 @@ class PacketBufferTest {
                 if (payload.isEmpty()) 0 else 2).apply {
             order(ByteOrder.BIG_ENDIAN)
             put(header)
-            putShort(header.sliceArray(1 until header.size).toCrc())
+            putShort(header.toCrc())
             put(payload)
             if (payload.isNotEmpty()) {
                 putShort(payload.toCrc())
@@ -133,6 +133,28 @@ class PacketBufferTest {
         assertEquals(1, command.major)
         assertEquals(0, command.minor)
         assertEquals(100, command.patch)
+    }
+
+    @Test
+    fun `test consume TinyFrame header crc includes SOF golden vector`() {
+        val packet = byteArrayOf(
+            0x01,
+            0x00,
+            0x00,
+            0x00,
+            0xFD.toByte(),
+            0x41,
+            0xFC.toByte()
+        )
+
+        packetBuffer.consume(packet) { results.add(it) }
+
+        assertEquals(1, results.size)
+        val result = results[0]
+        assertTrue(result is PacketBuffer.ParseResult.ReceivedPacket)
+        val command = (result as PacketBuffer.ParseResult.ReceivedPacket).command
+        assertTrue(command is RP2040IncomingCommand.Ack)
+        assertArrayEquals(byteArrayOf(), (command as RP2040IncomingCommand.Ack).data)
     }
 
     @Test
@@ -227,7 +249,7 @@ class PacketBufferTest {
     fun `test consume with invalid packet type`() {
         val packet = createPacket(AndroidToRP2040Command.GET_STATE, byteArrayOf(0x01, 0x02)).apply {
             this[4] = 0x99.toByte()
-            ByteBuffer.wrap(this).order(ByteOrder.BIG_ENDIAN).putShort(5, sliceArray(1 until 5).toCrc())
+            ByteBuffer.wrap(this).order(ByteOrder.BIG_ENDIAN).putShort(5, sliceArray(0 until 5).toCrc())
         }
 
         packetBuffer.consume(packet) { results.add(it) }

@@ -215,7 +215,7 @@ class RP2040IncomingCommandTest {
         assertEquals(0x00.toByte(), buffer.get())
         assertEquals(data.size.toShort(), buffer.short)
         assertEquals(AndroidToRP2040Command.ACK.hexValue, buffer.get())
-        val headerCrc = bytes.sliceArray(1 until 5).toCrc()
+        val headerCrc = bytes.sliceArray(0 until 5).toCrc()
         assertEquals(headerCrc, buffer.short)
         assertEquals(0xDE.toByte(), buffer.get())
         assertEquals(0xAD.toByte(), buffer.get())
