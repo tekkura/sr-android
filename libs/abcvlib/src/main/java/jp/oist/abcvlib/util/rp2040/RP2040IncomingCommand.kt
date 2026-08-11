@@ -109,6 +109,9 @@ sealed class RP2040IncomingCommand : RP2040Command() {
                 }
 
                 AndroidToRP2040Command.GET_STATE -> {
+                    if (!hasExpectedStatusPayloadSize(data))
+                        return null
+
                     val buffer = ByteBuffer.wrap(data).apply {
                         order(ByteOrder.LITTLE_ENDIAN)
                     }
@@ -121,6 +124,9 @@ sealed class RP2040IncomingCommand : RP2040Command() {
                 }
 
                 AndroidToRP2040Command.SET_MOTOR_LEVELS -> {
+                    if (!hasExpectedStatusPayloadSize(data))
+                        return null
+
                     val buffer = ByteBuffer.wrap(data).apply {
                         order(ByteOrder.LITTLE_ENDIAN)
                     }
@@ -133,6 +139,9 @@ sealed class RP2040IncomingCommand : RP2040Command() {
                 }
 
                 AndroidToRP2040Command.RESET_STATE -> {
+                    if (!hasExpectedStatusPayloadSize(data))
+                        return null
+
                     val buffer = ByteBuffer.wrap(data).apply {
                         order(ByteOrder.LITTLE_ENDIAN)
                     }
@@ -170,6 +179,16 @@ sealed class RP2040IncomingCommand : RP2040Command() {
             }
         }
 
+        private fun hasExpectedStatusPayloadSize(data: ByteArray): Boolean {
+            if (data.size == STATUS_PAYLOAD_SIZE)
+                return true
+
+            Logger.w(TAG, "Invalid RP2040 state payload size: ${data.size}")
+            return false
+        }
+
+        private const val STATUS_PAYLOAD_SIZE =
+            MotorsState.BYTE_LENGTH + BatteryDetails.BYTE_LENGTH + ChargeSideUSB.BYTE_LENGTH
         private const val GET_VERSION_PAYLOAD_SIZE = 3
     }
 }

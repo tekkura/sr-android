@@ -150,6 +150,17 @@ class PacketBufferTest {
     }
 
     @Test
+    fun `test consume state response with trailing payload byte reports error packet`() {
+        val payload = getStateCommand.toBytes().sliceArray(4 until getStateCommand.toBytes().size - 2)
+        val packet = createPacket(AndroidToRP2040Command.GET_STATE, payload + 0x00)
+
+        packetBuffer.consume(packet) { results.add(it) }
+
+        assertEquals(1, results.size)
+        assertTrue(results[0] is PacketBuffer.ParseResult.ReceivedErrorPacket)
+    }
+
+    @Test
     fun `test consume multiple complete packets`() {
         val packet1 = getStateCommand.toBytes()
         val packet2 = ackCommand.toBytes()
