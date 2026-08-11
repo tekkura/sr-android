@@ -89,7 +89,7 @@ class PacketBufferTest {
                 if (payload.isEmpty()) 0 else 2).apply {
             order(ByteOrder.BIG_ENDIAN)
             put(header)
-            putShort(header.toCrc())
+            putShort(header.sliceArray(1 until header.size).toCrc())
             put(payload)
             if (payload.isNotEmpty()) {
                 putShort(payload.toCrc())
@@ -227,7 +227,7 @@ class PacketBufferTest {
     fun `test consume with invalid packet type`() {
         val packet = createPacket(AndroidToRP2040Command.GET_STATE, byteArrayOf(0x01, 0x02)).apply {
             this[4] = 0x99.toByte()
-            ByteBuffer.wrap(this).order(ByteOrder.BIG_ENDIAN).putShort(5, sliceArray(0 until 5).toCrc())
+            ByteBuffer.wrap(this).order(ByteOrder.BIG_ENDIAN).putShort(5, sliceArray(1 until 5).toCrc())
         }
 
         packetBuffer.consume(packet) { results.add(it) }

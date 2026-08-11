@@ -44,7 +44,7 @@ abstract class RP2040Command {
             put(type.hexValue)
         }
 
-        val crc = header.array().sliceArray(0 until header.position()).toCrc()
+        val crc = header.array().sliceArray(1 until header.position()).toCrc()
 
         val crcBuffer = ByteBuffer.allocate(2).apply {
             order(ByteOrder.BIG_ENDIAN)

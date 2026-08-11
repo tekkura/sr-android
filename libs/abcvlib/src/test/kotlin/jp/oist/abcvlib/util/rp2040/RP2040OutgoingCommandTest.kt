@@ -23,7 +23,7 @@ class RP2040OutgoingCommandTest {
         val size = buffer.short
         assertEquals("Size mismatch", expectedPayload.size.toShort(), size)
         assertEquals("Command type mismatch", expectedType.hexValue, buffer.get())
-        val headerCrc = bytes.sliceArray(0 until 5).toCrc()
+        val headerCrc = bytes.sliceArray(1 until 5).toCrc()
         assertEquals("Header CRC mismatch", headerCrc, buffer.short)
         
         val actualPayload = ByteArray(size.toInt())

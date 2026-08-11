@@ -81,7 +81,7 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
 
                     val crc = _buffer.getShort(startIdx + RP2040ToAndroidPacket.Offsets.CRC)
                     val computedCrc = _buffer.array()
-                        .sliceArray(startIdx until startIdx + RP2040ToAndroidPacket.Offsets.CRC)
+                        .sliceArray(startIdx + 1 until startIdx + RP2040ToAndroidPacket.Offsets.CRC)
                         .toCrc()
 
                     if (crc != computedCrc) {

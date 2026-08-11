@@ -40,8 +40,9 @@ non-empty frame is `9 + LEN` bytes long. TinyFrame does not use a stop marker.
 Both checksums use CRC-16/ARC with polynomial `0x8005`, reflected input/output,
 initial value `0x0000`, and no final XOR.
 
-- Header CRC input is bytes 0 through 4: `SOF + ID + LEN + TYPE`. With
-  `TF_USE_SOF_BYTE=1`, the SOF byte is included.
+- Header CRC input is bytes 1 through 4: `ID + LEN + TYPE`. With
+  `TF_USE_SOF_BYTE=1`, the SOF byte is used for frame detection and is not
+  included in the header CRC.
 - Payload CRC input is the payload only.
 - The resulting 16-bit checksum is written to the frame in big-endian order.
 
