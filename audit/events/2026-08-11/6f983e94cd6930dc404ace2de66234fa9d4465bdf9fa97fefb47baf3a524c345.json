@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-08-11T03:51:42Z",
+  "event_ts": "2026-08-11T03:51:20Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "31456656973",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 321,
+    "title": "Startup failure handling",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/321",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3755109831,
+    "html_url": "https://github.com/tekkura/sr-android/pull/321#discussion_r3755109831",
+    "created_at": "2026-08-11T03:51:20Z",
+    "updated_at": "2026-08-11T03:51:20Z",
+    "body": "I do not see a clear responsibility boundary for `PublisherRegistry`.\n\n`PublisherManager` still owns the lifecycle phases and calls into `PublisherRegistry` mostly as a backing map for publisher metadata: permission status, completion status, failure state, and retry selection. This feels like `PublisherManager` internals moved into a separate file rather than a separate abstraction with its own stable responsibility.\n\nCan we fold this back into `PublisherManager` and keep publisher-specific lifecycle state encapsulated on `Publisher` where possible?"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/321#discussion_r3755109831",
+  "event_id": "6f983e94cd6930dc404ace2de66234fa9d4465bdf9fa97fefb47baf3a524c345"
+}
