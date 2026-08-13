@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-08-13T05:48:39Z",
+  "event_ts": "2026-08-13T05:48:14Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "issues",
+  "action": "closed",
+  "actor": "topherbuckley",
+  "run_id": "31671575899",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": {
+    "number": 323,
+    "title": "HIGH audit event: pull_request_review_comment.edited by GeorgeChernyshov (326001f1c000)",
+    "state": "closed",
+    "html_url": "https://github.com/tekkura/sr-android/issues/323",
+    "milestone": null
+  },
+  "pull_request": null,
+  "comment": null,
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/issues/323",
+  "event_id": "f66e2edb3637c4a07a50fe266eb4095ec587960dbec90266ca369b0cc229e19a"
+}
