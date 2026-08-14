@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-08-14T17:34:25Z",
+  "event_ts": "2026-08-14T17:34:06Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "31824584806",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 321,
+    "title": "Startup failure handling",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/321",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3785933881,
+    "html_url": "https://github.com/tekkura/sr-android/pull/321#discussion_r3785933881",
+    "created_at": "2026-08-14T17:34:06Z",
+    "updated_at": "2026-08-14T17:34:06Z",
+    "body": "Addressed this in [324a741](https://github.com/tekkura/sr-android/pull/321/commits/324a74116a1b641827fd423e7cf093845917401b)\r\nDidn't fully solve the issue, but paths diverge much later now"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/321#discussion_r3785933881",
+  "event_id": "390ae57db62f14ec97a96fde2f6c831853d414ae4744d374101b3b0184f4cf17"
+}
