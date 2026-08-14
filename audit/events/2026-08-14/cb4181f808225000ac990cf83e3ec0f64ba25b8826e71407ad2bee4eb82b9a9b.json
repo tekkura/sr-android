@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-08-14T17:37:14Z",
+  "event_ts": "2026-08-14T17:36:56Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "GeorgeChernyshov",
+  "run_id": "31824808608",
+  "run_attempt": "1",
+  "sender": {
+    "login": "GeorgeChernyshov",
+    "html_url": "https://github.com/GeorgeChernyshov"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 321,
+    "title": "Startup failure handling",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/321",
+    "milestone": null
+  },
+  "comment": {
+    "id": 3785950921,
+    "html_url": "https://github.com/tekkura/sr-android/pull/321#discussion_r3785950921",
+    "created_at": "2026-08-14T17:36:55Z",
+    "updated_at": "2026-08-14T17:36:56Z",
+    "body": "Merged back in [1f33e92](https://github.com/tekkura/sr-android/pull/321/commits/1f33e92e482788af9491011c362600cc6b0d63ce)\r\n\r\nAfter we resolve the https://github.com/tekkura/sr-android/pull/321#discussion_r3768072367, I might try separating the manager again, although couldn't come up with nice split this time"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/321#discussion_r3785950921",
+  "event_id": "cb4181f808225000ac990cf83e3ec0f64ba25b8826e71407ad2bee4eb82b9a9b"
+}
