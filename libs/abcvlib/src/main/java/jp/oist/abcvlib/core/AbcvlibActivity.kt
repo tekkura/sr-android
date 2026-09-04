@@ -8,6 +8,8 @@ import android.widget.Button
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.publisher.PublisherStartupHandler
 import jp.oist.abcvlib.core.outputs.Outputs
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.ProcessPriorityThreadFactory
@@ -36,6 +38,12 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     var switches = Switches()
     protected lateinit var usbSerial: UsbSerial
     protected lateinit var outputs: Outputs
+    private var _publisherManager: PublisherManager? = null
+    protected val publisherManager: PublisherManager
+        get() = checkNotNull(_publisherManager) {
+            "publisherManager is not initialized"
+        }
+
     private var serialCommManager: SerialCommManager? = null
     private var android2PiWriter: Runnable? = null
     private var pi2AndroidReader: Runnable? = null
@@ -93,18 +101,43 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         serialCommManager!!.start()
 
         initializeOutputs()
-        onOutputsReady()
-
-        if (mainLoopEnabled) {
-            // Needs to be > 5 in order for object detector not to overwhelm cpu
-            val priority = ProcessPriorityThreadFactory(
-                Thread.MAX_PRIORITY,
-                "AbcvlibActivityMainLoop"
-            )
-            Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
-                AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
-            )
+        prepareApp {
+            lifecycleScope.launch(Dispatchers.Default) {
+                onOutputsReady()
+                startMainLoop()
+            }
         }
+    }
+
+    protected fun initPublisherManager() {
+        _publisherManager = PublisherManager()
+    }
+
+    /**
+     * Performs asynchronous app-specific preparation before outputs and the main loop are used.
+     * Implementations must invoke [onReady] after preparation succeeds.
+     */
+    protected open fun prepareApp(onReady: () -> Unit) {
+        _publisherManager?.let {
+            PublisherStartupHandler(
+                this,
+                it,
+                onFailure = { outputs.turnOffWheels() }
+            ).start(onReady)
+        } ?: onReady()
+    }
+
+    private fun startMainLoop() {
+        if (!mainLoopEnabled) return
+        // Needs to be > 5 in order for object detector not to overwhelm cpu
+        val priority = ProcessPriorityThreadFactory(
+            Thread.MAX_PRIORITY,
+            "AbcvlibActivityMainLoop"
+        )
+
+        Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
+            AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
+        )
     }
 
     private inner class AbcvlibActivityRunnable : Runnable {
@@ -119,6 +152,11 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         throw RuntimeException("runAbcvlibActivityMainLoop must be overridden")
     }
 
+    /**
+     * Called after outputs are initialized.
+     *
+     * Called after [prepareApp] succeeds and outputs are initialized.
+     */
     @WorkerThread
     protected open fun onOutputsReady() {
         // Override this method in your MainActivity to do anything that requires the outputs
@@ -127,7 +165,6 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
                     "do anything that requires the outputs."
         )
     }
-
 
     private fun initializeOutputs() {
         outputs = Outputs(switches, serialCommManager!!)

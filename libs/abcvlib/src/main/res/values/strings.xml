@@ -14,4 +14,10 @@
     <string name="back_button">Back</string>
     <string name="robot_not_properly_attached_please_reattach_and_press_confirm">Robot not properly attached. Please reattach and press confirm</string>
     <string name="confirm">Confirm</string>
+    <string name="publisher_startup_failure_title">Required data unavailable</string>
+    <string name="publisher_startup_failure_message">One or more required data sources could not start. Resolve the problem, then retry, or close the app.</string>
+    <string name="microphone_startup_failure_message">The microphone could not start. Check Android\'s microphone indicator or Privacy Dashboard, stop or revoke microphone access for the app or service currently using it, then return and retry.</string>
+    <string name="retry">Retry</string>
+    <string name="close_app">Close app</string>
+    <string name="privacy_settings">Privacy settings</string>
 </resources>

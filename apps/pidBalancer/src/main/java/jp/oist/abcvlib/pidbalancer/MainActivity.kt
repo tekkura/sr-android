@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
 import jp.oist.abcvlib.core.inputs.phone.OrientationData
 import jp.oist.abcvlib.fragments.PidGuiFragament
@@ -52,12 +51,9 @@ class MainActivity : AbcvlibActivity() {
 
     override fun onSerialReady(usbSerial: UsbSerial) {
         // Create your data publisher objects
-        val publisherManager = PublisherManager()
+        initPublisherManager()
         val orientationData = OrientationData.Builder(this, publisherManager).build()
         val wheelData = WheelData.Builder(this, publisherManager).build()
-        // Initialize all publishers (i.e. start their threads and data streams)
-        publisherManager.initializePublishers()
-
         // Create your controller/subscriber
         balancePIDController = BalancePIDController().apply {
             setInitDelay(0)
@@ -71,9 +67,6 @@ class MainActivity : AbcvlibActivity() {
         // Attach the controller/subscriber to the publishers
         orientationData.addSubscriber(balancePIDController)
         wheelData.addSubscriber(balancePIDController)
-
-        // Start your publishers
-        publisherManager.startPublishers()
 
         super.onSerialReady(usbSerial)
     }

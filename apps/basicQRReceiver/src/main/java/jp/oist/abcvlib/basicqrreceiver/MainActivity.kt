@@ -3,7 +3,6 @@ package jp.oist.abcvlib.basicqrreceiver
 import android.os.Bundle
 import android.widget.TextView
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.phone.QRCodeData
 import jp.oist.abcvlib.core.inputs.phone.QRCodeDataSubscriber
 import jp.oist.abcvlib.util.SerialCommManager
@@ -17,7 +16,6 @@ import jp.oist.abcvlib.util.UsbSerial
  * @author Christopher Buckley https://github.com/topherbuckley
  */
 class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscriber {
-    private lateinit var publisherManager: PublisherManager
     private lateinit var letterTextView: TextView
 
     private var speedL = 0f
@@ -31,21 +29,13 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
     }
 
     override fun onSerialReady(usbSerial: UsbSerial) {
-        publisherManager = PublisherManager()
+        initPublisherManager()
 
         val qrCodeData = QRCodeData.Builder(this, publisherManager, this).build()
         qrCodeData.addSubscriber(this)
 
-        publisherManager.initializePublishers()
-        publisherManager.startPublishers()
-
         setSerialCommManager(SerialCommManager(usbSerial))
         super.onSerialReady(usbSerial)
-    }
-
-    public override fun onOutputsReady() {
-        publisherManager.initializePublishers()
-        publisherManager.startPublishers()
     }
 
     override fun onQRCodeDetected(qrDataDecoded: String) {

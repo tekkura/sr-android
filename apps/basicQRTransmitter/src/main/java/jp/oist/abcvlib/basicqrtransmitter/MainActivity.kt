@@ -2,7 +2,6 @@ package jp.oist.abcvlib.basicqrtransmitter
 
 import android.os.Bundle
 import jp.oist.abcvlib.core.AbcvlibActivity
-import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.phone.QRCodeData
 import jp.oist.abcvlib.core.inputs.phone.QRCodeDataSubscriber
 import jp.oist.abcvlib.util.Logger
@@ -22,7 +21,6 @@ import java.util.concurrent.TimeUnit
  */
 class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscriber {
     private lateinit var qrCode: QRCode
-    private lateinit var publisherManager: PublisherManager
     private var speedL = 0f
     private var speedR = 0f
     private val speed = 0.6f
@@ -48,22 +46,20 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
     }
 
     override fun onSerialReady(usbSerial: UsbSerial) {
-        publisherManager = PublisherManager()
+        initPublisherManager()
 
         val qrCodeData = QRCodeData.Builder(this, publisherManager, this).build()
         qrCodeData.addSubscriber(this)
-
-        publisherManager.initializePublishers()
-        publisherManager.startPublishers()
 
         setSerialCommManager(SerialCommManager(usbSerial))
         super.onSerialReady(usbSerial)
     }
 
     public override fun onOutputsReady() {
-        publisherManager.initializePublishers()
-        publisherManager.startPublishers()
-        val executor = ScheduledExecutorServiceWithException(1, ProcessPriorityThreadFactory(Thread.MIN_PRIORITY, "ActionSelector"))
+        val executor = ScheduledExecutorServiceWithException(
+            1,
+            ProcessPriorityThreadFactory(Thread.MIN_PRIORITY, "ActionSelector")
+        )
         executor.scheduleAtFixedRate(swapAction, 0, 10, TimeUnit.SECONDS)
     }
 
