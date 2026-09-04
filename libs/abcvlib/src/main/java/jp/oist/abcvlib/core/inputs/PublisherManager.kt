@@ -126,7 +126,11 @@ class PublisherManager(
         initializationRunner.initialize(publisher)
     }
 
-    @Deprecated("Publishers should call reportInitializationSucceeded()")
+    @Deprecated(
+        message = "Synchronous publishers should call reportInitializationSucceeded(); " +
+            "asynchronous publishers should use initializationSucceededCallback()",
+        level = DeprecationLevel.ERROR
+    )
     fun onPublisherInitialized() {
         initializationRunner.reportLegacyInitializationSucceeded()
     }

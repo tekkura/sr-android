@@ -470,7 +470,7 @@ class PublisherManagerInitializationTest {
         }
     }
 
-    @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION_ERROR")
     private class LegacyPublisher(
         context: Context,
         publisherManager: PublisherManager,
@@ -488,7 +488,7 @@ class PublisherManagerInitializationTest {
         }
     }
 
-    @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION_ERROR")
     private class AsyncLegacyPublisher(
         context: Context,
         publisherManager: PublisherManager
