@@ -37,13 +37,12 @@ open class SerialCommManager @JvmOverloads constructor(
     protected val commandLock = Object()
     private val lifecycleLock = Any()
     private var runContext: RunContext? = null
+    private val executingContext = ThreadLocal<RunContext>()
 
     protected var startTimeAndroid: Long = 0
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
 
-    private var versionTimeoutFuture: ScheduledFuture<*>? = null
-    private val firmwareCompatibilityFailureReported = AtomicBoolean(false)
     private val VERSION_TIMEOUT_MS = 2000L
 
     // Constructor to initialize SerialCommManager
@@ -65,7 +64,11 @@ open class SerialCommManager @JvmOverloads constructor(
         var writerExecutor: ScheduledExecutorServiceWithException? = null,
         var versionTimeoutExecutor: ScheduledExecutorService? = null,
         var delay: AtomicLong = AtomicLong(10),
-        var initialDelay: AtomicLong = AtomicLong(0)
+        var initialDelay: AtomicLong = AtomicLong(0),
+        var versionTimeoutFuture: ScheduledFuture<*>? = null,
+        var handshakeComplete: Boolean = false,
+        val onReady: (() -> Unit)? = null,
+        val onFailure: FirmwareCompatibilityFailureListener? = null
     )
 
     protected open fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
@@ -115,7 +118,7 @@ open class SerialCommManager @JvmOverloads constructor(
 
     // Start method to start the thread
     @JvmOverloads
-    fun start(initialDelay: Long = 0, delay: Long = 10) {
+    fun start(initialDelay: Long = 0, delay: Long = 10, onReady: (() -> Unit)? = null) {
         synchronized(lifecycleLock) {
             val existing = runContext
             if (existing != null && !existing.stopRequested.get()) {
@@ -123,7 +126,10 @@ open class SerialCommManager @JvmOverloads constructor(
                 return
             }
 
-            val context = RunContext().apply {
+            val context = RunContext(
+                onReady = onReady,
+                onFailure = firmwareCompatibilityFailureListener
+            ).apply {
                 this.delay.set(delay)
                 this.initialDelay.set(initialDelay)
             }
@@ -141,30 +147,35 @@ open class SerialCommManager @JvmOverloads constructor(
                 )
             )
             runContext = context
-            firmwareCompatibilityFailureReported.set(false)
+            usbSerial.resetReceiveState()
 
             // Only check version support for real firmware
             if (usbSerial.isPortReal)
-                requestFirmwareVersion()
-            else startPolling()
+                requestFirmwareVersion(context)
+            else context.writerExecutor?.execute { startPolling(context) }
         }
     }
 
     fun stop() {
-        versionTimeoutFuture?.cancel(false)
-        versionTimeoutFuture = null
-
-        var contextToStop: RunContext? = null
         synchronized(lifecycleLock) {
-            contextToStop = runContext
-            runContext = null
+            runContext?.let { stopContext(it) }
         }
-        contextToStop?.let { context ->
-            context.stopRequested.set(true)
-            context.writerExecutor?.shutdownNow()
-            context.writerExecutor = null
-            context.versionTimeoutExecutor?.shutdownNow()
-            context.versionTimeoutExecutor = null
+    }
+
+    // Called with lifecycleLock held, so an old run cannot stop a replacement run.
+    private fun stopContext(context: RunContext) {
+        context.stopRequested.set(true)
+        context.versionTimeoutFuture?.cancel(false)
+        context.versionTimeoutFuture = null
+        context.writerExecutor?.shutdownNow()
+        context.writerExecutor = null
+        context.versionTimeoutExecutor?.shutdownNow()
+        context.versionTimeoutExecutor = null
+        if (runContext === context) runContext = null
+        synchronized(commandLock) {
+            command = null
+            queuedMotorLevelsAtMs = 0L
+            commandLock.notifyAll()
         }
     }
 
@@ -176,6 +187,10 @@ open class SerialCommManager @JvmOverloads constructor(
 
     //TODO paseFifoPacket() should call the various SerialResponseListener methods.
     internal fun parseFifoPacket() {
+        val context = executingContext.get()
+        if (context != null && synchronized(lifecycleLock) {
+                runContext !== context || context.stopRequested.get()
+            }) return
         var result = 0
         val command: RP2040IncomingCommand?
         var packet: ByteArray?
@@ -216,17 +231,19 @@ open class SerialCommManager @JvmOverloads constructor(
                 }
 
                 is RP2040IncomingCommand.GetVersion -> {
-                    versionTimeoutFuture?.cancel(false)
-                    versionTimeoutFuture = null
-
+                    if (context == null) {
+                        Logger.w("serial", "Ignoring version response outside an active request")
+                        return
+                    }
                     if (checkVersionSupport(
                         command.major,
                         command.minor,
                         command.patch
                     )) {
-                        startPolling()
+                        startPolling(context)
                     } else {
                         handleFirmwareCompatibilityFailure(
+                            context,
                             FirmwareCompatibilityException.unsupportedVersion(
                                 Version(command.major, command.minor, command.patch)
                             )
@@ -410,35 +427,43 @@ open class SerialCommManager @JvmOverloads constructor(
         Logger.d("serial", "parseAck")
     }
 
-    private fun startPolling() {
-        with(runContext ?: throw IllegalStateException("SerialCommManager not started")) {
-            writerExecutor?.schedule(
-                buildAndroid2PiWriter(this),
-                initialDelay.get(),
+    private fun startPolling(context: RunContext) {
+        synchronized(lifecycleLock) {
+            if (runContext !== context || context.stopRequested.get() || context.handshakeComplete)
+                return
+            context.handshakeComplete = true
+            context.versionTimeoutFuture?.cancel(false)
+            context.versionTimeoutFuture = null
+            // Completion and stop are serialized; application startup cannot run after stop returns.
+            context.onReady?.invoke()
+            if (runContext !== context || context.stopRequested.get()) return
+            context.writerExecutor?.schedule(
+                { inRun(context) { buildAndroid2PiWriter(context).run() } },
+                context.initialDelay.get(),
                 TimeUnit.MILLISECONDS
             )
         }
     }
 
-    private fun requestFirmwareVersion() {
-        with(runContext ?: throw IllegalStateException("SerialCommManager not started")) {
+    private fun requestFirmwareVersion(context: RunContext) {
+        with(context) {
             versionTimeoutFuture = versionTimeoutExecutor?.schedule({
                 handleFirmwareCompatibilityFailure(
+                    context,
                     FirmwareCompatibilityException.versionRequestTimedOut(VERSION_TIMEOUT_MS)
                 )
             }, VERSION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
 
 
             writerExecutor?.execute {
-                try {
-                    sendCommand(RP2040OutgoingCommand.GetVersion())
-                } catch (e: FirmwareCompatibilityException) {
-                    handleFirmwareCompatibilityFailure(e)
-                } catch (e: RuntimeException) {
-                    if (firmwareCompatibilityFailureReported.get()) {
-                        Logger.d("serial", "Ignoring send failure after firmware compatibility failure")
-                    } else {
+                inRun(context) {
+                    try {
+                        sendCommand(RP2040OutgoingCommand.GetVersion())
+                    } catch (e: FirmwareCompatibilityException) {
+                        handleFirmwareCompatibilityFailure(context, e)
+                    } catch (e: RuntimeException) {
                         handleFirmwareCompatibilityFailure(
+                            context,
                             FirmwareCompatibilityException.versionRequestFailed(e)
                         )
                     }
@@ -447,16 +472,26 @@ open class SerialCommManager @JvmOverloads constructor(
         }
     }
 
-    private fun handleFirmwareCompatibilityFailure(exception: FirmwareCompatibilityException) {
-        if (!firmwareCompatibilityFailureReported.compareAndSet(false, true))
-            return
+    private fun inRun(context: RunContext, action: () -> Unit) {
+        if (context.stopRequested.get()) return
+        executingContext.set(context)
+        try {
+            action()
+        } finally {
+            executingContext.remove()
+        }
+    }
 
-        versionTimeoutFuture?.cancel(false)
-        versionTimeoutFuture = null
-        Logger.e("serial", exception.message ?: "Firmware compatibility failure", exception)
-        stop()
-        firmwareCompatibilityFailureListener?.onFirmwareCompatibilityFailure(
-            exception.userFacingMessage
-        )
+    private fun handleFirmwareCompatibilityFailure(
+        context: RunContext,
+        exception: FirmwareCompatibilityException
+    ) {
+        synchronized(lifecycleLock) {
+            if (runContext !== context || context.stopRequested.get() || context.handshakeComplete)
+                return
+            Logger.e("serial", exception.message ?: "Firmware compatibility failure", exception)
+            stopContext(context)
+            context.onFailure?.onFirmwareCompatibilityFailure(exception.userFacingMessage)
+        }
     }
 }

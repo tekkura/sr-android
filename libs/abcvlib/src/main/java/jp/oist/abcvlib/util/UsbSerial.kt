@@ -37,7 +37,7 @@ open class UsbSerial @Throws(IOException::class) constructor(
 ) : SerialInputOutputManager.Listener {
 
     private lateinit var _port: RobotSerialPort
-    val isPortReal get() = _port is RealRobotSerialPort
+    open val isPortReal get() = _port is RealRobotSerialPort
 
     private val timeout: Int = 1000 //1s
     private var badPacketCount = 0
@@ -45,12 +45,12 @@ open class UsbSerial @Throws(IOException::class) constructor(
     internal val fifoQueue: CircularFifoQueue<RP2040IncomingCommand> = CircularFifoQueue<RP2040IncomingCommand>(256)
     private val packetBuffer = PacketBuffer()
     private var firmwareCompatibilityException: FirmwareCompatibilityException? = null
+    private var packetErrorPending = false
+    private val lock = ReentrantLock()
+    private val packetReceived: Condition = lock.newCondition()
 
     companion object {
         private const val TAG = "UsbSerial"
-
-        private val lock = ReentrantLock()
-        private val packetReceived: Condition = lock.newCondition()
 
         private const val ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION"
         private const val BAD_PACKET_THRESHOLD = 5
@@ -174,21 +174,24 @@ open class UsbSerial @Throws(IOException::class) constructor(
 
                         is PacketBuffer.ParseResult.Overflow -> {
                             onBadPacket()
+                            packetErrorPending = true
+                            packetReceived.signalAll()
                             Logger.d(TAG, "Buffer overflow.")
                         }
 
                         is PacketBuffer.ParseResult.ReceivedErrorPacket -> {
                             onBadPacket()
+                            packetErrorPending = true
                             Logger.d(TAG, "Error packet received")
                             Logger.d(TAG, "packetReceived.signal()")
-                            packetReceived.signal()
+                            packetReceived.signalAll()
                         }
 
                         is PacketBuffer.ParseResult.FirmwareCompatibilityFailure -> {
                             firmwareCompatibilityException = result.exception
                             Logger.e(TAG, result.exception.message ?: "Firmware compatibility failure")
                             Logger.d(TAG, "packetReceived.signal()")
-                            packetReceived.signal()
+                            packetReceived.signalAll()
                         }
 
                         is PacketBuffer.ParseResult.ReceivedPacket -> {
@@ -196,7 +199,7 @@ open class UsbSerial @Throws(IOException::class) constructor(
 
                             Logger.d(TAG, "Packet verified")
                             Logger.d(TAG, "packetReceived.signal()")
-                            packetReceived.signal()
+                            packetReceived.signalAll()
                         }
                     }
                 }
@@ -222,30 +225,40 @@ open class UsbSerial @Throws(IOException::class) constructor(
      * Blocks until a response is received
      */
     internal fun awaitPacketReceived(timeout: Int): Int {
-        var returnVal = -1
-        // Wait until packet is available
         lock.lock()
         try {
-            if (!packetReceived.await(timeout.toLong(), TimeUnit.MILLISECONDS)) {
-                // throw new RuntimeException("SerialTimeoutException on send. The serial connection " +
-                // "with the rp2040 is not working as expected and timed out");
-            } else {
-                firmwareCompatibilityException?.let {
-                    firmwareCompatibilityException = null
-                    throw it
-                }
-                Logger.d(
-                    Thread.currentThread().name,
-                    "packetReceived.await() completed. Packet received from rp2040"
-                )
-                returnVal = 1
+            var remaining = TimeUnit.MILLISECONDS.toNanos(timeout.toLong())
+            // Signals are not stored: inspect the response/error predicates before waiting.
+            while (synchronized(fifoQueue) { fifoQueue.isEmpty() } &&
+                firmwareCompatibilityException == null && !packetErrorPending
+            ) {
+                if (remaining <= 0L) return -1
+                remaining = packetReceived.awaitNanos(remaining)
             }
+            packetErrorPending = false
+            firmwareCompatibilityException?.let {
+                firmwareCompatibilityException = null
+                throw it
+            }
+            return if (synchronized(fifoQueue) { fifoQueue.isNotEmpty() }) 1 else -1
         } catch (e: InterruptedException) {
-            e.printStackTrace()
+            Thread.currentThread().interrupt()
+            return -1
         } finally {
             lock.unlock()
         }
-        return returnVal
+    }
+
+    internal fun resetReceiveState() {
+        lock.lock()
+        try {
+            synchronized(fifoQueue) { fifoQueue.clear() }
+            packetBuffer.clear()
+            firmwareCompatibilityException = null
+            packetErrorPending = false
+        } finally {
+            lock.unlock()
+        }
     }
 
     /**
