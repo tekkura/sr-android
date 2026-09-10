@@ -57,8 +57,6 @@ internal class MockRP2040 {
                 generateStatusResponse(AndroidToRP2040Command.SET_MOTOR_LEVELS)
             }
             AndroidToRP2040Command.RESET_STATE -> {
-                motorsState = MotorsState()
-                logEntries.add("State reset")
                 RP2040IncomingCommand.Ack(byteArrayOf()).toBytes()
             }
             AndroidToRP2040Command.GET_LOG -> {

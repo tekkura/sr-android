@@ -36,8 +36,14 @@ class MockRP2040Test {
     }
 
     @Test
-    fun `reset state request returns ack`() {
-        val response = MockRP2040().processPacket(RP2040OutgoingCommand.ResetState().toBytes())
+    fun `reset state request returns ack without changing state`() {
+        val mock = MockRP2040().apply {
+            motorsState.controlValues.left = 0x12
+            motorsState.controlValues.right = 0x34
+            logEntries.add("existing log")
+        }
+
+        val response = mock.processPacket(RP2040OutgoingCommand.ResetState().toBytes())
 
         assertNotNull(response)
 
@@ -48,5 +54,8 @@ class MockRP2040Test {
         assertTrue(results[0] is PacketBuffer.ParseResult.ReceivedPacket)
         val command = (results[0] as PacketBuffer.ParseResult.ReceivedPacket).command
         assertEquals(AndroidToRP2040Command.ACK, command.type)
+        assertEquals(0x12.toByte(), mock.motorsState.controlValues.left)
+        assertEquals(0x34.toByte(), mock.motorsState.controlValues.right)
+        assertEquals(listOf("existing log"), mock.logEntries)
     }
 }
