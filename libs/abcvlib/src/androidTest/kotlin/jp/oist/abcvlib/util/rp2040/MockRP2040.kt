@@ -59,7 +59,7 @@ internal class MockRP2040 {
             AndroidToRP2040Command.RESET_STATE -> {
                 motorsState = MotorsState()
                 logEntries.add("State reset")
-                generateStatusResponse(AndroidToRP2040Command.RESET_STATE)
+                RP2040IncomingCommand.Ack(byteArrayOf()).toBytes()
             }
             AndroidToRP2040Command.GET_LOG -> {
                 val logCmd = RP2040IncomingCommand.GetLog(logEntries.toList())
@@ -124,7 +124,6 @@ internal class MockRP2040 {
         val command = when (type) {
             AndroidToRP2040Command.GET_STATE -> RP2040IncomingCommand.GetState(motorsState, batteryDetails, chargeSideUSB)
             AndroidToRP2040Command.SET_MOTOR_LEVELS -> RP2040IncomingCommand.SetMotorLevels(motorsState, batteryDetails, chargeSideUSB)
-            AndroidToRP2040Command.RESET_STATE -> RP2040IncomingCommand.ResetState(motorsState, batteryDetails, chargeSideUSB)
             else -> throw IllegalArgumentException("Invalid status type")
         }
         return command.toBytes()

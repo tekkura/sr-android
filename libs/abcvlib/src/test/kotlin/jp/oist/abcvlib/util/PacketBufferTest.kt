@@ -52,30 +52,6 @@ class PacketBufferTest {
         }
     )
 
-    private val resetStateCommand = RP2040IncomingCommand.ResetState(
-        motorsState = MotorsState().apply {
-            controlValues.left = 0x66
-            controlValues.right = 0x34
-            faults.left = 0x00
-            faults.right = 0x01
-            encoderCounts.left = 1
-            encoderCounts.right = 2
-        },
-        batteryDetails = BatteryDetails().apply {
-            voltageMv = 12345
-            temperature = 6789
-            safetyStatus = 0x02
-            stateOfHealth = 0x6
-            flags = 0x2005
-        },
-        chargeSideUSB = ChargeSideUSB().apply {
-            max77976_chg_details = 0x12345678
-            ncp3901_wireless_charger_attached = true
-            usb_charger_voltage = 0x55
-            wireless_charger_vrect = 0x6478
-        }
-    )
-
     private fun createPacket(type: Byte, payload: ByteArray): ByteArray {
         val command = ByteBuffer.allocate(3 + payload.size).apply {
             order(ByteOrder.LITTLE_ENDIAN)
@@ -219,17 +195,16 @@ class PacketBufferTest {
     @Test
     fun `test consume with leading noise`() {
         val noise = byteArrayOf(0x00, 0x11, 0x22)
-        val payload = byteArrayOf(0x44)
-        val packet = resetStateCommand.toBytes()
+        val packet = ackCommand.toBytes()
         val combined = noise + packet
 
         packetBuffer.consume(combined) { results.add(it) }
 
         val packets = results.filterIsInstance<PacketBuffer.ParseResult.ReceivedPacket>()
         assertEquals(1, packets.size)
-        assertEquals(AndroidToRP2040Command.RESET_STATE, packets[0].command.type)
+        assertEquals(AndroidToRP2040Command.ACK, packets[0].command.type)
         assertArrayEquals(
-            resetStateCommand.toBytes(),
+            ackCommand.toBytes(),
             packets[0].command.toBytes()
         )
     }

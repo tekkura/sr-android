@@ -153,21 +153,6 @@ class RP2040IncomingCommandTest {
     }
 
     @Test
-    fun testResetState() {
-        val motors = createMockMotorsState()
-        val battery = createMockBatteryDetails()
-        val usb = createMockChargeSideUSB()
-        val command = RP2040IncomingCommand.ResetState(motors, battery, usb)
-        
-        val payload = extractPayload(command.toBytes())
-        val fromBytes = RP2040IncomingCommand.from(AndroidToRP2040Command.RESET_STATE, payload) as RP2040IncomingCommand.ResetState
-        
-        verifyMotorsState(motors, fromBytes.motorsState)
-        verifyBatteryDetails(battery, fromBytes.batteryDetails)
-        verifyChargeSideUSB(usb, fromBytes.chargeSideUSB)
-    }
-
-    @Test
     fun testGetVersion() {
         val command = RP2040IncomingCommand.GetVersion(1, 0, 100)
 

@@ -57,18 +57,6 @@ sealed class RP2040IncomingCommand : RP2040Command() {
                 chargeSideUSB.toBytes()
     }
 
-    class ResetState(
-        override val motorsState: MotorsState,
-        override val batteryDetails: BatteryDetails,
-        override val chargeSideUSB: ChargeSideUSB
-    ) : RP2040IncomingCommand(), StatusCommand {
-        override val type = AndroidToRP2040Command.RESET_STATE
-
-        override fun serializeData() = motorsState.toBytes() +
-                batteryDetails.toBytes() +
-                chargeSideUSB.toBytes()
-    }
-
     class GetVersion(
         val major: Int,
         val minor: Int,
@@ -139,18 +127,8 @@ sealed class RP2040IncomingCommand : RP2040Command() {
                 }
 
                 AndroidToRP2040Command.RESET_STATE -> {
-                    if (!hasExpectedStatusPayloadSize(data))
-                        return null
-
-                    val buffer = ByteBuffer.wrap(data).apply {
-                        order(ByteOrder.LITTLE_ENDIAN)
-                    }
-
-                    return ResetState(
-                        motorsState = MotorsState.from(buffer) ?: return null,
-                        batteryDetails = BatteryDetails.from(buffer) ?: return null,
-                        chargeSideUSB = ChargeSideUSB.from(buffer) ?: return null
-                    )
+                    Logger.w(TAG, "RESET_STATE responses must use ACK")
+                    return null
                 }
 
                 AndroidToRP2040Command.GET_VERSION -> {

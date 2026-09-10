@@ -41,7 +41,7 @@ The same type identifies a request and its corresponding response.
 |:-------|:-------------------|:-------------------------------------|:------------------------------------|
 | `0x00` | `GET_LOG`          | Empty                                | ASCII log entries separated by `\n` |
 | `0x01` | `SET_MOTOR_LEVELS` | Two motor-control bytes: left, right | `RP2040_STATE`                      |
-| `0x02` | `RESET_STATE`      | Empty                                | `RP2040_STATE`                      |
+| `0x02` | `RESET_STATE`      | Empty                                | `ACK`                               |
 | `0x03` | `GET_STATE`        | Empty                                | `RP2040_STATE`                      |
 | `0x06` | `GET_VERSION`      | Empty                                | Three bytes: major, minor, patch    |
 | `0xFC` | `NACK`             | Command-specific or empty            | Command-specific or empty           |
@@ -72,6 +72,12 @@ conversion.
 | 2      |    1 | Patch version |
 
 The response payload must be exactly 3 bytes.
+
+### `RESET_STATE`
+
+`RESET_STATE` is reserved for a future state reset workflow. Current firmware
+does not reset any robot state for this command and responds with an empty
+`ACK`.
 
 ### `RP2040_STATE`
 
