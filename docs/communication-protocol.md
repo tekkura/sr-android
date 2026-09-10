@@ -48,7 +48,8 @@ The same type identifies a request and its corresponding response.
 | `0xFD` | `ACK`              | Command-specific or empty            | Command-specific or empty           |
 
 `0xFE` is reserved for the start marker and cannot be used as a command type.
-`0xFF` is not a stop marker in this protocol.
+`0xFF` is not a stop marker in this protocol, but remains reserved and cannot
+be used as a command type.
 
 ## Payload encoding
 
