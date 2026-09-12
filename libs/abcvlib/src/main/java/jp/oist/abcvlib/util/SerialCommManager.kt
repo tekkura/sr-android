@@ -428,14 +428,19 @@ open class SerialCommManager @JvmOverloads constructor(
     }
 
     private fun startPolling(context: RunContext) {
+        val onReady: (() -> Unit)?
         synchronized(lifecycleLock) {
             if (runContext !== context || context.stopRequested.get() || context.handshakeComplete)
                 return
             context.handshakeComplete = true
             context.versionTimeoutFuture?.cancel(false)
             context.versionTimeoutFuture = null
-            // Completion and stop are serialized; application startup cannot run after stop returns.
-            context.onReady?.invoke()
+            onReady = context.onReady
+        }
+
+        onReady?.invoke()
+
+        synchronized(lifecycleLock) {
             if (runContext !== context || context.stopRequested.get()) return
             context.writerExecutor?.schedule(
                 { inRun(context) { buildAndroid2PiWriter(context).run() } },

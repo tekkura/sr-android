@@ -17,6 +17,7 @@ import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(AndroidJUnit4::class)
 class SerialHandshakeTest {
@@ -89,6 +90,30 @@ class SerialHandshakeTest {
         await(ready)
         await(manager.writerStarted)
         assertEquals(1, manager.writerStarts.get())
+    }
+
+    @Test
+    fun readinessCallbackCanReenterSerialCommManager() {
+        val manager = manager(serial(TestPort { version() }))
+        val ready = CountDownLatch(1)
+        val callbackError = AtomicReference<AssertionError>()
+        manager.start(onReady = {
+            try {
+                val reentered = CountDownLatch(1)
+                Thread {
+                    manager.getLog()
+                    reentered.countDown()
+                }.start()
+                assertTrue(reentered.await(1, TimeUnit.SECONDS))
+            } catch (e: AssertionError) {
+                callbackError.set(e)
+            } finally {
+                ready.countDown()
+            }
+        })
+        await(ready)
+        callbackError.get()?.let { throw it }
+        await(manager.writerStarted)
     }
 
     @Test
