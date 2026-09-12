@@ -1,9 +1,12 @@
 package jp.oist.abcvlib.util
 
 import jp.oist.abcvlib.util.versioning.Version
+import jp.oist.abcvlib.util.versioning.checkVersionSupport
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VersioningTest {
@@ -41,5 +44,13 @@ class VersioningTest {
         assert(version2 > version3)
         assert(version2 > version4)
         assert(version3 > version4)
+    }
+
+    @Test
+    fun testCheckVersionSupportBoundaries() {
+        assertFalse(checkVersionSupport(1, 1, 100))
+        assertTrue(checkVersionSupport(1, 2, 0))
+        assertTrue(checkVersionSupport(1, 2, 100))
+        assertFalse(checkVersionSupport(1, 2, 101))
     }
 }
