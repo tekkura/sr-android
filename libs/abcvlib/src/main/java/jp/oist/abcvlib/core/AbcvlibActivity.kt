@@ -5,6 +5,7 @@ import android.hardware.usb.UsbManager
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.TextView
 import androidx.annotation.WorkerThread
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -20,7 +21,9 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * AbcvlibActivity is where all the other classes are initialized into objects. The objects
@@ -42,6 +45,9 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     private var alertDialog: AlertDialog? = null
     private var initialDelay: Long = 0
     private var serialReadyJob: Job? = null
+    private var mainLoopExecutor: ScheduledExecutorService? = null
+    private val startupGeneration = AtomicLong()
+    @Volatile private var startupAllowed = true
 
     // Note anything less than 10ms will result in no GET_STATE commands being called and all
     // being overrides by whatever commands are sent in the main loop
@@ -83,6 +89,8 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
 
     @WorkerThread
     override fun onSerialReady(usbSerial: UsbSerial) {
+        if (!startupAllowed) return
+        val generation = startupGeneration.incrementAndGet()
         if (serialCommManager == null) {
             Logger.w(
                 TAG, "Default SerialCommManager being used. If you intended to create your " +
@@ -90,21 +98,34 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
             )
             serialCommManager = SerialCommManager(usbSerial)
         }
-        serialCommManager!!.start()
-
-        initializeOutputs()
-        onOutputsReady()
-
-        if (mainLoopEnabled) {
-            // Needs to be > 5 in order for object detector not to overwhelm cpu
-            val priority = ProcessPriorityThreadFactory(
-                Thread.MAX_PRIORITY,
-                "AbcvlibActivityMainLoop"
-            )
-            Executors.newSingleThreadScheduledExecutor(priority).scheduleWithFixedDelay(
-                AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
-            )
+        val manager = serialCommManager!!
+        manager.setFirmwareCompatibilityFailureListener { message ->
+            mainLoopExecutor?.shutdownNow()
+            mainLoopExecutor = null
+            runOnUiThread {
+                if (startupAllowed && startupGeneration.get() == generation && serialCommManager === manager) {
+                    showCustomDialog(message)
+                }
+            }
         }
+        manager.start(onReady = {
+            if (startupAllowed && startupGeneration.get() == generation && serialCommManager === manager) {
+                initializeOutputs()
+                onOutputsReady()
+
+                if (mainLoopEnabled) {
+                    val priority = ProcessPriorityThreadFactory(
+                        Thread.MAX_PRIORITY,
+                        "AbcvlibActivityMainLoop"
+                    )
+                    mainLoopExecutor?.shutdownNow()
+                    mainLoopExecutor = Executors.newSingleThreadScheduledExecutor(priority)
+                    mainLoopExecutor!!.scheduleWithFixedDelay(
+                        AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
+                    )
+                }
+            }
+        })
     }
 
     private inner class AbcvlibActivityRunnable : Runnable {
@@ -171,17 +192,27 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         this.pi2AndroidReader = pi2AndroidReader
     }
 
-    private fun showCustomDialog() {
+    private fun showCustomDialog(
+        message: String = getString(R.string.robot_not_properly_attached_please_reattach_and_press_confirm)
+    ) {
         val builder = AlertDialog.Builder(this)
         val dialogView = layoutInflater.inflate(R.layout.missing_robot, null)
         builder.setView(dialogView)
 
         // Find the TextView and Button in the dialog layout
+        val messageTextView = dialogView.findViewById<TextView>(R.id.messageTextView)
         val confirmButton = dialogView.findViewById<Button>(R.id.confirmButton)
+        messageTextView.text = message
 
         // Set a click listener for the Confirm button
         confirmButton.setOnClickListener { // Dismiss the dialog
             alertDialog?.dismiss()
+            startupGeneration.incrementAndGet()
+            serialCommManager?.stop()
+            mainLoopExecutor?.shutdownNow()
+            mainLoopExecutor = null
+            serialCommManager = null
+
             usbInitialize()
         }
 
@@ -198,11 +229,21 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
 
     public override fun onPause() {
         super.onPause()
+        startupAllowed = false
+        startupGeneration.incrementAndGet()
+        serialReadyJob?.cancel()
         serialCommManager?.let {
             it.setMotorLevels(0f, 0f, true, true)
             it.stop()
         }
+        mainLoopExecutor?.shutdownNow()
+        mainLoopExecutor = null
         Logger.i(TAG, "End of AbcvlibActivity.onPause")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startupAllowed = true
     }
 
 

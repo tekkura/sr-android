@@ -1,8 +1,10 @@
 package jp.oist.abcvlib.util
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command.Companion.getEnumByValue
+import jp.oist.abcvlib.util.ByteArrayExtensions.toCrc
 import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040ToAndroidPacket
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Arrays
@@ -52,25 +54,11 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                 }
 
                 PacketBufferState.READING_HEADER -> {
-                    if (dataEnd - startIdx < RP2040ToAndroidPacket.Offsets.DATA) {
+                    if (dataEnd - startIdx < RP2040ToAndroidPacket.Offsets.DATA + 1) {
                         onResult(ParseResult.NotEnoughData)
                         return
                     }
 
-                    val typeByte = _buffer.get(startIdx + RP2040ToAndroidPacket.Offsets.PACKET_TYPE)
-                    val parsedPacketType = getEnumByValue(typeByte)
-
-                    if (parsedPacketType == null ||
-                        parsedPacketType == AndroidToRP2040Command.START ||
-                        parsedPacketType == AndroidToRP2040Command.STOP
-                    ) {
-                        Logger.e("verifyPacket", "Invalid or reserved packetType: $typeByte")
-                        onResult(ParseResult.ReceivedErrorPacket)
-                        resync()
-                        continue
-                    }
-
-                    packetType = parsedPacketType
                     packetDataSize = _buffer.getShort(startIdx + RP2040ToAndroidPacket.Offsets.DATA_SIZE)
                         .toInt() and 0xFFFF
 
@@ -81,22 +69,29 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                         continue
                     }
 
+                    val typeByte = _buffer.get(startIdx + RP2040ToAndroidPacket.Offsets.DATA)
+                    val parsedPacketType = getEnumByValue(typeByte)
+                    if (packetDataSize < 1 ||
+                        parsedPacketType == null ||
+                        parsedPacketType == AndroidToRP2040Command.START ||
+                        parsedPacketType == AndroidToRP2040Command.STOP
+                    ) {
+                        Logger.e("verifyPacket", "Invalid packet header: length=$packetDataSize, type=$typeByte")
+                        onResult(ParseResult.ReceivedErrorPacket)
+                        resync()
+                        continue
+                    }
+
+                    packetType = parsedPacketType
+
                     state = PacketBufferState.AWAITING_DATA
                 }
 
                 PacketBufferState.AWAITING_DATA -> {
-                    val totalExpectedSize = RP2040ToAndroidPacket.Offsets.DATA + packetDataSize + 1
+                    val totalExpectedSize = RP2040ToAndroidPacket.Offsets.DATA + packetDataSize + 2
                     if (dataEnd - startIdx < totalExpectedSize) {
                         onResult(ParseResult.NotEnoughData)
                         return
-                    }
-
-                    val stopPos = startIdx + totalExpectedSize - 1
-                    if (_buffer.get(stopPos) != AndroidToRP2040Command.STOP.hexValue) {
-                        Logger.e("verifyPacket", "Missing STOP marker at $stopPos")
-                        onResult(ParseResult.ReceivedErrorPacket)
-                        resync()
-                        continue
                     }
 
                     val data = ByteArray(packetDataSize)
@@ -108,7 +103,31 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                         packetDataSize
                     )
 
-                    val command = RP2040IncomingCommand.from(packetType, data)
+                    val endPos = startIdx + totalExpectedSize - 2
+                    val crc = ByteBuffer.allocate(packetDataSize + 2).apply {
+                        order(ByteOrder.LITTLE_ENDIAN)
+                        putShort(packetDataSize.toShort())
+                        put(data)
+                    }.array().toCrc()
+
+                    if (_buffer.getShort(endPos) != crc) {
+                        Logger.e("verifyPacket", "Data CRC mismatch: ${_buffer.getShort(endPos)} != $crc")
+                        onResult(ParseResult.ReceivedErrorPacket)
+                        resync()
+                        continue
+                    }
+
+                    val command = try {
+                        RP2040IncomingCommand.from(
+                            packetType,
+                            data.sliceArray(1 until data.size)
+                        )
+                    } catch (e: FirmwareCompatibilityException) {
+                        onResult(ParseResult.FirmwareCompatibilityFailure(e))
+                        readIndex = startIdx + totalExpectedSize
+                        resetState()
+                        continue
+                    }
                     onResult(
                         command?.let {
                             ParseResult.ReceivedPacket(it)
@@ -188,6 +207,9 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
         object NotEnoughData : ParseResult()
         object Overflow : ParseResult()
         object ReceivedErrorPacket : ParseResult()
+        data class FirmwareCompatibilityFailure(
+            val exception: FirmwareCompatibilityException
+        ) : ParseResult()
         data class ReceivedPacket(
             val command: RP2040IncomingCommand
         ) : ParseResult()
