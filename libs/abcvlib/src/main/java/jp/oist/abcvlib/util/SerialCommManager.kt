@@ -458,9 +458,20 @@ open class SerialCommManager @JvmOverloads constructor(
             writerExecutor?.execute {
                 inRun(context) {
                     try {
-                        sendCommand(RP2040OutgoingCommand.GetVersion())
+                        usbSerial.send(RP2040OutgoingCommand.GetVersion(), 10000)
+                        if (!awaitFirmwareVersionResponse(context, VERSION_TIMEOUT_MS)) {
+                            handleFirmwareCompatibilityFailure(
+                                context,
+                                FirmwareCompatibilityException.versionRequestTimedOut(VERSION_TIMEOUT_MS)
+                            )
+                        }
                     } catch (e: FirmwareCompatibilityException) {
                         handleFirmwareCompatibilityFailure(context, e)
+                    } catch (e: IOException) {
+                        handleFirmwareCompatibilityFailure(
+                            context,
+                            FirmwareCompatibilityException.versionRequestFailed(e)
+                        )
                     } catch (e: RuntimeException) {
                         handleFirmwareCompatibilityFailure(
                             context,
@@ -470,6 +481,54 @@ open class SerialCommManager @JvmOverloads constructor(
                 }
             }
         }
+    }
+
+    private fun awaitFirmwareVersionResponse(context: RunContext, timeoutMs: Long): Boolean {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
+        while (!context.stopRequested.get()) {
+            val remainingMs = deadline - SystemClock.uptimeMillis()
+            if (remainingMs <= 0L) return false
+
+            val receivedStatus = usbSerial.awaitPacketReceived(
+                remainingMs.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            )
+            if (receivedStatus != 1) {
+                continue
+            }
+
+            val receivedCommand = synchronized(usbSerial.fifoQueue) {
+                usbSerial.fifoQueue.poll()
+            } ?: continue
+
+            if (receivedCommand is RP2040IncomingCommand.GetVersion) {
+                if (checkVersionSupport(
+                    receivedCommand.major,
+                    receivedCommand.minor,
+                    receivedCommand.patch
+                )) {
+                    startPolling(context)
+                } else {
+                    handleFirmwareCompatibilityFailure(
+                        context,
+                        FirmwareCompatibilityException.unsupportedVersion(
+                            Version(
+                                receivedCommand.major,
+                                receivedCommand.minor,
+                                receivedCommand.patch
+                            )
+                        )
+                    )
+                }
+                return true
+            }
+
+            Logger.w(
+                "serial",
+                "Ignoring ${receivedCommand.type} received while waiting for firmware version"
+            )
+        }
+
+        return true
     }
 
     private fun inRun(context: RunContext, action: () -> Unit) {

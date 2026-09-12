@@ -58,4 +58,23 @@ class MockRP2040Test {
         assertEquals(0x34.toByte(), mock.motorsState.controlValues.right)
         assertEquals(listOf("existing log"), mock.logEntries)
     }
+
+    @Test
+    fun `get version request returns version response`() {
+        val response = MockRP2040().processPacket(RP2040OutgoingCommand.GetVersion().toBytes())
+
+        assertNotNull(response)
+
+        val results = mutableListOf<PacketBuffer.ParseResult>()
+        PacketBuffer().consume(response!!) { results.add(it) }
+
+        assertEquals(1, results.size)
+        assertTrue(results[0] is PacketBuffer.ParseResult.ReceivedPacket)
+        val command = (results[0] as PacketBuffer.ParseResult.ReceivedPacket).command
+        assertTrue(command is RP2040IncomingCommand.GetVersion)
+        command as RP2040IncomingCommand.GetVersion
+        assertEquals(1, command.major)
+        assertEquals(2, command.minor)
+        assertEquals(0, command.patch)
+    }
 }

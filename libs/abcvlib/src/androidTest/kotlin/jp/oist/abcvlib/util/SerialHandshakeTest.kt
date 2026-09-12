@@ -81,6 +81,17 @@ class SerialHandshakeTest {
     }
 
     @Test
+    fun stalePacketBeforeVersionResponseDoesNotCompleteHandshake() {
+        val staleAck = RP2040IncomingCommand.Ack(byteArrayOf()).toBytes()
+        val manager = manager(serial(TestPort { staleAck + version() }))
+        val ready = CountDownLatch(1)
+        manager.start(onReady = { ready.countDown() })
+        await(ready)
+        await(manager.writerStarted)
+        assertEquals(1, manager.writerStarts.get())
+    }
+
+    @Test
     fun unsupportedVersionDoesNotStartOutputsOrWriter() {
         assertFailedHandshake(TestPort { RP2040IncomingCommand.GetVersion(9, 0, 0).toBytes() })
     }

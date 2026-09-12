@@ -64,6 +64,9 @@ internal class MockRP2040 {
                 logEntries.clear()
                 logCmd.toBytes()
             }
+            AndroidToRP2040Command.GET_VERSION -> {
+                RP2040IncomingCommand.GetVersion(1, 2, 0).toBytes()
+            }
             else -> {
                 RP2040IncomingCommand.Ack(byteArrayOf()).toBytes()
             }
