@@ -40,6 +40,17 @@ class SerialHandshakeTest {
     }
 
     @Test
+    fun closingUsbSerialClosesPortOnlyOnce() {
+        val port = TestPort()
+        val serial = serial(port)
+
+        serial.close()
+        serial.close()
+
+        assertEquals(1, port.closeCount.get())
+    }
+
+    @Test
     fun malformedVersionBeforeWaitIsReportedAndCleared() {
         val serial = serial(TestPort())
         val malformed = object : RP2040Command() {
@@ -240,13 +251,14 @@ class SerialHandshakeTest {
 
     private class TestPort(private val response: () -> ByteArray? = { null }) : RobotSerialPort {
         private lateinit var listener: SerialInputOutputManager.Listener
+        val closeCount = AtomicInteger()
         fun reply(bytes: ByteArray) = listener.onNewData(bytes)
         override fun write(data: ByteArray, timeout: Int) { response()?.let { reply(it) } }
         override fun startReading(listener: SerialInputOutputManager.Listener) { this.listener = listener }
         override fun open(connection: UsbDeviceConnection?) = Unit
         override fun setParameters(baudRate: Int, dataBits: Int, stopBits: Int, parity: Int) = Unit
         override fun setDtr(value: Boolean) = Unit
-        override fun close() = Unit
+        override fun close() { closeCount.incrementAndGet() }
         override fun stopReading() = Unit
     }
 }

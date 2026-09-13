@@ -213,6 +213,9 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
             mainLoopExecutor = null
             serialCommManager = null
 
+            if (::usbSerial.isInitialized)
+                usbSerial.close()
+
             usbInitialize()
         }
 

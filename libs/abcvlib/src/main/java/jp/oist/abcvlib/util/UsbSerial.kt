@@ -38,6 +38,8 @@ open class UsbSerial @Throws(IOException::class) constructor(
 
     private lateinit var _port: RobotSerialPort
     open val isPortReal get() = _port is RealRobotSerialPort
+    private var usbReceiver: BroadcastReceiver? = null
+    @Volatile private var closed = false
 
     private val timeout: Int = 1000 //1s
     private var badPacketCount = 0
@@ -86,13 +88,16 @@ open class UsbSerial @Throws(IOException::class) constructor(
             val filter = IntentFilter(ACTION_USB_PERMISSION).apply {
                 addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
             }
-            val usbReceiver: BroadcastReceiver = MyBroadcastReceiver()
-            ContextCompat.registerReceiver(context, usbReceiver, filter, RECEIVER_NOT_EXPORTED)
+            usbReceiver = MyBroadcastReceiver()
+            ContextCompat.registerReceiver(context, usbReceiver!!, filter, RECEIVER_NOT_EXPORTED)
         }
     }
 
     @Throws(IOException::class)
+    @Synchronized
     private fun connect(device: UsbDevice) {
+        if (closed) return
+
         if (usbManager.hasPermission(device)) {
             Logger.i(Thread.currentThread().name, "Has permission to connect to device")
             val connection: UsbDeviceConnection = usbManager.openDevice(device)
@@ -113,6 +118,27 @@ open class UsbSerial @Throws(IOException::class) constructor(
 
             usbManager.requestPermission(device, permissionIntent)
         }
+    }
+
+    @Synchronized
+    open fun close() {
+        if (closed) return
+        closed = true
+
+        try {
+            if (::_port.isInitialized) _port.close()
+        } catch (e: IOException) {
+            Logger.e(TAG, "Failed to close USB serial port", e)
+        }
+
+        usbReceiver?.let {
+            try {
+                context.unregisterReceiver(it)
+            } catch (e: IllegalArgumentException) {
+                Logger.w(TAG, "USB receiver was already unregistered", e)
+            }
+        }
+        usbReceiver = null
     }
 
     private fun openPort(connection: UsbDeviceConnection) {
