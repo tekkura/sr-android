@@ -35,7 +35,8 @@ resulting 16-bit checksum is written to the frame in little-endian order.
 
 ## Commands
 
-The same type identifies a request and its corresponding response.
+Most commands use the same type for a request and its corresponding response
+unless the response column documents a different response type.
 
 | ID     | Name               | Android request payload              | RP2040 response payload             |
 |:-------|:-------------------|:-------------------------------------|:------------------------------------|
@@ -130,7 +131,7 @@ packetBuffer.consume(incomingBytes) { result ->
             // resynchronize with the next START marker.
         }
         is PacketBuffer.ParseResult.FirmwareCompatibilityFailure -> {
-            // The firmware version response is malformed or unsupported.
+            // The firmware version response is malformed.
         }
         is PacketBuffer.ParseResult.Overflow -> {
             // Internal buffer limit reached. The parser clears its state and
