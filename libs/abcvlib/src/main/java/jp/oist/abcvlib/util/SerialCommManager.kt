@@ -9,7 +9,13 @@ import jp.oist.abcvlib.util.rp2040.RP2040IncomingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
 import jp.oist.abcvlib.util.rp2040.RP2040State
 import jp.oist.abcvlib.util.rp2040.StatusCommand
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
+import jp.oist.abcvlib.util.versioning.Version
+import jp.oist.abcvlib.util.versioning.checkVersionSupport
 import java.io.IOException
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -21,7 +27,8 @@ import java.util.concurrent.atomic.AtomicLong
 open class SerialCommManager @JvmOverloads constructor(
     protected val usbSerial: UsbSerial,
     batteryData: BatteryData? = null,
-    wheelData: WheelData? = null
+    wheelData: WheelData? = null,
+    private var firmwareCompatibilityFailureListener: FirmwareCompatibilityFailureListener? = null
 ) {
     private val rp2040State: RP2040State?
 
@@ -30,10 +37,13 @@ open class SerialCommManager @JvmOverloads constructor(
     protected val commandLock = Object()
     private val lifecycleLock = Any()
     private var runContext: RunContext? = null
+    private val executingContext = ThreadLocal<RunContext>()
 
     protected var startTimeAndroid: Long = 0
     private var cnt: Int = 0
     private var durationAndroid: Long = 0
+
+    private val VERSION_TIMEOUT_MS = 2000L
 
     // Constructor to initialize SerialCommManager
     init {
@@ -52,7 +62,13 @@ open class SerialCommManager @JvmOverloads constructor(
     protected class RunContext(
         val stopRequested: AtomicBoolean = AtomicBoolean(false),
         var writerExecutor: ScheduledExecutorServiceWithException? = null,
-        var delay: AtomicLong = AtomicLong(10)
+        var versionTimeoutExecutor: ScheduledExecutorService? = null,
+        var delay: AtomicLong = AtomicLong(10),
+        var initialDelay: AtomicLong = AtomicLong(0),
+        var versionTimeoutFuture: ScheduledFuture<*>? = null,
+        var handshakeComplete: Boolean = false,
+        val onReady: (() -> Unit)? = null,
+        val onFailure: FirmwareCompatibilityFailureListener? = null
     )
 
     protected open fun buildAndroid2PiWriter(context: RunContext): Runnable = Runnable {
@@ -102,7 +118,7 @@ open class SerialCommManager @JvmOverloads constructor(
 
     // Start method to start the thread
     @JvmOverloads
-    fun start(initialDelay: Long = 0, delay: Long = 10) {
+    fun start(initialDelay: Long = 0, delay: Long = 10, onReady: (() -> Unit)? = null) {
         synchronized(lifecycleLock) {
             val existing = runContext
             if (existing != null && !existing.stopRequested.get()) {
@@ -110,40 +126,71 @@ open class SerialCommManager @JvmOverloads constructor(
                 return
             }
 
-            val context = RunContext().apply {
+            val context = RunContext(
+                onReady = onReady,
+                onFailure = firmwareCompatibilityFailureListener
+            ).apply {
                 this.delay.set(delay)
+                this.initialDelay.set(initialDelay)
             }
 
             val priorityFactory = ProcessPriorityThreadFactory(
                 Thread.MAX_PRIORITY,
                 "SerialCommManager_Android2Pi"
             )
-            context.writerExecutor = ScheduledExecutorServiceWithException(1, priorityFactory).also {
-                it.schedule(
-                    buildAndroid2PiWriter(context),
-                    initialDelay,
-                    TimeUnit.MILLISECONDS
+
+            context.writerExecutor = ScheduledExecutorServiceWithException(2, priorityFactory)
+            context.versionTimeoutExecutor = Executors.newSingleThreadScheduledExecutor(
+                ProcessPriorityThreadFactory(
+                    Thread.MAX_PRIORITY,
+                    "SerialCommManager_FirmwareVersionTimeout"
                 )
-            }
+            )
             runContext = context
+            usbSerial.resetReceiveState()
+
+            // Only check version support for real firmware
+            if (usbSerial.isPortReal)
+                requestFirmwareVersion(context)
+            else context.writerExecutor?.execute { startPolling(context) }
         }
     }
 
     fun stop() {
-        var contextToStop: RunContext? = null
         synchronized(lifecycleLock) {
-            contextToStop = runContext
-            runContext = null
+            runContext?.let { stopContext(it) }
         }
-        contextToStop?.let { context ->
-            context.stopRequested.set(true)
-            context.writerExecutor?.shutdownNow()
-            context.writerExecutor = null
+    }
+
+    // Called with lifecycleLock held, so an old run cannot stop a replacement run.
+    private fun stopContext(context: RunContext) {
+        context.stopRequested.set(true)
+        context.versionTimeoutFuture?.cancel(false)
+        context.versionTimeoutFuture = null
+        context.writerExecutor?.shutdownNow()
+        context.writerExecutor = null
+        context.versionTimeoutExecutor?.shutdownNow()
+        context.versionTimeoutExecutor = null
+        if (runContext === context) runContext = null
+        synchronized(commandLock) {
+            command = null
+            queuedMotorLevelsAtMs = 0L
+            commandLock.notifyAll()
         }
+    }
+
+    fun setFirmwareCompatibilityFailureListener(
+        listener: FirmwareCompatibilityFailureListener?
+    ) {
+        firmwareCompatibilityFailureListener = listener
     }
 
     //TODO paseFifoPacket() should call the various SerialResponseListener methods.
     internal fun parseFifoPacket() {
+        val context = executingContext.get()
+        if (context != null && synchronized(lifecycleLock) {
+                runContext !== context || context.stopRequested.get()
+            }) return
         var result = 0
         val command: RP2040IncomingCommand?
         var packet: ByteArray?
@@ -183,6 +230,30 @@ open class SerialCommManager @JvmOverloads constructor(
                     Logger.d("Pi2AndroidReader", "parseAck")
                 }
 
+                is RP2040IncomingCommand.GetVersion -> {
+                    if (context == null) {
+                        Logger.w("serial", "Ignoring version response outside an active request")
+                        return
+                    }
+                    if (checkVersionSupport(
+                        command.major,
+                        command.minor,
+                        command.patch
+                    )) {
+                        startPolling(context)
+                    } else {
+                        handleFirmwareCompatibilityFailure(
+                            context,
+                            FirmwareCompatibilityException.unsupportedVersion(
+                                Version(command.major, command.minor, command.patch)
+                            )
+                        )
+                    }
+
+                    result = 1
+                    Logger.d("Pi2AndroidReader", "parseGetVersion")
+                }
+
                 else -> {
                     result = -1
                     Logger.e("Pi2AndroidReader", "Unknown command received")
@@ -219,8 +290,8 @@ open class SerialCommManager @JvmOverloads constructor(
      * -2 if SerialTimeoutException on send
      */
     protected fun sendPacket(bytes: ByteArray): Int {
-        require(bytes.size == RP2040OutgoingCommand.PACKET_SIZE) {
-            "Input byte array must have a length of " + RP2040OutgoingCommand.PACKET_SIZE
+        require(bytes.size >= 1 + 2 + 1 + 2) {
+            "Input byte array must contain at least a header and CRC"
         }
         try {
             this.usbSerial.send(bytes, 10000)
@@ -354,5 +425,137 @@ open class SerialCommManager @JvmOverloads constructor(
 
     private fun onAck(bytes: ByteArray) {
         Logger.d("serial", "parseAck")
+    }
+
+    private fun startPolling(context: RunContext) {
+        val onReady: (() -> Unit)?
+        synchronized(lifecycleLock) {
+            if (runContext !== context || context.stopRequested.get() || context.handshakeComplete)
+                return
+            context.handshakeComplete = true
+            context.versionTimeoutFuture?.cancel(false)
+            context.versionTimeoutFuture = null
+            onReady = context.onReady
+        }
+
+        onReady?.invoke()
+
+        synchronized(lifecycleLock) {
+            if (runContext !== context || context.stopRequested.get()) return
+            context.writerExecutor?.schedule(
+                { inRun(context) { buildAndroid2PiWriter(context).run() } },
+                context.initialDelay.get(),
+                TimeUnit.MILLISECONDS
+            )
+        }
+    }
+
+    private fun requestFirmwareVersion(context: RunContext) {
+        with(context) {
+            versionTimeoutFuture = versionTimeoutExecutor?.schedule({
+                handleFirmwareCompatibilityFailure(
+                    context,
+                    FirmwareCompatibilityException.versionRequestTimedOut(VERSION_TIMEOUT_MS)
+                )
+            }, VERSION_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+
+
+            writerExecutor?.execute {
+                inRun(context) {
+                    try {
+                        usbSerial.send(RP2040OutgoingCommand.GetVersion(), 10000)
+                        if (!awaitFirmwareVersionResponse(context, VERSION_TIMEOUT_MS)) {
+                            handleFirmwareCompatibilityFailure(
+                                context,
+                                FirmwareCompatibilityException.versionRequestTimedOut(VERSION_TIMEOUT_MS)
+                            )
+                        }
+                    } catch (e: FirmwareCompatibilityException) {
+                        handleFirmwareCompatibilityFailure(context, e)
+                    } catch (e: IOException) {
+                        handleFirmwareCompatibilityFailure(
+                            context,
+                            FirmwareCompatibilityException.versionRequestFailed(e)
+                        )
+                    } catch (e: RuntimeException) {
+                        handleFirmwareCompatibilityFailure(
+                            context,
+                            FirmwareCompatibilityException.versionRequestFailed(e)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun awaitFirmwareVersionResponse(context: RunContext, timeoutMs: Long): Boolean {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
+        while (!context.stopRequested.get()) {
+            val remainingMs = deadline - SystemClock.uptimeMillis()
+            if (remainingMs <= 0L) return false
+
+            val receivedStatus = usbSerial.awaitPacketReceived(
+                remainingMs.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            )
+            if (receivedStatus != 1) {
+                continue
+            }
+
+            val receivedCommand = synchronized(usbSerial.fifoQueue) {
+                usbSerial.fifoQueue.poll()
+            } ?: continue
+
+            if (receivedCommand is RP2040IncomingCommand.GetVersion) {
+                if (checkVersionSupport(
+                    receivedCommand.major,
+                    receivedCommand.minor,
+                    receivedCommand.patch
+                )) {
+                    startPolling(context)
+                } else {
+                    handleFirmwareCompatibilityFailure(
+                        context,
+                        FirmwareCompatibilityException.unsupportedVersion(
+                            Version(
+                                receivedCommand.major,
+                                receivedCommand.minor,
+                                receivedCommand.patch
+                            )
+                        )
+                    )
+                }
+                return true
+            }
+
+            Logger.w(
+                "serial",
+                "Ignoring ${receivedCommand.type} received while waiting for firmware version"
+            )
+        }
+
+        return true
+    }
+
+    private fun inRun(context: RunContext, action: () -> Unit) {
+        if (context.stopRequested.get()) return
+        executingContext.set(context)
+        try {
+            action()
+        } finally {
+            executingContext.remove()
+        }
+    }
+
+    private fun handleFirmwareCompatibilityFailure(
+        context: RunContext,
+        exception: FirmwareCompatibilityException
+    ) {
+        synchronized(lifecycleLock) {
+            if (runContext !== context || context.stopRequested.get() || context.handshakeComplete)
+                return
+            Logger.e("serial", exception.message ?: "Firmware compatibility failure", exception)
+            stopContext(context)
+            context.onFailure?.onFirmwareCompatibilityFailure(exception.userFacingMessage)
+        }
     }
 }

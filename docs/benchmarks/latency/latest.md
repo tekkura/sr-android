@@ -1,14 +1,16 @@
 ### Benchmark Results (1000 iterations)
 
-- Generated at (UTC): 2026-07-02T16:45:33.510188Z
-- Runner: samsung SM-A356E (physical device)
-- Android: 16 (API 36)
-- Device: brand=samsung, device=a35x, product=a35xjvxx
-- Hardware loop: No; uses virtual transport and simulated firmware
-- Transport: VirtualRobotPort
-- Firmware: MockRP2040 simulator with 5 ms processing delay
-- Protocol: Existing RP2040 serial request/response protocol
-- Git commit: 858fe6da7833e028a5f519a5b0417f2d42996426 (clean)
+- Generated at (UTC): 2026-09-05T04:44:10.193851Z
+- Runner: Google Pixel 3a (physical device)
+- Android: 12 (API 32)
+- Device: brand=google, device=sargo, product=sargo
+- Hardware loop: Yes; physical USB serial transport to attached firmware
+- Transport: UsbSerial + RealRobotSerialPort
+- Firmware: `tekkura/feature/milestone-3-crc-framing` at `9bfeef30fbd91745275104a4a887046650797cdd`
+- Firmware hash attribution: operator run history and branch ancestry; not embedded in the device report
+- Protocol: CRC length-prefix
+- Android branch: `tekkura/CommunicationFraming+crc-length-prefix`
+- Git commit: c01c50bfe74894e862817aed8833a43c7e5705c6 (clean)
 - Warm-up iterations: 100
 - Measured iterations: 1000
 
@@ -16,11 +18,15 @@ Success Rate: 100.00% (1000/1000)
 
 | Metric                             | Mean (ms) | Min (ms) | Max (ms) | P95 (ms) |
 |:-----------------------------------|:----------|:---------|:---------|:---------|
-| M1: Outbound Queueing              | 0.287     | 0.044    | 5.633    | 0.977    |
-| M2: Handling/Serialization         | 0.061     | 0.015    | 1.996    | 0.123    |
-| M3: Android Write Blocking         | 0.616     | 0.163    | 4.779    | 1.208    |
-| M4: Response Wait After Write      | 5.816     | 4.910    | 11.959   | 6.935    |
-| M5: Buffer Processing              | 0.521     | 0.143    | 4.318    | 0.966    |
-| M6: Wake-up Lag                    | 0.519     | 0.095    | 3.717    | 1.150    |
-| M7: App Logic                      | 0.688     | 0.186    | 3.888    | 1.322    |
-| Total RTT                          | 8.508     | 6.018    | 19.376   | 11.359   |
+| M1: Outbound Queueing              | 0.385     | 0.094    | 2.776    | 0.630    |
+| M2: Handling/Serialization         | 0.208     | 0.065    | 1.485    | 0.309    |
+| M3: Android Write Blocking         | 1.090     | 0.268    | 4.532    | 1.693    |
+| M4: Response Wait After Write      | 14.337    | 8.683    | 25.098   | 17.890   |
+| M5: Buffer Processing              | 3.855     | 1.924    | 6.536    | 4.869    |
+| M6: Wake-up Lag                    | 0.815     | 0.198    | 2.466    | 1.093    |
+| M7: App Logic                      | 2.015     | 0.555    | 4.702    | 2.671    |
+| Total RTT                          | 22.705    | 18.607   | 35.097   | 26.253   |
+
+All measured responses completed, but Gradle failed the mean RTT < 20 ms assertion.
+These are the tested rebased revisions, before Android `720a67dc` (RESET_STATE
+ACK alignment) and firmware `8d3e3c9` (protocol documentation only).

@@ -2,37 +2,11 @@ package jp.oist.abcvlib.util.rp2040
 
 import jp.oist.abcvlib.util.AndroidToRP2040Command
 import jp.oist.abcvlib.util.Logger
+import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-interface StatusCommand {
-    val motorsState: MotorsState
-    val batteryDetails: BatteryDetails
-    val chargeSideUSB: ChargeSideUSB
-}
-
-sealed class RP2040IncomingCommand {
-
-    protected abstract fun serializeData(): ByteArray
-    abstract val type: AndroidToRP2040Command
-
-    fun toBytes(): ByteArray {
-        val data = serializeData()
-        val header = createHeader(data)
-        return header + data + AndroidToRP2040Command.STOP.hexValue
-    }
-
-    private fun createHeader(data: ByteArray): ByteArray {
-        val buffer = ByteBuffer.allocate(4).apply {
-            order(ByteOrder.LITTLE_ENDIAN)
-        }
-
-        buffer.put(AndroidToRP2040Command.START.hexValue)
-        buffer.put(type.hexValue)
-        buffer.putShort(data.size.toShort())
-
-        return buffer.array()
-    }
+sealed class RP2040IncomingCommand : RP2040Command() {
 
     class Nack(val data: ByteArray) : RP2040IncomingCommand() {
         override val type = AndroidToRP2040Command.NACK
@@ -83,16 +57,20 @@ sealed class RP2040IncomingCommand {
                 chargeSideUSB.toBytes()
     }
 
-    class ResetState(
-        override val motorsState: MotorsState,
-        override val batteryDetails: BatteryDetails,
-        override val chargeSideUSB: ChargeSideUSB
-    ) : RP2040IncomingCommand(), StatusCommand {
-        override val type = AndroidToRP2040Command.RESET_STATE
+    class GetVersion(
+        val major: Int,
+        val minor: Int,
+        val patch: Int
+    ) : RP2040IncomingCommand() {
+        override val type = AndroidToRP2040Command.GET_VERSION
 
-        override fun serializeData() = motorsState.toBytes() +
-                batteryDetails.toBytes() +
-                chargeSideUSB.toBytes()
+        override fun serializeData(): ByteArray = ByteBuffer.allocate(3)
+            .apply {
+                put(major.toByte())
+                put(minor.toByte())
+                put(patch.toByte())
+            }
+            .array()
     }
 
     companion object {
@@ -119,6 +97,9 @@ sealed class RP2040IncomingCommand {
                 }
 
                 AndroidToRP2040Command.GET_STATE -> {
+                    if (!hasExpectedStatusPayloadSize(data))
+                        return null
+
                     val buffer = ByteBuffer.wrap(data).apply {
                         order(ByteOrder.LITTLE_ENDIAN)
                     }
@@ -131,6 +112,9 @@ sealed class RP2040IncomingCommand {
                 }
 
                 AndroidToRP2040Command.SET_MOTOR_LEVELS -> {
+                    if (!hasExpectedStatusPayloadSize(data))
+                        return null
+
                     val buffer = ByteBuffer.wrap(data).apply {
                         order(ByteOrder.LITTLE_ENDIAN)
                     }
@@ -143,14 +127,19 @@ sealed class RP2040IncomingCommand {
                 }
 
                 AndroidToRP2040Command.RESET_STATE -> {
-                    val buffer = ByteBuffer.wrap(data).apply {
-                        order(ByteOrder.LITTLE_ENDIAN)
+                    Logger.w(TAG, "RESET_STATE responses must use ACK")
+                    return null
+                }
+
+                AndroidToRP2040Command.GET_VERSION -> {
+                    if (data.size != GET_VERSION_PAYLOAD_SIZE) {
+                        throw FirmwareCompatibilityException.invalidVersionPayload(data.size)
                     }
 
-                    return ResetState(
-                        motorsState = MotorsState.from(buffer) ?: return null,
-                        batteryDetails = BatteryDetails.from(buffer) ?: return null,
-                        chargeSideUSB = ChargeSideUSB.from(buffer) ?: return null
+                    return GetVersion(
+                        major = data[0].toInt() and 0xFF,
+                        minor = data[1].toInt() and 0xFF,
+                        patch = data[2].toInt() and 0xFF
                     )
                 }
 
@@ -167,5 +156,17 @@ sealed class RP2040IncomingCommand {
                 }
             }
         }
+
+        private fun hasExpectedStatusPayloadSize(data: ByteArray): Boolean {
+            if (data.size == STATUS_PAYLOAD_SIZE)
+                return true
+
+            Logger.w(TAG, "Invalid RP2040 state payload size: ${data.size}")
+            return false
+        }
+
+        private const val STATUS_PAYLOAD_SIZE =
+            MotorsState.BYTE_LENGTH + BatteryDetails.BYTE_LENGTH + ChargeSideUSB.BYTE_LENGTH
+        private const val GET_VERSION_PAYLOAD_SIZE = 3
     }
 }
