@@ -11,14 +11,10 @@ import jp.oist.abcvlib.core.BuildConfig
 import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
 import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
-import jp.oist.abcvlib.util.latency.BenchmarkClock
-import jp.oist.abcvlib.util.SerialCommManager
 import jp.oist.abcvlib.util.SerialReadyListener
 import jp.oist.abcvlib.util.UsbSerial
 import jp.oist.abcvlib.util.VirtualRobotPort
 import jp.oist.abcvlib.util.rp2040.MockRP2040
-import jp.oist.abcvlib.util.rp2040.RP2040OutgoingCommand
-import junit.framework.TestCase.assertEquals
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
@@ -31,13 +27,12 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.absoluteValue
 
 @RunWith(AndroidJUnit4::class)
 class LatencyBenchmark {
 
     private lateinit var simulator: MockRP2040
-    private lateinit var usbSerial: UsbSerial
+    private lateinit var usbSerial: LatencyMeasuringUsbSerial
     private lateinit var commManager: LatencyMeasuringSerialCommManager
     private lateinit var publisherManager: PublisherManager
     private lateinit var wheelData: WheelData
@@ -145,6 +140,7 @@ class LatencyBenchmark {
                 commManager.setMotorLevelsForBenchmark(i, speed, speed, false, false)
 
                 val success = iterationLatch.await(BENCHMARK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                usbSerial.assertTelemetryAvailable()
                 Assert.assertTrue(
                     "Iteration $i timed out after ${BENCHMARK_TIMEOUT_MS}ms; " +
                             "aborting benchmark to avoid attributing late responses to later iterations.",

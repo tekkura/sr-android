@@ -7,9 +7,16 @@ import jp.oist.abcvlib.util.rp2040.RP2040ToAndroidPacket
 import jp.oist.abcvlib.util.versioning.FirmwareCompatibilityException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.Arrays
 
-class PacketBuffer(capacity: Int = (512 * 128) + 8) {
+class PacketBuffer @JvmOverloads constructor(
+    capacity: Int = (512 * 128) + 8,
+    private val payloadDecoder: ((AndroidToRP2040Command, ByteArray) -> PacketPayload)? = null
+) {
+
+    data class PacketPayload(
+        val commandData: ByteArray,
+        val additionalData: ByteArray? = null
+    )
 
     private var packetDataSize = RP2020_PACKET_SIZE_STATE
     private var packetType: AndroidToRP2040Command = AndroidToRP2040Command.NACK
@@ -117,10 +124,13 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                         continue
                     }
 
+                    val commandData = data.sliceArray(1 until data.size)
+                    val payload = payloadDecoder?.invoke(packetType, commandData)
+                        ?: PacketPayload(commandData)
                     val command = try {
                         RP2040IncomingCommand.from(
                             packetType,
-                            data.sliceArray(1 until data.size)
+                            payload.commandData
                         )
                     } catch (e: FirmwareCompatibilityException) {
                         onResult(ParseResult.FirmwareCompatibilityFailure(e))
@@ -130,7 +140,7 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
                     }
                     onResult(
                         command?.let {
-                            ParseResult.ReceivedPacket(it)
+                            ParseResult.ReceivedPacket(it, payload.additionalData)
                         } ?: ParseResult.ReceivedErrorPacket
                     )
 
@@ -211,7 +221,8 @@ class PacketBuffer(capacity: Int = (512 * 128) + 8) {
             val exception: FirmwareCompatibilityException
         ) : ParseResult()
         data class ReceivedPacket(
-            val command: RP2040IncomingCommand
+            val command: RP2040IncomingCommand,
+            val additionalData: ByteArray? = null
         ) : ParseResult()
     }
 

@@ -29,22 +29,24 @@ object BenchmarkClock {
         successStates[iteration] = true
     }
 
-    fun mark(iteration: Int, junction: Int) {
-        if (!enabled || iteration == -1) return
-        val timestamps = iterations[iteration] ?: return
-        if (junction !in 1..9) return
+    fun mark(iteration: Int, junction: Int): Long? {
+        return markAt(iteration, junction, System.nanoTime())
+    }
+
+    fun markAt(iteration: Int, junction: Int, timestampNs: Long): Long? {
+        if (!enabled || iteration == -1) return null
+        val timestamps = iterations[iteration] ?: return null
+        if (junction !in 1..9) return null
 
         val index = junction - 1
 
-        // Ensure that junctions are marked in order for a single command-response cycle.
-        // This prevents a late T8 from a previous iteration from being recorded in a new one,
-        // and ensures we only track the first valid sequence.
-        if (junction > 1 && timestamps[index - 1] == 0L) return
-
         // Prevent overwriting a junction that was already marked for this iteration.
         if (timestamps[index] == 0L) {
-            timestamps[index] = System.nanoTime()
+            timestamps[index] = timestampNs
+            return timestampNs
         }
+
+        return timestamps[index]
     }
 
     fun getResults(): Map<Int, LongArray> = iterations.toMap()
