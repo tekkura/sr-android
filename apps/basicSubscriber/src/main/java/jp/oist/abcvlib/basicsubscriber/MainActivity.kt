@@ -92,6 +92,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, BatteryDataSubscrib
          * that implements the appropriate listener interface.
          */
         publisherManager = PublisherManager()
+        registerPublisherManager(publisherManager)
 
         // Note how BatteryData and WheelData objects must have a reference such that they can
         // be passed to the SerialCommManager object.
