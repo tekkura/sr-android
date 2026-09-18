@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-09-18T05:38:54Z",
+  "event_ts": "2026-09-18T05:38:39Z",
+  "repo": "tekkura/sr-android",
+  "event_name": "pull_request_review_comment",
+  "action": "created",
+  "actor": "topherbuckley",
+  "run_id": "35311609714",
+  "run_attempt": "1",
+  "sender": {
+    "login": "topherbuckley",
+    "html_url": "https://github.com/topherbuckley"
+  },
+  "issue": null,
+  "pull_request": {
+    "number": 252,
+    "title": "Firmware benchmarking/parse firmware benchmarks",
+    "state": "open",
+    "html_url": "https://github.com/tekkura/sr-android/pull/252",
+    "milestone": null
+  },
+  "comment": {
+    "id": 4044103673,
+    "html_url": "https://github.com/tekkura/sr-android/pull/252#discussion_r4044103673",
+    "created_at": "2026-09-18T05:38:39Z",
+    "updated_at": "2026-09-18T05:38:39Z",
+    "body": "#codex-reply\nFixed in 75fc949fbc9e5545b0cf8e9fbd63697372dae7b4\n\nGeorge's rationale makes sense for the commit-labeling part: benchmark runs may intentionally measure uncommitted worktree state, so I am not treating clean/dirty commit provenance as a blocker for this PR.\n\nThe remaining issue was the benchmark history truncation. history.csv now preserves the previously accepted benchmark rows and appends the new run, and plot.svg has been regenerated from the complete history.\n"
+  },
+  "milestone": null,
+  "changes": null,
+  "severity": "INFO",
+  "target_url": "https://github.com/tekkura/sr-android/pull/252#discussion_r4044103673",
+  "event_id": "18e004001510fe37b9727c3ddf2af4c9e3533cf4683ae3235cfa947db22ffd6f"
+}
