@@ -15,13 +15,14 @@ import java.util.concurrent.Phaser
 class PublisherManager {
     val publishers: ArrayList<Publisher<*>> = ArrayList()
     private val publishersLock = Any()
-    private val lifecyclePausedPublishers = mutableSetOf<Publisher<*>>()
+    private val initializedPublishers = mutableSetOf<Publisher<*>>()
     private val phaser = Phaser(1)
     private val TAG: String = javaClass.name
 
     @Volatile
     private var lifecyclePaused = false
     private var publishersPaused = false
+    private var startPublishersGateOpen = false
 
     //========================================Phase 0===============================================
     fun add(publisher: Publisher<*>): PublisherManager {
@@ -47,10 +48,8 @@ class PublisherManager {
         phaser.register()
         publisher.start()
         synchronized(publishersLock) {
+            initializedPublishers.add(publisher)
             if (lifecyclePaused || publishersPaused) {
-                if (lifecyclePaused) {
-                    lifecyclePausedPublishers.add(publisher)
-                }
                 publisher.pause()
             }
         }
@@ -84,11 +83,8 @@ class PublisherManager {
             phaser.awaitAdvance(1)
             Logger.i(TAG, "All publishers initialized. Starting publishers")
             synchronized(publishersLock) {
-                if (!lifecyclePaused && !publishersPaused) {
-                    for (publisher in publishers) {
-                        publisher.resume()
-                    }
-                }
+                startPublishersGateOpen = true
+                resumePublishersIfAllowedLocked()
             }
             executor.shutdown() // Shut down the executor after the task is completed
         }
@@ -109,17 +105,7 @@ class PublisherManager {
     fun resumePublishers() {
         synchronized(publishersLock) {
             publishersPaused = false
-            if (!lifecyclePaused) {
-                for (publisher in publishers) {
-                    if (publisher.getState() != PublisherState.STOPPED) {
-                        publisher.resume()
-                    }
-                }
-            } else {
-                lifecyclePausedPublishers.addAll(
-                    publishers.filter { it.getState() != PublisherState.STOPPED }
-                )
-            }
+            resumePublishersIfAllowedLocked()
         }
     }
 
@@ -128,7 +114,6 @@ class PublisherManager {
             lifecyclePaused = true
             for (publisher in publishers) {
                 if (publisher.getState() == PublisherState.STARTED) {
-                    lifecyclePausedPublishers.add(publisher)
                     publisher.pause()
                 }
             }
@@ -138,23 +123,31 @@ class PublisherManager {
     internal fun resumeAfterLifecycle() {
         synchronized(publishersLock) {
             lifecyclePaused = false
-            if (!publishersPaused) {
-                for (publisher in lifecyclePausedPublishers) {
-                    if (publisher.getState() != PublisherState.STOPPED) {
-                        publisher.resume()
-                    }
-                }
-            }
-            lifecyclePausedPublishers.clear()
+            resumePublishersIfAllowedLocked()
         }
     }
 
     fun stopPublishers() {
         val publishersSnapshot = synchronized(publishersLock) {
-            publishers.toList()
+            startPublishersGateOpen = false
+            initializedPublishers.toList().also {
+                initializedPublishers.clear()
+            }
         }
         for (publisher in publishersSnapshot) {
             publisher.stop()
+        }
+    }
+
+    private fun resumePublishersIfAllowedLocked() {
+        if (!startPublishersGateOpen || lifecyclePaused || publishersPaused) {
+            return
+        }
+
+        for (publisher in initializedPublishers) {
+            if (publisher.getState() != PublisherState.STOPPED) {
+                publisher.resume()
+            }
         }
     }
 }
