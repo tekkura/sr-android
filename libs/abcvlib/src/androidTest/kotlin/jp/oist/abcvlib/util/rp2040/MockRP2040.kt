@@ -1,5 +1,6 @@
 package jp.oist.abcvlib.util.rp2040
 
+import jp.oist.abcvlib.util.latency.LatencyTelemetry
 import jp.oist.abcvlib.util.AndroidToRP2040Command
 import jp.oist.abcvlib.util.ByteArrayExtensions.toCrc
 import java.nio.ByteBuffer
@@ -25,6 +26,11 @@ internal class MockRP2040 {
     var onCommandProcessed: ((AndroidToRP2040Command) -> Unit)? = null
 
     /**
+     * Optional hook used by latency benchmarks to tag the firmware processing boundary.
+     */
+    var benchmarkIterationProvider: (() -> Int)? = null
+
+    /**
      * Processes an incoming raw packet and returns a response packet.
      * Mimics the firmware's request-response cycle.
      */
@@ -39,14 +45,24 @@ internal class MockRP2040 {
 
         // Simulate firmware processing time to prevent race conditions in tests.
         // This ensures the Android side has time to enter its 'await' state.
+        val firmwareReceiptUs = System.nanoTime() / 1_000
         Thread.sleep(5)
+        val firmwareProcessingCompleteUs = System.nanoTime() / 1_000
         
         val typeByte = packet[3]
         val type = AndroidToRP2040Command.getEnumByValue(typeByte) ?: return null
+        val telemetry = if (benchmarkIterationProvider != null && type in benchmarkTelemetryTypes) {
+            LatencyTelemetry(
+                t4TimestampUs = firmwareReceiptUs,
+                t5TimestampUs = firmwareProcessingCompleteUs
+            )
+        } else {
+            null
+        }
         
         val response = when (type) {
             AndroidToRP2040Command.GET_STATE -> {
-                generateStatusResponse(AndroidToRP2040Command.GET_STATE)
+                generateStatusResponse(AndroidToRP2040Command.GET_STATE, telemetry)
             }
             AndroidToRP2040Command.SET_MOTOR_LEVELS -> {
                 // Update simulated motor state
@@ -54,7 +70,7 @@ internal class MockRP2040 {
                 motorsState.controlValues.right = packet[5]
 
                 logEntries.add("Motors set: L=${motorsState.controlValues.left}, R=${motorsState.controlValues.right}")
-                generateStatusResponse(AndroidToRP2040Command.SET_MOTOR_LEVELS)
+                generateStatusResponse(AndroidToRP2040Command.SET_MOTOR_LEVELS, telemetry)
             }
             AndroidToRP2040Command.RESET_STATE -> {
                 RP2040IncomingCommand.Ack(byteArrayOf()).toBytes()
@@ -121,16 +137,52 @@ internal class MockRP2040 {
         return expectedCrc == actualCrc
     }
 
-    private fun generateStatusResponse(type: AndroidToRP2040Command): ByteArray {
+    private fun generateStatusResponse(
+        type: AndroidToRP2040Command,
+        latencyTelemetry: LatencyTelemetry?
+    ): ByteArray {
         val command = when (type) {
             AndroidToRP2040Command.GET_STATE -> RP2040IncomingCommand.GetState(motorsState, batteryDetails, chargeSideUSB)
             AndroidToRP2040Command.SET_MOTOR_LEVELS -> RP2040IncomingCommand.SetMotorLevels(motorsState, batteryDetails, chargeSideUSB)
             else -> throw IllegalArgumentException("Invalid status type")
         }
-        return command.toBytes()
+        return if (latencyTelemetry != null) {
+            appendTelemetry(command.toBytes(), latencyTelemetry.toBytes())
+        } else {
+            command.toBytes()
+        }
+    }
+
+    private fun appendTelemetry(packet: ByteArray, telemetry: ByteArray): ByteArray {
+        val baseDataSize = ByteBuffer.wrap(packet, 1, 2)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .short
+            .toInt() and 0xFFFF
+        val extendedPacket = ByteArray(packet.size + telemetry.size)
+        val extendedDataSize = baseDataSize + telemetry.size
+        val crcOffset = 3 + extendedDataSize
+
+        extendedPacket[0] = packet[0]
+        ByteBuffer.wrap(extendedPacket).order(ByteOrder.LITTLE_ENDIAN).apply {
+            position(1)
+            putShort(extendedDataSize.toShort())
+        }
+        System.arraycopy(packet, 3, extendedPacket, 3, baseDataSize)
+        System.arraycopy(telemetry, 0, extendedPacket, 3 + baseDataSize, telemetry.size)
+
+        val crc = extendedPacket.sliceArray(1 until crcOffset).toCrc()
+        ByteBuffer.wrap(extendedPacket, crcOffset, 2)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .putShort(crc)
+
+        return extendedPacket
     }
 
     companion object {
+        val benchmarkTelemetryTypes = setOf(
+            AndroidToRP2040Command.GET_STATE,
+            AndroidToRP2040Command.SET_MOTOR_LEVELS
+        )
         private const val MIN_PACKET_SIZE: Int = 6
     }
 }

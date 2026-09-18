@@ -112,6 +112,39 @@ class PacketBufferTest {
     }
 
     @Test
+    fun `test consume packet with telemetry tail`() {
+        val telemetryBytes = ByteArray(16) { it.toByte() }
+        val basePacket = getStateCommand.toBytes()
+        val extendedPacket = appendTelemetry(basePacket, telemetryBytes)
+        val basePayloadSize = basePacket.size - 6
+
+        val packetBufferWithDecoder = PacketBuffer(payloadDecoder = { type, data ->
+            if (type == AndroidToRP2040Command.GET_STATE && data.size == basePayloadSize + telemetryBytes.size) {
+                PacketBuffer.PacketPayload(
+                    commandData = data.copyOfRange(0, basePayloadSize),
+                    additionalData = data.copyOfRange(basePayloadSize, data.size)
+                )
+            } else {
+                PacketBuffer.PacketPayload(data)
+            }
+        })
+
+        packetBufferWithDecoder.consume(extendedPacket) { results.add(it) }
+
+        assertEquals(1, results.size)
+        val result = results[0]
+        assertTrue(result is PacketBuffer.ParseResult.ReceivedPacket)
+        if (result is PacketBuffer.ParseResult.ReceivedPacket) {
+            assertArrayEquals(telemetryBytes, result.additionalData)
+            assertEquals(AndroidToRP2040Command.GET_STATE, result.command.type)
+            assertArrayEquals(
+                basePacket,
+                result.command.toBytes()
+            )
+        }
+    }
+
+    @Test
     fun `test consume malformed firmware version response reports compatibility failure`() {
         val packet = createPacket(AndroidToRP2040Command.GET_VERSION, byteArrayOf(1, 0))
 
@@ -307,5 +340,30 @@ class PacketBufferTest {
         assertEquals("Expected 1 valid packet after overflow recovery", 1, packets.size)
         assertEquals(AndroidToRP2040Command.ACK, packets[0].command.type)
         assertArrayEquals(ackCommand.toBytes(), packets[0].command.toBytes())
+    }
+
+    private fun appendTelemetry(packet: ByteArray, telemetry: ByteArray): ByteArray {
+        val baseDataSize = ByteBuffer.wrap(packet, 1, 2)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .short
+            .toInt() and 0xFFFF
+        val extendedPacket = ByteArray(packet.size + telemetry.size)
+        val extendedDataSize = baseDataSize + telemetry.size
+        val crcOffset = 3 + extendedDataSize
+
+        extendedPacket[0] = packet[0]
+        ByteBuffer.wrap(extendedPacket).order(ByteOrder.LITTLE_ENDIAN).apply {
+            position(1)
+            putShort(extendedDataSize.toShort())
+        }
+        System.arraycopy(packet, 3, extendedPacket, 3, baseDataSize)
+        System.arraycopy(telemetry, 0, extendedPacket, 3 + baseDataSize, telemetry.size)
+
+        val crc = extendedPacket.sliceArray(1 until crcOffset).toCrc()
+        ByteBuffer.wrap(extendedPacket, crcOffset, 2)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .putShort(crc)
+
+        return extendedPacket
     }
 }
