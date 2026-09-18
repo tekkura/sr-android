@@ -38,6 +38,9 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
     }
 
     private val swapAction: Runnable = Runnable {
+        if (!isActivityResumed) {
+            return@Runnable
+        }
         if (action == ACTIONS.TURN_RIGHT) {
             action = ACTIONS.TURN_LEFT
             turnRight()
@@ -49,6 +52,7 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
 
     override fun onSerialReady(usbSerial: UsbSerial) {
         publisherManager = PublisherManager()
+        registerPublisherManager(publisherManager)
 
         val qrCodeData = QRCodeData.Builder(this, publisherManager, this).build()
         qrCodeData.addSubscriber(this)
@@ -91,6 +95,9 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener, QRCodeDataSubscribe
     }
 
     private fun qrCodeRegenerate(qrcodeData: String) {
+        if (!isActivityResumed) {
+            return
+        }
         qrCode.close()
         qrCode.generate(qrcodeData)
     }

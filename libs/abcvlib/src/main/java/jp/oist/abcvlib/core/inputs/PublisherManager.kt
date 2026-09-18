@@ -14,14 +14,25 @@ import java.util.concurrent.Phaser
  */
 class PublisherManager {
     val publishers: ArrayList<Publisher<*>> = ArrayList()
+    private val publishersLock = Any()
+    private val lifecyclePausedPublishers = mutableSetOf<Publisher<*>>()
     private val phaser = Phaser(1)
     private val TAG: String = javaClass.name
+
+    @Volatile
+    private var lifecyclePaused = false
+    private var publishersPaused = false
 
     //========================================Phase 0===============================================
     fun add(publisher: Publisher<*>): PublisherManager {
         Logger.i(TAG, "Adding publisher: " + publisher.javaClass.name)
-        publishers.add(publisher)
-        phaser.register()
+        synchronized(publishersLock) {
+            publishers.add(publisher)
+            phaser.register()
+            if (lifecyclePaused || publishersPaused) {
+                publisher.pause()
+            }
+        }
         return this
     }
 
@@ -35,6 +46,14 @@ class PublisherManager {
         Logger.i(TAG, "Registering publisher for phase 1: " + publisher.javaClass.name)
         phaser.register()
         publisher.start()
+        synchronized(publishersLock) {
+            if (lifecyclePaused || publishersPaused) {
+                if (lifecyclePaused) {
+                    lifecyclePausedPublishers.add(publisher)
+                }
+                publisher.pause()
+            }
+        }
     }
 
     fun onPublisherInitialized() {
@@ -44,11 +63,13 @@ class PublisherManager {
 
     fun initializePublishers() {
         phaser.arrive()
-        Logger.i(TAG, "Starting initializePublishers with " + publishers.size + " publishers")
+        val publisherCount = synchronized(publishersLock) { publishers.size }
+        Logger.i(TAG, "Starting initializePublishers with " + publisherCount + " publishers")
         Logger.i(TAG, "Waiting on all publishers to initialize before starting")
         phaser.awaitAdvance(0) // Waits to initialize if not finished with initPhase
         Logger.i(TAG, "Phase 0 complete, starting publisher initialization")
-        for (publisher in publishers) {
+        val publishersSnapshot = synchronized(publishersLock) { publishers.toList() }
+        for (publisher in publishersSnapshot) {
             Logger.i(TAG, "Initializing publisher: " + publisher.javaClass.name)
             initialize(publisher)
         }
@@ -62,8 +83,12 @@ class PublisherManager {
             Logger.i(TAG, "Waiting on phase 1 to finish before starting")
             phaser.awaitAdvance(1)
             Logger.i(TAG, "All publishers initialized. Starting publishers")
-            for (publisher in publishers) {
-                publisher.resume()
+            synchronized(publishersLock) {
+                if (!lifecyclePaused && !publishersPaused) {
+                    for (publisher in publishers) {
+                        publisher.resume()
+                    }
+                }
             }
             executor.shutdown() // Shut down the executor after the task is completed
         }
@@ -71,19 +96,64 @@ class PublisherManager {
 
     //====================================Non-phase Related=========================================
     fun pausePublishers() {
-        for (publisher in publishers) {
-            publisher.pause()
+        synchronized(publishersLock) {
+            publishersPaused = true
+            for (publisher in publishers) {
+                if (publisher.getState() == PublisherState.STARTED) {
+                    publisher.pause()
+                }
+            }
         }
     }
 
     fun resumePublishers() {
-        for (publisher in publishers) {
-            publisher.resume()
+        synchronized(publishersLock) {
+            publishersPaused = false
+            if (!lifecyclePaused) {
+                for (publisher in publishers) {
+                    if (publisher.getState() != PublisherState.STOPPED) {
+                        publisher.resume()
+                    }
+                }
+            } else {
+                lifecyclePausedPublishers.addAll(
+                    publishers.filter { it.getState() != PublisherState.STOPPED }
+                )
+            }
+        }
+    }
+
+    internal fun pauseForLifecycle() {
+        synchronized(publishersLock) {
+            lifecyclePaused = true
+            for (publisher in publishers) {
+                if (publisher.getState() == PublisherState.STARTED) {
+                    lifecyclePausedPublishers.add(publisher)
+                    publisher.pause()
+                }
+            }
+        }
+    }
+
+    internal fun resumeAfterLifecycle() {
+        synchronized(publishersLock) {
+            lifecyclePaused = false
+            if (!publishersPaused) {
+                for (publisher in lifecyclePausedPublishers) {
+                    if (publisher.getState() != PublisherState.STOPPED) {
+                        publisher.resume()
+                    }
+                }
+            }
+            lifecyclePausedPublishers.clear()
         }
     }
 
     fun stopPublishers() {
-        for (publisher in publishers) {
+        val publishersSnapshot = synchronized(publishersLock) {
+            publishers.toList()
+        }
+        for (publisher in publishersSnapshot) {
             publisher.stop()
         }
     }
