@@ -14,6 +14,7 @@ import jp.oist.abcvlib.util.rp2040.MotorsState
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor(
     context: Context,
@@ -57,8 +58,8 @@ internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor
 
     private val benchmarkTrafficActive = AtomicBoolean(false)
     private val telemetryUnavailable = AtomicBoolean(false)
-    private var transportDispatchTimestampNs: Long? = null
-    private var responseReceiptTimestampNs: Long? = null
+    private val transportDispatchTimestampNs = AtomicReference<Long?>()
+    private val responseReceiptTimestampNs = AtomicReference<Long?>()
 
     fun setBenchmarkTrafficActive(isActive: Boolean) {
         benchmarkTrafficActive.set(isActive)
@@ -73,7 +74,7 @@ internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor
     override fun send(packet: ByteArray, timeout: Int) {
         // T3: Transport Dispatch
         if (benchmarkTrafficActive.get()) {
-            transportDispatchTimestampNs = BenchmarkClock.mark(currentIteration.get(), 3)
+            transportDispatchTimestampNs.set(BenchmarkClock.mark(currentIteration.get(), 3))
         }
 
         super.send(packet, timeout)
@@ -82,7 +83,7 @@ internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor
     override fun onNewData(data: ByteArray) {
         // T6: Response Receipt at Phone
         if (benchmarkTrafficActive.get()) {
-            responseReceiptTimestampNs = BenchmarkClock.mark(currentIteration.get(), 6)
+            responseReceiptTimestampNs.set(BenchmarkClock.mark(currentIteration.get(), 6))
         }
 
         super.onNewData(data)
@@ -112,8 +113,8 @@ internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor
                 return
             }
 
-        val transportDispatchNs = transportDispatchTimestampNs ?: return
-        val responseReceiptNs = responseReceiptTimestampNs ?: return
+        val transportDispatchNs = transportDispatchTimestampNs.get() ?: return
+        val responseReceiptNs = responseReceiptTimestampNs.get() ?: return
 
         val firmwareReceiptNs = telemetry.t4TimestampUs * 1_000L
         val firmwareProcessingDoneNs = telemetry.t5TimestampUs * 1_000L
@@ -126,7 +127,7 @@ internal class LatencyMeasuringUsbSerial @Throws(IOException::class) constructor
 
         BenchmarkClock.markAt(iteration, 4, calculatedT4)
         BenchmarkClock.markAt(iteration, 5, calculatedT5)
-        transportDispatchTimestampNs = null
-        responseReceiptTimestampNs = null
+        transportDispatchTimestampNs.set(null)
+        responseReceiptTimestampNs.set(null)
     }
 }
