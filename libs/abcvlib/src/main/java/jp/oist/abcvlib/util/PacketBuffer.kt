@@ -220,7 +220,7 @@ class PacketBuffer @JvmOverloads constructor(
         data class FirmwareCompatibilityFailure(
             val exception: FirmwareCompatibilityException
         ) : ParseResult()
-        data class ReceivedPacket(
+        data class ReceivedPacket @JvmOverloads constructor(
             val command: RP2040IncomingCommand,
             val additionalData: ByteArray? = null
         ) : ParseResult()
