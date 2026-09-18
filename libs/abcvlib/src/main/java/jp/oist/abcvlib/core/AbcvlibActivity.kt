@@ -270,12 +270,23 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
      * intentionally explicit and also handles managers created after onResume.
      */
     protected fun registerPublisherManager(publisherManager: PublisherManager) {
-        val pauseForLifecycle = synchronized(publisherManagersLock) {
-            if (!publisherManagers.contains(publisherManager)) {
-                publisherManagers.add(publisherManager)
+        var pauseForLifecycle = false
+        val staleManagers = synchronized(publisherManagersLock) {
+            pauseForLifecycle = !isActivityResumed
+            if (publisherManagers.contains(publisherManager)) {
+                emptyList<PublisherManager>()
+            } else {
+                publisherManagers.toList().also {
+                    publisherManagers.clear()
+                    publisherManagers.add(publisherManager)
+                }
             }
-            !isActivityResumed
         }
+
+        for (staleManager in staleManagers) {
+            staleManager.stopPublishers()
+        }
+
         if (pauseForLifecycle) {
             publisherManager.pauseForLifecycle()
         }
@@ -291,6 +302,17 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         synchronized(publisherManagersLock) {
             publisherManagers.toList()
         }.forEach { it.resumeAfterLifecycle() }
+    }
+
+    private fun clearPublisherManagers() {
+        val managersToStop = synchronized(publisherManagersLock) {
+            publisherManagers.toList().also {
+                publisherManagers.clear()
+            }
+        }
+        for (publisherManager in managersToStop) {
+            publisherManager.stopPublishers()
+        }
     }
 
     private fun showCustomDialog(
@@ -314,6 +336,7 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
                 serialCommManager?.stop()
                 serialCommManager = null
             }
+            clearPublisherManagers()
             mainLoopExecutor?.shutdownNow()
             mainLoopExecutor = null
 
@@ -367,6 +390,7 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     override fun onDestroy() {
         mainLoopExecutor?.shutdownNow()
         mainLoopExecutor = null
+        clearPublisherManagers()
         super.onDestroy()
     }
 
