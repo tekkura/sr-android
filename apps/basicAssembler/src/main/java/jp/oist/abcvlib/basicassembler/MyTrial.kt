@@ -26,7 +26,8 @@ class MyTrial(
     private val mainHandler: Handler = Handler(context.mainLooper)
 
     override fun forward(data: TimeStepData) {
-        val motionAction: MotionAction = if ((timeStep / 10) % 2 == 0) {
+        val actionIndex = (timeStep - 1).coerceAtLeast(0) / 10
+        val motionAction: MotionAction = if (actionIndex % 2 == 0) {
             motionActionSet.motionActions[1]!!
         } else {
             motionActionSet.motionActions[2]!!
