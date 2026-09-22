@@ -53,6 +53,7 @@ class MainActivity : AbcvlibActivity() {
     override fun onSerialReady(usbSerial: UsbSerial) {
         // Create your data publisher objects
         val publisherManager = PublisherManager()
+        registerPublisherManager(publisherManager)
         val orientationData = OrientationData.Builder(this, publisherManager).build()
         val wheelData = WheelData.Builder(this, publisherManager).build()
         // Initialize all publishers (i.e. start their threads and data streams)

@@ -7,6 +7,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import jp.oist.abcvlib.basicsubscriberPython.databinding.ActivityMainBinding
 import jp.oist.abcvlib.core.AbcvlibActivity
+import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.SerialReadyListener
 import jp.oist.abcvlib.util.UsbSerial
@@ -56,6 +57,11 @@ class MainActivity : AbcvlibActivity(), SerialReadyListener {
      */
     fun onSetupReady() {
         super.onSerialReady(usbSerial)
+    }
+
+    /** Exposes Activity lifecycle registration to the Python demo. */
+    fun registerPythonPublisherManager(publisherManager: PublisherManager) {
+        registerPublisherManager(publisherManager)
     }
 }
 

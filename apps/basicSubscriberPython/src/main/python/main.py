@@ -72,6 +72,7 @@ class QRCodeSubscriber(dynamic_proxy(QRCodeDataSubscriber)):
 
 def setup():
     publisher_manager = PublisherManager()
+    context.registerPythonPublisherManager(publisher_manager)
 
     battery_data = BatteryData.Builder(context, publisher_manager).build()
     battery_data.addSubscriber(BatterySubscriber())

@@ -12,6 +12,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import jp.oist.abcvlib.core.inputs.PublisherManager
 import jp.oist.abcvlib.core.outputs.Outputs
 import jp.oist.abcvlib.util.Logger
 import jp.oist.abcvlib.util.ProcessPriorityThreadFactory
@@ -42,21 +43,33 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     var switches = Switches()
     protected lateinit var usbSerial: UsbSerial
     protected lateinit var outputs: Outputs
+    @Volatile
     private var serialCommManager: SerialCommManager? = null
     private var android2PiWriter: Runnable? = null
     private var pi2AndroidReader: Runnable? = null
     private var alertDialog: AlertDialog? = null
     private var initialDelay: Long = 0
     private var serialReadyJob: Job? = null
+    private val serialLifecycleLock = Any()
+    private val publisherManagers = mutableListOf<PublisherManager>()
+    private val publisherManagersLock = Any()
     private var mainLoopExecutor: ScheduledExecutorService? = null
+    private val outputsInitializationLock = Any()
+    private var outputsInitializedFor: SerialCommManager? = null
+    private var startedSerialManager: SerialCommManager? = null
     private val startupGeneration = AtomicLong()
-    @Volatile private var startupAllowed = true
+
+    @Volatile
+    private var startupAllowed = true
 
     // Note anything less than 10ms will result in no GET_STATE commands being called and all
     // being overrides by whatever commands are sent in the main loop
     private var delay: Long = 5
     private var isCreated = false
     private var mainLoopEnabled = true
+
+    @Volatile
+    protected var isActivityResumed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         isCreated = true
@@ -112,48 +125,77 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
 
     @WorkerThread
     override fun onSerialReady(usbSerial: UsbSerial) {
-        if (!startupAllowed) return
-        val generation = startupGeneration.incrementAndGet()
-        if (serialCommManager == null) {
-            Logger.w(
-                TAG, "Default SerialCommManager being used. If you intended to create your " +
-                        "own, make sure you initialize it in onCreate prior to calling super.onCreate()."
-            )
-            serialCommManager = SerialCommManager(usbSerial)
+        synchronized(serialLifecycleLock) {
+            if (serialCommManager == null) {
+                Logger.w(
+                    TAG, "Default SerialCommManager being used. If you intended to create your " +
+                            "own, make sure you initialize it in onCreate prior to calling super.onCreate()."
+                )
+                serialCommManager = SerialCommManager(usbSerial)
+            }
+            if (isActivityResumed) {
+                startSerialCommManager(serialCommManager!!)
+            }
         }
-        val manager = serialCommManager!!
+    }
+
+    // Must be called with serialLifecycleLock held.
+    private fun startSerialCommManager(manager: SerialCommManager) {
+        if (startedSerialManager === manager) return
+
+        val generation = startupGeneration.incrementAndGet()
+        startedSerialManager = manager
         manager.setFirmwareCompatibilityFailureListener { message ->
             mainLoopExecutor?.shutdownNow()
             mainLoopExecutor = null
             runOnUiThread {
-                if (startupAllowed && startupGeneration.get() == generation && serialCommManager === manager) {
+                if (startupAllowed && startupGeneration.get() == generation &&
+                    serialCommManager === manager
+                ) {
                     showCustomDialog(message)
                 }
             }
         }
         manager.start(onReady = {
-            if (startupAllowed && startupGeneration.get() == generation && serialCommManager === manager) {
-                initializeOutputs()
-                onOutputsReady()
+            if (isStartupCurrent(manager, generation)) {
+                synchronized(outputsInitializationLock) {
+                    if (isStartupCurrent(manager, generation) &&
+                        outputsInitializedFor !== manager
+                    ) {
+                        initializeOutputs(manager)
+                        onOutputsReady()
+                        outputsInitializedFor = manager
+                    }
+                }
 
-                if (mainLoopEnabled) {
-                    val priority = ProcessPriorityThreadFactory(
-                        Thread.MAX_PRIORITY,
-                        "AbcvlibActivityMainLoop"
-                    )
-                    mainLoopExecutor?.shutdownNow()
-                    mainLoopExecutor = Executors.newSingleThreadScheduledExecutor(priority)
-                    mainLoopExecutor!!.scheduleWithFixedDelay(
-                        AbcvlibActivityRunnable(), this.initialDelay, this.delay, TimeUnit.MILLISECONDS
-                    )
+                synchronized(serialLifecycleLock) {
+                    if (mainLoopEnabled && isStartupCurrent(manager, generation)) {
+                        val priority = ProcessPriorityThreadFactory(
+                            Thread.MAX_PRIORITY,
+                            "AbcvlibActivityMainLoop"
+                        )
+                        mainLoopExecutor?.shutdownNow()
+                        mainLoopExecutor = Executors.newSingleThreadScheduledExecutor(priority)
+                        mainLoopExecutor!!.scheduleWithFixedDelay(
+                            AbcvlibActivityRunnable(), this.initialDelay, this.delay,
+                            TimeUnit.MILLISECONDS
+                        )
+                    }
                 }
             }
         })
     }
 
+    private fun isStartupCurrent(manager: SerialCommManager, generation: Long): Boolean {
+        return startupAllowed && startupGeneration.get() == generation &&
+                serialCommManager === manager
+    }
+
     private inner class AbcvlibActivityRunnable : Runnable {
         override fun run() {
-            abcvlibMainLoop()
+            if (isActivityResumed) {
+                abcvlibMainLoop()
+            }
         }
     }
 
@@ -173,12 +215,19 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     }
 
 
-    private fun initializeOutputs() {
-        outputs = Outputs(switches, serialCommManager!!)
+    private fun initializeOutputs(manager: SerialCommManager) {
+        outputs = Outputs(switches, manager)
     }
 
     protected fun setSerialCommManager(serialCommManager: SerialCommManager) {
-        this.serialCommManager = serialCommManager
+        synchronized(serialLifecycleLock) {
+            if (this.serialCommManager !== serialCommManager) {
+                startedSerialManager?.stop()
+                startedSerialManager = null
+                startupGeneration.incrementAndGet()
+                this.serialCommManager = serialCommManager
+            }
+        }
     }
 
     protected fun setInitialDelay(initialDelay: Long) {
@@ -215,6 +264,61 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         this.pi2AndroidReader = pi2AndroidReader
     }
 
+    /**
+     * Registers publishers that should only process data while this Activity is visible.
+     * Applications create their managers when hardware becomes available, so registration is
+     * intentionally explicit and also handles managers created after onResume. Registration is
+     * replacement-based: each Activity owns one current PublisherManager for its active serial
+     * setup, and registering a different manager stops any manager from an older setup.
+     */
+    protected fun registerPublisherManager(publisherManager: PublisherManager) {
+        val (staleManagers, pauseForLifecycle) = synchronized(publisherManagersLock) {
+            if (publisherManagers.contains(publisherManager)) {
+                emptyList<PublisherManager>() to !isActivityResumed
+            } else {
+                publisherManagers.toList().also {
+                    publisherManagers.clear()
+                    publisherManagers.add(publisherManager)
+                } to !isActivityResumed
+            }
+        }
+
+        for (staleManager in staleManagers) {
+            staleManager.stopPublishers()
+        }
+
+        if (pauseForLifecycle) {
+            publisherManager.pauseForLifecycle()
+        }
+    }
+
+    fun isAbcvlibActivityResumed(): Boolean {
+        return isActivityResumed
+    }
+
+    private fun pausePublisherManagers() {
+        synchronized(publisherManagersLock) {
+            publisherManagers.toList()
+        }.forEach { it.pauseForLifecycle() }
+    }
+
+    private fun resumePublisherManagers() {
+        synchronized(publisherManagersLock) {
+            publisherManagers.toList()
+        }.forEach { it.resumeAfterLifecycle() }
+    }
+
+    private fun clearPublisherManagers() {
+        val managersToStop = synchronized(publisherManagersLock) {
+            publisherManagers.toList().also {
+                publisherManagers.clear()
+            }
+        }
+        for (publisherManager in managersToStop) {
+            publisherManager.stopPublishers()
+        }
+    }
+
     private fun showCustomDialog(
         message: String = getString(R.string.robot_not_properly_attached_please_reattach_and_press_confirm)
     ) {
@@ -230,11 +334,15 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         // Set a click listener for the Confirm button
         confirmButton.setOnClickListener { // Dismiss the dialog
             alertDialog?.dismiss()
-            startupGeneration.incrementAndGet()
-            serialCommManager?.stop()
+            synchronized(serialLifecycleLock) {
+                startupGeneration.incrementAndGet()
+                startedSerialManager = null
+                serialCommManager?.stop()
+                serialCommManager = null
+            }
+            clearPublisherManagers()
             mainLoopExecutor?.shutdownNow()
             mainLoopExecutor = null
-            serialCommManager = null
 
             if (::usbSerial.isInitialized)
                 usbSerial.close()
@@ -253,23 +361,41 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         Logger.v(TAG, "End of AbcvlibActivity.onStop")
     }
 
+    override fun onResume() {
+        super.onResume()
+        startupAllowed = true
+        isActivityResumed = true
+        resumePublisherManagers()
+        synchronized(serialLifecycleLock) {
+            serialCommManager?.let { startSerialCommManager(it) }
+        }
+        Logger.i(TAG, "AbcvlibActivity resumed: publishers and main loop enabled")
+    }
+
     public override fun onPause() {
-        super.onPause()
+        isActivityResumed = false
         startupAllowed = false
         startupGeneration.incrementAndGet()
         serialReadyJob?.cancel()
-        serialCommManager?.let {
-            it.setMotorLevels(0f, 0f, true, true)
-            it.stop()
+        pausePublisherManagers()
+        super.onPause()
+        synchronized(serialLifecycleLock) {
+            startedSerialManager = null
+            serialCommManager?.let {
+                it.setMotorLevels(0f, 0f, true, true)
+                it.stop()
+            }
         }
         mainLoopExecutor?.shutdownNow()
         mainLoopExecutor = null
         Logger.i(TAG, "End of AbcvlibActivity.onPause")
     }
 
-    override fun onResume() {
-        super.onResume()
-        startupAllowed = true
+    override fun onDestroy() {
+        mainLoopExecutor?.shutdownNow()
+        mainLoopExecutor = null
+        clearPublisherManagers()
+        super.onDestroy()
     }
 
 
