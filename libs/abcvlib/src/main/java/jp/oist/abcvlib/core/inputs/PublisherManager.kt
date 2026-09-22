@@ -23,6 +23,7 @@ class PublisherManager {
     private var lifecyclePaused = false
     private var publishersPaused = false
     private var startPublishersGateOpen = false
+    private var stopped = false
 
     //========================================Phase 0===============================================
     fun add(publisher: Publisher<*>): PublisherManager {
@@ -47,11 +48,19 @@ class PublisherManager {
         Logger.i(TAG, "Registering publisher for phase 1: " + publisher.javaClass.name)
         phaser.register()
         publisher.start()
+        var stopAfterStart = false
         synchronized(publishersLock) {
-            initializedPublishers.add(publisher)
-            if (lifecyclePaused || publishersPaused) {
+            if (stopped) {
+                stopAfterStart = true
+            } else {
+                initializedPublishers.add(publisher)
+            }
+            if (!stopAfterStart && (lifecyclePaused || publishersPaused)) {
                 publisher.pause()
             }
+        }
+        if (stopAfterStart) {
+            publisher.stop()
         }
     }
 
@@ -83,6 +92,10 @@ class PublisherManager {
             phaser.awaitAdvance(1)
             Logger.i(TAG, "All publishers initialized. Starting publishers")
             synchronized(publishersLock) {
+                if (stopped) {
+                    executor.shutdown()
+                    return@submit
+                }
                 startPublishersGateOpen = true
                 resumePublishersIfAllowedLocked()
             }
@@ -129,10 +142,10 @@ class PublisherManager {
 
     fun stopPublishers() {
         val publishersSnapshot = synchronized(publishersLock) {
+            stopped = true
             startPublishersGateOpen = false
-            initializedPublishers.toList().also {
-                initializedPublishers.clear()
-            }
+            initializedPublishers.clear()
+            publishers.toList()
         }
         for (publisher in publishersSnapshot) {
             publisher.stop()
