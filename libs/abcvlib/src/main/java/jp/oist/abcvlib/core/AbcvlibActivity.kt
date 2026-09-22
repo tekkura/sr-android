@@ -292,6 +292,10 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
         }
     }
 
+    fun isAbcvlibActivityResumed(): Boolean {
+        return isActivityResumed
+    }
+
     private fun pausePublisherManagers() {
         synchronized(publisherManagersLock) {
             publisherManagers.toList()

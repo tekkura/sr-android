@@ -109,6 +109,9 @@ open class Trial(
     }
 
     override fun run() {
+        if (!shouldRun()) {
+            return
+        }
         incrementTimeStep()
         // Moves timeStepDataBuffer.writeData to readData and nulls out the writeData for new data
         timeStepDataBuffer.nextTimeStep()
@@ -147,6 +150,10 @@ open class Trial(
                 ErrorHandler.eLog(TAG, "Error when trying to end episode or trail", e, true)
             }
         }
+    }
+
+    protected open fun shouldRun(): Boolean {
+        return true
     }
 
     @Throws(RecordingWithoutTimeStepBufferException::class, InterruptedException::class)

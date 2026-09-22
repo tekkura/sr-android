@@ -8,5 +8,6 @@ def run():
     main.context = context
     main.setup()
     while True:
-        main.loop()
+        if context.isAbcvlibActivityResumed():
+            main.loop()
         time.sleep(loop_delay)

@@ -1,6 +1,5 @@
 package jp.oist.abcvlib.basicassembler
 
-import android.content.Context
 import android.os.Handler
 import jp.oist.abcvlib.core.inputs.TimeStepDataBuffer.TimeStepData
 import jp.oist.abcvlib.core.learning.ActionSpace
@@ -17,13 +16,17 @@ import java.util.concurrent.BrokenBarrierException
 import java.util.concurrent.ExecutionException
 
 class MyTrial(
-    context: Context,
+    private val activity: MainActivity,
     private val guiUpdater: GuiUpdater,
     metaParameters: MetaParameters,
     actionSpace: ActionSpace,
     stateSpace: StateSpace
 ) : Trial(metaParameters, actionSpace, stateSpace), ActionSelector {
-    private val mainHandler: Handler = Handler(context.mainLooper)
+    private val mainHandler: Handler = Handler(activity.mainLooper)
+
+    override fun shouldRun(): Boolean {
+        return activity.isAbcvlibActivityResumed()
+    }
 
     override fun forward(data: TimeStepData) {
         val motionAction: MotionAction = if ((timeStep / 10) % 2 == 0) {
