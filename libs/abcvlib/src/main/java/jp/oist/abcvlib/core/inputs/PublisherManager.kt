@@ -144,8 +144,9 @@ class PublisherManager {
         val publishersSnapshot = synchronized(publishersLock) {
             stopped = true
             startPublishersGateOpen = false
-            initializedPublishers.clear()
-            publishers.toList()
+            initializedPublishers.toList().also {
+                initializedPublishers.clear()
+            }
         }
         for (publisher in publishersSnapshot) {
             publisher.stop()

@@ -267,19 +267,19 @@ abstract class AbcvlibActivity : AppCompatActivity(), SerialReadyListener {
     /**
      * Registers publishers that should only process data while this Activity is visible.
      * Applications create their managers when hardware becomes available, so registration is
-     * intentionally explicit and also handles managers created after onResume.
+     * intentionally explicit and also handles managers created after onResume. Registration is
+     * replacement-based: each Activity owns one current PublisherManager for its active serial
+     * setup, and registering a different manager stops any manager from an older setup.
      */
     protected fun registerPublisherManager(publisherManager: PublisherManager) {
-        var pauseForLifecycle = false
-        val staleManagers = synchronized(publisherManagersLock) {
-            pauseForLifecycle = !isActivityResumed
+        val (staleManagers, pauseForLifecycle) = synchronized(publisherManagersLock) {
             if (publisherManagers.contains(publisherManager)) {
-                emptyList<PublisherManager>()
+                emptyList<PublisherManager>() to !isActivityResumed
             } else {
                 publisherManagers.toList().also {
                     publisherManagers.clear()
                     publisherManagers.add(publisherManager)
-                }
+                } to !isActivityResumed
             }
         }
 
