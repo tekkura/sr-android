@@ -1,0 +1,575 @@
+package jp.oist.abcvlib.kidsfacedemo
+
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.os.SystemClock
+import android.util.Log
+import android.view.View
+import android.widget.SeekBar
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.bumptech.glide.Glide
+import com.google.mediapipe.framework.image.MPImage
+import com.google.mediapipe.framework.image.MediaImageBuilder
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
+import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
+import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizer
+import com.google.mediapipe.tasks.vision.gesturerecognizer.GestureRecognizerResult
+import jp.oist.abcvlib.core.AbcvlibActivity
+import jp.oist.abcvlib.core.inputs.PublisherManager
+import jp.oist.abcvlib.core.inputs.microcontroller.BatteryData
+import jp.oist.abcvlib.core.inputs.microcontroller.WheelData
+import jp.oist.abcvlib.core.inputs.microcontroller.WheelDataSubscriber
+import jp.oist.abcvlib.kidsfacedemo.databinding.ActivityMainBinding
+import jp.oist.abcvlib.util.SerialCommManager
+import jp.oist.abcvlib.util.UsbSerial
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
+class MainActivity : AbcvlibActivity(), WheelDataSubscriber {
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var imageExecutor: ExecutorService
+    private lateinit var publisherManager: PublisherManager
+    private var dizzyFaceAnimator: AnimatorSet? = null
+    private var gestureRecognizer: GestureRecognizer? = null
+    private var lastMetricsLogAtMs = 0L
+    private var debugViewVisible = false
+    private var cameraStarted = false
+    private var currentGestureFace: String? = null
+    private var faceInitialized = false
+    @Volatile private var forwardGain = DEFAULT_FORWARD_GAIN
+    @Volatile private var turnGain = DEFAULT_TURN_GAIN
+    @Volatile private var currentKnownGesture: String? = null
+    @Volatile private var forcedGestureFace: String? = null
+    @Volatile private var forcedGestureFaceUntilMs = 0L
+    @Volatile private var thumbsUpSpinActive = false
+    @Volatile private var thumbsUpSpinCompleted = false
+    @Volatile private var latestWheelDistanceL = 0.0
+    @Volatile private var latestWheelDistanceR = 0.0
+    @Volatile private var thumbsUpSpinStartDistanceL = 0.0
+    @Volatile private var thumbsUpSpinStartDistanceR = 0.0
+    @Volatile private var stopGestureActive = false
+    @Volatile private var latestMetrics = PoseMetrics.EMPTY
+    @Volatile private var latestTargetAtMs = 0L
+
+    private val cameraPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            startCameraAnalysis()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        super.onCreate(savedInstanceState)
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+        binding.viewToggleButton.setOnClickListener {
+            setDebugViewVisible(!debugViewVisible)
+        }
+        setupGainControls()
+        setDebugViewVisible(debugViewVisible)
+        updateGestureFace(null)
+
+        imageExecutor = Executors.newSingleThreadExecutor()
+        gestureRecognizer = GestureRecognizer.createFromOptions(
+            this,
+            GestureRecognizer.GestureRecognizerOptions.builder()
+                .setBaseOptions(
+                    BaseOptions.builder()
+                        .setModelAssetPath(GESTURE_MODEL_ASSET)
+                        .build()
+                )
+                .setRunningMode(RunningMode.LIVE_STREAM)
+                .setNumHands(1)
+                .setResultListener(::onGestureResult)
+                .setErrorListener { error -> Log.e(TAG, "GestureRecognizer error", error) }
+                .build()
+        )
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            startCameraAnalysis()
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun setDebugViewVisible(visible: Boolean) {
+        debugViewVisible = visible
+        binding.cameraPreview.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.poseOverlay.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.debugControls.visibility = if (visible) View.VISIBLE else View.GONE
+        binding.faceView.visibility = if (visible) View.GONE else View.VISIBLE
+        binding.viewToggleButton.text = if (visible) "Face" else "Debug"
+        if (cameraStarted) {
+            startCameraAnalysis()
+        }
+    }
+
+    private fun setupGainControls() {
+        binding.forwardGainSeekBar.progress = (forwardGain * GAIN_SCALE).toInt()
+        binding.turnGainSeekBar.progress = (turnGain * GAIN_SCALE).toInt()
+        updateGainLabels()
+
+        binding.forwardGainSeekBar.setOnSeekBarChangeListener(
+            gainSeekBarListener { progress ->
+                forwardGain = progress.toFloat() / GAIN_SCALE
+                updateGainLabels()
+            }
+        )
+        binding.turnGainSeekBar.setOnSeekBarChangeListener(
+            gainSeekBarListener { progress ->
+                turnGain = progress.toFloat() / GAIN_SCALE
+                updateGainLabels()
+            }
+        )
+    }
+
+    private fun gainSeekBarListener(
+        handleProgressChanged: (progress: Int) -> Unit
+    ) = object : SeekBar.OnSeekBarChangeListener {
+        override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+            handleProgressChanged(progress)
+        }
+
+        override fun onStartTrackingTouch(seekBar: SeekBar) = Unit
+
+        override fun onStopTrackingTouch(seekBar: SeekBar) = Unit
+    }
+
+    private fun updateGainLabels() {
+        binding.forwardGainLabel.text = "Forward gain: ${"%.2f".format(forwardGain)}"
+        binding.turnGainLabel.text = "Turn gain: ${"%.2f".format(turnGain)}"
+    }
+
+    override fun onSerialReady(usbSerial: UsbSerial) {
+        publisherManager = PublisherManager()
+        val batteryData = BatteryData.Builder(this, publisherManager).build()
+        val wheelData = WheelData.Builder(this, publisherManager).build()
+        wheelData.addSubscriber(this)
+        setSerialCommManager(SerialCommManager(usbSerial, batteryData, wheelData))
+        super.onSerialReady(usbSerial)
+    }
+
+    override fun onWheelDataUpdate(
+        timestamp: Long,
+        wheelCountL: Int,
+        wheelCountR: Int,
+        wheelDistanceL: Double,
+        wheelDistanceR: Double,
+        wheelSpeedInstantL: Double,
+        wheelSpeedInstantR: Double,
+        wheelSpeedBufferedL: Double,
+        wheelSpeedBufferedR: Double,
+        wheelSpeedExpAvgL: Double,
+        wheelSpeedExpAvgR: Double
+    ) {
+        latestWheelDistanceL = wheelDistanceL
+        latestWheelDistanceR = wheelDistanceR
+    }
+
+    public override fun onOutputsReady() {
+        publisherManager.initializePublishers()
+        publisherManager.startPublishers()
+    }
+
+    override fun abcvlibMainLoop() {
+        if (thumbsUpSpinActive) {
+            if (thumbsUpSpinTargetReached()) {
+                thumbsUpSpinActive = false
+                thumbsUpSpinCompleted = true
+                forcedGestureFace = THUMBS_UP_GESTURE
+                forcedGestureFaceUntilMs = SystemClock.uptimeMillis() + THUMBS_UP_DIZZY_FACE_MS
+                runOnUiThread { startDizzyFaceAnimation() }
+                outputs.setWheelOutput(0f, 0f, false, false)
+            } else {
+                outputs.setWheelOutput(MAX_WHEEL_SPEED, -MAX_WHEEL_SPEED, false, false)
+            }
+            return
+        }
+
+        if (currentKnownGesture == THUMBS_UP_GESTURE && thumbsUpSpinCompleted) {
+            outputs.setWheelOutput(0f, 0f, false, false)
+            return
+        }
+
+        val metrics = latestMetrics
+        val targetIsFresh = SystemClock.uptimeMillis() - latestTargetAtMs <= TARGET_TIMEOUT_MS
+        if (!targetIsFresh || metrics.stopped) {
+            outputs.setWheelOutput(0f, 0f, false, false)
+            return
+        }
+        outputs.setWheelOutput(metrics.leftWheel, metrics.rightWheel, false, false)
+    }
+
+    private fun startCameraAnalysis() {
+        cameraStarted = true
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+            val targetRotation = binding.cameraPreview.display.rotation
+            val imageAnalysis = ImageAnalysis.Builder()
+                .setTargetRotation(targetRotation)
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+            val preview = Preview.Builder()
+                .setTargetRotation(targetRotation)
+                .build()
+            preview.surfaceProvider = binding.cameraPreview.surfaceProvider
+
+            imageAnalysis.setAnalyzer(imageExecutor) { imageProxy ->
+                analyzeFrame(imageProxy)
+            }
+
+            cameraProvider.unbindAll()
+            if (debugViewVisible) {
+                cameraProvider.bindToLifecycle(
+                    this,
+                    CameraSelector.DEFAULT_FRONT_CAMERA,
+                    preview,
+                    imageAnalysis
+                )
+            } else {
+                cameraProvider.bindToLifecycle(
+                    this,
+                    CameraSelector.DEFAULT_FRONT_CAMERA,
+                    imageAnalysis
+                )
+            }
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    @ExperimentalGetImage
+    private fun analyzeFrame(imageProxy: ImageProxy) {
+        val image = imageProxy.image
+        if (image == null) {
+            imageProxy.close()
+            return
+        }
+
+        val mpImage = MediaImageBuilder(image).build()
+        val options = ImageProcessingOptions.builder()
+            .setRotationDegrees(imageProxy.imageInfo.rotationDegrees)
+            .build()
+        val timestampMs = SystemClock.uptimeMillis()
+        gestureRecognizer?.recognizeAsync(mpImage, options, timestampMs)
+        imageProxy.close()
+    }
+
+    private fun onGestureResult(
+        result: GestureRecognizerResult,
+        input: MPImage
+    ) {
+        val topGesture = result.gestures()
+            .flatten()
+            .maxByOrNull { it.score() }
+        val gesturePoints = result.landmarks().firstOrNull()
+            ?.map { it.toPosePoint().toNormalizedPoint() }
+            ?: emptyList()
+        val detectedKnownGesture = topGesture
+            ?.takeIf { it.score() >= GESTURE_SCORE_THRESHOLD }
+            ?.categoryName()
+            ?.takeIf { it in KNOWN_GESTURES }
+        if (detectedKnownGesture == THUMBS_UP_GESTURE &&
+            currentKnownGesture != THUMBS_UP_GESTURE
+        ) {
+            thumbsUpSpinActive = true
+            thumbsUpSpinCompleted = false
+            thumbsUpSpinStartDistanceL = latestWheelDistanceL
+            thumbsUpSpinStartDistanceR = latestWheelDistanceR
+        } else if (detectedKnownGesture != THUMBS_UP_GESTURE) {
+            thumbsUpSpinCompleted = false
+        }
+        currentKnownGesture = detectedKnownGesture
+        stopGestureActive = detectedKnownGesture == STOP_GESTURE
+        val metrics = gestureMetrics(gesturePoints)
+        latestMetrics = metrics
+        latestTargetAtMs = if (metrics.targetVisible) SystemClock.uptimeMillis() else 0L
+        logMetrics(metrics)
+        val overlayGesture = if (topGesture != null || gesturePoints.isNotEmpty()) {
+            OverlayGesture(
+                label = result.gestures()
+                    .flatten()
+                    .sortedByDescending { it.score() }
+                    .take(DEBUG_GESTURE_COUNT)
+                    .joinToString(" ") {
+                        "${it.categoryName()}=${"%.2f".format(it.score())}"
+                    }
+                    .ifEmpty { "None" },
+                landmarks = gesturePoints,
+                metrics = metrics
+            )
+        } else {
+            null
+        }
+        runOnUiThread {
+            updateGestureFace(currentFaceGesture(detectedKnownGesture))
+            binding.poseOverlay.updatePose(null, input.height, input.width)
+            binding.poseOverlay.updateGesture(overlayGesture)
+        }
+    }
+
+    private fun currentFaceGesture(detectedKnownGesture: String?): String? {
+        if (SystemClock.uptimeMillis() < forcedGestureFaceUntilMs) {
+            return forcedGestureFace
+        }
+        forcedGestureFace = null
+        forcedGestureFaceUntilMs = 0L
+        return detectedKnownGesture
+    }
+
+    private fun updateGestureFace(gesture: String?) {
+        val faceGesture = gesture?.takeIf { it in FACE_GESTURES }
+        if (faceInitialized && faceGesture == currentGestureFace) {
+            return
+        }
+        faceInitialized = true
+        currentGestureFace = faceGesture
+        if (faceGesture != THUMBS_UP_GESTURE && dizzyFaceAnimator?.isRunning == true) {
+            stopDizzyFaceAnimation()
+        }
+        if (faceGesture == null) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.playful_expectation_face)
+                .into(binding.faceView)
+            return
+        }
+        if (faceGesture == LOVE_GESTURE) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.face_love_animated)
+                .into(binding.faceView)
+            return
+        }
+        if (faceGesture == STOP_GESTURE) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.face_open_palm_animated)
+                .into(binding.faceView)
+            return
+        }
+        if (faceGesture == VICTORY_GESTURE) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.face_victory_animated)
+                .into(binding.faceView)
+            return
+        }
+        if (faceGesture == THUMBS_UP_GESTURE) {
+            Glide.with(this)
+                .asGif()
+                .load(R.raw.face_dizzy_animated)
+                .into(binding.faceView)
+            return
+        }
+
+        Glide.with(this).clear(binding.faceView)
+        binding.faceView.setImageResource(
+            when (faceGesture) {
+                LOVE_GESTURE -> R.drawable.face_love
+                STOP_GESTURE -> R.drawable.face_stop
+                VICTORY_GESTURE -> R.drawable.face_victory
+                THUMBS_UP_GESTURE -> R.drawable.face_pointing_up
+                else -> R.drawable.face_default
+            }
+        )
+    }
+
+    private fun startDizzyFaceAnimation() {
+        dizzyFaceAnimator?.cancel()
+        binding.faceView.rotation = 0f
+        binding.faceView.scaleX = 1f
+        binding.faceView.scaleY = 1f
+
+        val rotation = ObjectAnimator.ofFloat(
+            binding.faceView,
+            View.ROTATION,
+            0f,
+            -8f,
+            8f,
+            -6f,
+            6f,
+            -4f,
+            4f,
+            -2f,
+            2f,
+            0f
+        )
+        val scaleX = ObjectAnimator.ofFloat(
+            binding.faceView,
+            View.SCALE_X,
+            1f,
+            1.06f,
+            0.98f,
+            1.04f,
+            1f
+        )
+        val scaleY = ObjectAnimator.ofFloat(
+            binding.faceView,
+            View.SCALE_Y,
+            1f,
+            1.06f,
+            0.98f,
+            1.04f,
+            1f
+        )
+        dizzyFaceAnimator = AnimatorSet().apply {
+            duration = THUMBS_UP_DIZZY_FACE_MS
+            playTogether(rotation, scaleX, scaleY)
+            start()
+        }
+    }
+
+    private fun stopDizzyFaceAnimation() {
+        dizzyFaceAnimator?.cancel()
+        dizzyFaceAnimator = null
+        binding.faceView.rotation = 0f
+        binding.faceView.scaleX = 1f
+        binding.faceView.scaleY = 1f
+    }
+
+    private fun gestureMetrics(gesturePoints: List<NormalizedPoint>): PoseMetrics {
+        val targetVisible = gesturePoints.isNotEmpty()
+        val targetX = if (targetVisible) gesturePoints.sumOf { it.x.toDouble() }.toFloat() / gesturePoints.size else 0f
+        val targetY = if (targetVisible) gesturePoints.sumOf { it.y.toDouble() }.toFloat() / gesturePoints.size else 0f
+        val stopped = stopGestureActive || !targetVisible
+        val turn = targetX.deadband(CENTER_DEADBAND) * turnGain
+        val forward = ((targetY - TARGET_GESTURE_Y) * forwardGain)
+            .coerceIn(0f, MAX_FORWARD_SPEED)
+        val leftWheel = if (stopped) 0f else (forward + turn).coerceIn(-MAX_WHEEL_SPEED, MAX_WHEEL_SPEED)
+        val rightWheel = if (stopped) 0f else (forward - turn).coerceIn(-MAX_WHEEL_SPEED, MAX_WHEEL_SPEED)
+
+        return PoseMetrics(
+            person = true,
+            targetVisible = targetVisible,
+            targetX = targetX,
+            targetY = targetY,
+            leftWheel = leftWheel,
+            rightWheel = rightWheel,
+            stopped = stopped
+        )
+    }
+
+    private fun thumbsUpSpinTargetReached(): Boolean {
+        val leftDistance = kotlin.math.abs(latestWheelDistanceL - thumbsUpSpinStartDistanceL)
+        val rightDistance = kotlin.math.abs(latestWheelDistanceR - thumbsUpSpinStartDistanceR)
+        return leftDistance >= THUMBS_UP_SPIN_DISTANCE_MM &&
+            rightDistance >= THUMBS_UP_SPIN_DISTANCE_MM
+    }
+
+    private fun logMetrics(metrics: PoseMetrics) {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastMetricsLogAtMs < METRICS_LOG_INTERVAL_MS) {
+            return
+        }
+        lastMetricsLogAtMs = now
+        Log.i(
+            TAG,
+            "poseMetrics " +
+                "person=${metrics.person} " +
+                "targetVisible=${metrics.targetVisible} " +
+                "targetX=${"%.4f".format(metrics.targetX)} " +
+                "targetY=${"%.4f".format(metrics.targetY)} " +
+                "leftWheel=${"%.4f".format(metrics.leftWheel)} " +
+                "rightWheel=${"%.4f".format(metrics.rightWheel)} " +
+                "stopGestureActive=$stopGestureActive " +
+                "stopped=${metrics.stopped}"
+        )
+    }
+
+    private fun Float.deadband(deadband: Float): Float {
+        if (this > deadband) {
+            return this - deadband
+        }
+        if (this < -deadband) {
+            return this + deadband
+        }
+        return 0f
+    }
+
+    private fun NormalizedLandmark.toPosePoint(): PosePoint {
+        val visibleX = 1f - y()
+        return PosePoint(
+            x = visibleX * 2f - 1f,
+            y = x(),
+            isVisible = visibility().orElse(1f) >= MIN_VISIBILITY
+        )
+    }
+
+    private fun PosePoint.toNormalizedPoint(): NormalizedPoint {
+        return NormalizedPoint(x, y)
+    }
+
+    override fun onDestroy() {
+        stopDizzyFaceAnimation()
+        gestureRecognizer?.close()
+        imageExecutor.shutdown()
+        super.onDestroy()
+    }
+
+    private data class PosePoint(
+        val x: Float,
+        val y: Float,
+        val isVisible: Boolean
+    )
+
+    private companion object {
+        const val TAG = "KidsFaceDemo"
+        const val GESTURE_MODEL_ASSET = "gesture_recognizer.task"
+        const val LOVE_GESTURE = "ILoveYou"
+        const val STOP_GESTURE = "Open_Palm"
+        const val VICTORY_GESTURE = "Victory"
+        const val THUMBS_UP_GESTURE = "Thumb_Up"
+        const val GESTURE_SCORE_THRESHOLD = 0.6f
+        const val THUMBS_UP_SPIN_DISTANCE_MM = 800.0
+        const val THUMBS_UP_DIZZY_FACE_MS = 3_000L
+        const val DEBUG_GESTURE_COUNT = 3
+        const val TARGET_TIMEOUT_MS = 500L
+        const val METRICS_LOG_INTERVAL_MS = 100L
+        const val MIN_VISIBILITY = 0.4f
+        const val TARGET_GESTURE_Y = 0.1f
+        const val CENTER_DEADBAND = 0.08f
+        const val DEFAULT_FORWARD_GAIN = 0.85f
+        const val DEFAULT_TURN_GAIN = 0.20f
+        const val GAIN_SCALE = 100f
+        const val MAX_FORWARD_SPEED = 0.75f
+        const val MAX_WHEEL_SPEED = 1.0f
+        val KNOWN_GESTURES = setOf(
+            LOVE_GESTURE,
+            STOP_GESTURE,
+            VICTORY_GESTURE,
+            THUMBS_UP_GESTURE
+        )
+        val FACE_GESTURES = setOf(
+            LOVE_GESTURE,
+            STOP_GESTURE,
+            VICTORY_GESTURE,
+            THUMBS_UP_GESTURE
+        )
+    }
+}
